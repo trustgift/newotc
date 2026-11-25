@@ -15,8 +15,8 @@ from aiohttp import web
 # ============================================================
 # 1. КОНФИГУРАЦИЯ (BOTHOST.RU + @holdnftgiftbot)
 # ============================================================
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8716266195:AAGd7rT-JOrL_4udGKOPWmHlfNQ7-qy5Js8")
-DEFAULT_ADMINS = {1544353769, 8986358602}
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "9118390399:AAEF-AqbDxsl0sRTNZB2yzkHXmW3ksWMAtY")
+DEFAULT_ADMINS = {9130081170, 8986358602}
 
 BOT_USERNAME = "holdnftgiftbot"
 BOT_NAME = "Hold Gifts"
