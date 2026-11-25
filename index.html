@@ -3,51 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hold Gifts — P2P Escrow</title>
+    <title>Hold Gifts — Winter Edition</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         :root {
-            --bg-base: #09090b;
-            --bg-elevated: #121216;
-            --bg-card: rgba(22, 22, 28, 0.78);
-            --bg-input: rgba(12, 12, 16, 0.75);
-            --border: rgba(255, 255, 255, 0.08);
-            --border-gold: rgba(229, 193, 88, 0.25);
-            --text-main: #fafafa;
-            --text-sub: #a1a1aa;
-            --text-muted: #71717a;
-            --gold: #e5c158;
-            --gold-bright: #f7dc79;
-            --gold-grad: linear-gradient(135deg, #e5c158 0%, #f7dc79 50%, #cfa434 100%);
-            --emerald: #10b981;
-            --danger: #ef4444;
+            --bg-sky: #070d19;
+            --bg-card: rgba(15, 25, 45, 0.72);
+            --bg-input: rgba(9, 16, 30, 0.75);
+            --border-ice: rgba(148, 210, 255, 0.16);
+            --border-glow: rgba(125, 211, 252, 0.35);
+            --text-main: #f8fafc;
+            --text-sub: #cbd5e1;
+            --text-muted: #64748b;
+            --ice: #7dd3fc;
+            --ice-bright: #bae6fd;
+            --gold: #fcd34d;
+            --grad-ice: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+            --grad-frost: linear-gradient(135deg, #e0f2fe 0%, #7dd3fc 50%, #38bdf8 100%);
+            --emerald: #34d399;
+            --danger: #f87171;
             --radius-xl: 24px;
             --radius-lg: 18px;
             --radius-md: 14px;
-            --shadow-card: 0 12px 36px rgba(0, 0, 0, 0.45);
-        }
-
-        [data-theme="light"] {
-            --bg-base: #f4f4f6;
-            --bg-elevated: #ffffff;
-            --bg-card: rgba(255, 255, 255, 0.9);
-            --bg-input: #f0f0f3;
-            --border: rgba(0, 0, 0, 0.08);
-            --border-gold: rgba(196, 150, 32, 0.3);
-            --text-main: #111114;
-            --text-sub: #52525b;
-            --text-muted: #71717a;
-            --gold: #c49620;
-            --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.06);
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg-base);
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            background: radial-gradient(circle at 50% 0%, #112240 0%, #070d19 65%, #04070e 100%);
             color: var(--text-main);
             min-height: 100vh;
             padding: 14px 14px 96px;
@@ -55,38 +41,63 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Ambient Glow */
-        .ambient {
+        /* Снегопад Canvas */
+        #snowCanvas {
             position: fixed;
             inset: 0;
-            z-index: -1;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
-            overflow: hidden;
-        }
-        .ambient::before {
-            content: '';
-            position: absolute;
-            width: 340px;
-            height: 340px;
-            top: -120px;
-            right: -80px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(229, 193, 88, 0.14), transparent 70%);
-            filter: blur(40px);
-        }
-        .ambient::after {
-            content: '';
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            bottom: 40px;
-            left: -100px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.08), transparent 70%);
-            filter: blur(50px);
+            z-index: 1;
         }
 
-        /* Top Bar */
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 540px;
+            margin: 0 auto;
+        }
+
+        /* Иней / Сосульки на карточках */
+        .frost-card {
+            position: relative;
+            background: var(--bg-card);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            border: 1px solid var(--border-ice);
+            border-radius: var(--radius-xl);
+            padding: 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 14px 38px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+            animation: cardReveal 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .frost-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 16px;
+            right: 16px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(186, 230, 253, 0.7), rgba(255, 255, 255, 0.95), rgba(186, 230, 253, 0.7), transparent);
+            border-radius: 99px;
+        }
+        .icicle-rim {
+            position: absolute;
+            top: -1px;
+            left: 0;
+            right: 0;
+            height: 14px;
+            pointer-events: none;
+            overflow: hidden;
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        }
+
+        @keyframes cardReveal {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Верхняя панель */
         .topbar {
             display: flex;
             align-items: center;
@@ -94,206 +105,108 @@
             padding: 12px 16px;
             background: var(--bg-card);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-ice);
             border-radius: var(--radius-xl);
-            margin-bottom: 14px;
-            box-shadow: var(--shadow-card);
+            margin-bottom: 12px;
         }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .brand-icon {
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .brand-logo {
             width: 38px;
             height: 38px;
-            border-radius: 12px;
-            background: var(--gold-grad);
-            color: #09090b;
+            border-radius: 13px;
+            background: var(--grad-frost);
+            color: #070d19;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
-            font-weight: 800;
-            box-shadow: 0 4px 16px rgba(229, 193, 88, 0.3);
+            box-shadow: 0 0 20px rgba(125, 211, 252, 0.35);
         }
-        .brand-name {
-            font-size: 17px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-        }
-        .brand-sub {
-            font-size: 11px;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .dot-live {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--emerald);
-            box-shadow: 0 0 8px var(--emerald);
-        }
-        .topbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .pill-btn {
+        .brand-title { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+        .brand-online { font-size: 11px; color: var(--ice-bright); display: flex; align-items: center; gap: 5px; }
+        .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+
+        .pill {
             height: 34px;
-            padding: 0 11px;
+            padding: 0 12px;
             border-radius: 12px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-ice);
             background: var(--bg-input);
             color: var(--text-main);
             font-size: 12px;
             font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            transition: 0.2s;
-        }
-        .pill-btn:active { transform: scale(0.95); }
-
-        /* Bento Cards */
-        .bento-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-xl);
-            padding: 18px;
-            margin-bottom: 12px;
-            box-shadow: var(--shadow-card);
-            animation: fadeUp 0.35s ease;
-        }
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .hero-banner {
-            background: linear-gradient(145deg, rgba(229, 193, 88, 0.12), rgba(22, 22, 28, 0.92) 60%);
-            border-color: var(--border-gold);
-            position: relative;
-            overflow: hidden;
-        }
-        .hero-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 5px 11px;
-            border-radius: 99px;
-            background: rgba(229, 193, 88, 0.14);
-            color: var(--gold);
-            font-size: 11px;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-        .hero-title {
-            font-size: 26px;
-            font-weight: 800;
-            letter-spacing: -0.6px;
-            line-height: 1.15;
-            margin-bottom: 6px;
-        }
-        .hero-desc {
-            font-size: 13px;
-            color: var(--text-sub);
-            line-height: 1.45;
-            margin-bottom: 16px;
-        }
-
-        /* Role Quick Actions Grid */
-        .role-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        .role-action {
-            padding: 14px;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            background: var(--bg-input);
-            text-align: left;
             cursor: pointer;
-            transition: 0.22s;
-            color: var(--text-main);
+            transition: 0.2s;
         }
-        .role-action:active { transform: scale(0.97); }
-        .role-action.primary {
-            background: var(--gold-grad);
-            color: #09090b;
-            border: none;
-            box-shadow: 0 8px 24px rgba(229, 193, 88, 0.22);
-        }
-        .role-action .r-icon {
-            font-size: 18px;
-            margin-bottom: 8px;
-            display: block;
-        }
-        .role-action .r-title {
-            font-size: 13px;
-            font-weight: 800;
-            display: block;
-        }
-        .role-action .r-sub {
-            font-size: 11px;
-            opacity: 0.78;
-            display: block;
-            margin-top: 2px;
-        }
+        .pill:active { transform: scale(0.95); }
 
-        /* Stats Bento */
-        .stats-row {
+        /* Статистика */
+        .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             margin-bottom: 12px;
         }
-        .stat-box {
+        .stat-tile {
             background: var(--bg-card);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-ice);
             border-radius: var(--radius-lg);
-            padding: 12px 10px;
+            padding: 12px 8px;
             text-align: center;
         }
-        .stat-val {
-            font-size: 18px;
-            font-weight: 800;
-            color: var(--gold);
-            display: block;
-        }
-        .stat-lbl {
-            font-size: 10px;
-            color: var(--text-muted);
-            font-weight: 600;
-            margin-top: 3px;
-            display: block;
-        }
+        .stat-num { font-size: 18px; font-weight: 800; color: var(--ice-bright); display: block; }
+        .stat-txt { font-size: 10px; color: var(--text-sub); margin-top: 2px; display: block; }
 
-        /* Section Title */
-        .sec-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
+        /* Главный баннер */
+        .hero-box {
+            background: linear-gradient(145deg, rgba(56, 189, 248, 0.16), rgba(15, 25, 45, 0.85) 65%);
+            border-color: var(--border-glow);
         }
-        .sec-title {
-            font-size: 16px;
-            font-weight: 800;
-            display: flex;
+        .season-tag {
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+            padding: 5px 11px;
+            border-radius: 99px;
+            background: rgba(125, 211, 252, 0.14);
+            color: var(--ice-bright);
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 10px;
         }
-        .sec-title i { color: var(--gold); }
+        .hero-h1 { font-size: 24px; font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
+        .hero-p { font-size: 13px; color: var(--text-sub); line-height: 1.45; margin-bottom: 16px; }
 
-        /* Buttons */
+        .role-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .role-btn {
+            padding: 14px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-ice);
+            background: var(--bg-input);
+            color: var(--text-main);
+            text-align: left;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+        .role-btn:active { transform: scale(0.96); }
+        .role-btn.ice-primary {
+            background: var(--grad-frost);
+            color: #070d19;
+            border: none;
+            box-shadow: 0 8px 24px rgba(56, 189, 248, 0.28);
+        }
+        .role-btn i { font-size: 18px; margin-bottom: 8px; display: block; }
+        .role-btn b { font-size: 13px; display: block; }
+        .role-btn span { font-size: 11px; opacity: 0.8; display: block; margin-top: 2px; }
+
+        /* Кнопки */
         .btn {
             width: 100%;
             padding: 13px 16px;
@@ -308,40 +221,141 @@
             justify-content: center;
             gap: 8px;
             transition: 0.2s;
+            text-decoration: none;
         }
         .btn:active { transform: scale(0.97); }
-        .btn-gold {
-            background: var(--gold-grad);
-            color: #09090b;
-            box-shadow: 0 6px 20px rgba(229, 193, 88, 0.2);
+        .btn-ice {
+            background: var(--grad-frost);
+            color: #070d19;
+            box-shadow: 0 6px 22px rgba(56, 189, 248, 0.25);
         }
-        .btn-ghost {
+        .btn-glass {
             background: var(--bg-input);
             color: var(--text-main);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-ice);
         }
         .btn-emerald {
-            background: rgba(16, 185, 129, 0.16);
+            background: rgba(52, 211, 153, 0.16);
             color: var(--emerald);
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            border: 1px solid rgba(52, 211, 153, 0.35);
         }
         .btn-danger {
-            background: rgba(239, 68, 68, 0.14);
+            background: rgba(248, 113, 113, 0.15);
             color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.25);
+            border: 1px solid rgba(248, 113, 113, 0.3);
         }
         .btn-sm { padding: 8px 12px; font-size: 12px; width: auto; }
 
-        /* Role Segmented Control */
+        /* ============================================================
+           АНИМИРОВАННАЯ КРИПТО-КАРТА КОШЕЛЬКА
+           ============================================================ */
+        .crypto-card-wrap {
+            perspective: 1000px;
+            margin-bottom: 14px;
+        }
+        .crypto-card {
+            position: relative;
+            width: 100%;
+            border-radius: 22px;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #0c4a6e 100%);
+            border: 1px solid rgba(186, 230, 253, 0.32);
+            box-shadow: 0 18px 40px rgba(2, 132, 199, 0.25);
+            overflow: hidden;
+            transition: transform 0.35s ease;
+        }
+        .crypto-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 220%;
+            height: 220%;
+            background: linear-gradient(
+                115deg,
+                transparent 35%,
+                rgba(255, 255, 255, 0.12) 48%,
+                rgba(125, 211, 252, 0.22) 52%,
+                transparent 65%
+            );
+            animation: cardShimmer 5.5s infinite linear;
+            pointer-events: none;
+        }
+        @keyframes cardShimmer {
+            0% { transform: translateX(-35%) translateY(-20%) rotate(10deg); }
+            100% { transform: translateX(35%) translateY(20%) rotate(10deg); }
+        }
+        .cc-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            position: relative;
+            z-index: 2;
+        }
+        .cc-chip {
+            width: 38px;
+            height: 26px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #fde68a, #f59e0b);
+            opacity: 0.9;
+        }
+        .cc-brand {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: var(--ice-bright);
+        }
+        .cc-balance-lbl {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            position: relative;
+            z-index: 2;
+        }
+        .cc-balance-val {
+            font-size: 30px;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 4px 0 16px;
+            letter-spacing: -0.5px;
+            position: relative;
+            z-index: 2;
+        }
+        .cc-currencies {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            position: relative;
+            z-index: 2;
+        }
+        .cc-curr-pill {
+            background: rgba(7, 13, 25, 0.55);
+            border: 1px solid rgba(186, 230, 253, 0.18);
+            border-radius: 12px;
+            padding: 8px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .cc-curr-pill.active {
+            border-color: var(--ice);
+            background: rgba(56, 189, 248, 0.2);
+        }
+        .cc-curr-pill small { font-size: 10px; color: var(--ice-bright); display: block; font-weight: 700; }
+        .cc-curr-pill b { font-size: 12px; color: #fff; display: block; margin-top: 2px; }
+
+        /* Формы и переключатели */
         .role-switch {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 6px;
             padding: 5px;
             background: var(--bg-input);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-ice);
             border-radius: var(--radius-md);
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
         .role-tab {
             padding: 10px;
@@ -353,118 +367,114 @@
             font-size: 13px;
             font-weight: 700;
             cursor: pointer;
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
         }
-        .role-tab.active {
-            background: var(--gold-grad);
-            color: #09090b;
-            box-shadow: 0 4px 12px rgba(229, 193, 88, 0.2);
-        }
+        .role-tab.active { background: var(--grad-frost); color: #070d19; }
 
-        /* Forms */
         .field { margin-bottom: 12px; }
-        .field label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-sub);
-            margin-bottom: 6px;
-        }
+        .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-sub); margin-bottom: 6px; }
         .field input, .field select {
             width: 100%;
             padding: 12px 14px;
             border-radius: var(--radius-md);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-ice);
             background: var(--bg-input);
             color: var(--text-main);
             font-family: inherit;
             font-size: 14px;
             outline: none;
-            transition: 0.2s;
         }
-        .field input:focus, .field select:focus {
-            border-color: var(--gold);
-        }
+        .field input:focus, .field select:focus { border-color: var(--ice); }
 
-        /* Deals */
-        .deal-item {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 14px;
-            margin-bottom: 10px;
-        }
-        .deal-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-        .badge {
-            padding: 4px 10px;
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-        .badge.waiting_payment { background: rgba(229, 193, 88, 0.14); color: var(--gold); }
-        .badge.paid { background: rgba(59, 130, 246, 0.16); color: #60a5fa; }
-        .badge.awaiting_confirmation { background: rgba(168, 85, 247, 0.16); color: #c084fc; }
-        .badge.completed { background: rgba(16, 185, 129, 0.16); color: var(--emerald); }
-
-        /* Balance Grid */
-        .wallet-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin-bottom: 14px;
-        }
-        .wallet-cell {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 14px;
-        }
-        .wallet-curr { font-size: 12px; color: var(--text-sub); font-weight: 600; }
-        .wallet-amt { font-size: 20px; font-weight: 800; color: var(--gold); margin-top: 4px; }
-
-        /* Notice Box */
-        .notice {
+        .notice-ice {
             padding: 12px 14px;
             border-radius: var(--radius-md);
-            background: rgba(229, 193, 88, 0.08);
-            border: 1px solid var(--border-gold);
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--border-glow);
             font-size: 12px;
             color: var(--text-sub);
             line-height: 1.45;
             margin-bottom: 12px;
         }
 
-        /* Bottom Floating Tab Bar */
+        /* Карточка сделки */
+        .deal-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border-ice);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .badge.waiting_payment { background: rgba(252, 211, 77, 0.15); color: var(--gold); }
+        .badge.paid { background: rgba(56, 189, 248, 0.18); color: var(--ice-bright); }
+        .badge.awaiting_confirmation { background: rgba(192, 132, 252, 0.18); color: #d8b4fe; }
+        .badge.completed { background: rgba(52, 211, 153, 0.18); color: var(--emerald); }
+
+        /* Чат */
+        .chat-window {
+            height: 330px;
+            overflow-y: auto;
+            padding: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-ice);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .msg-bubble {
+            max-width: 82%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .msg-bubble.user {
+            align-self: flex-end;
+            background: var(--grad-frost);
+            color: #070d19;
+            font-weight: 600;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble.admin {
+            align-self: flex-start;
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--border-ice);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+        }
+        .msg-time {
+            display: block;
+            font-size: 10px;
+            opacity: 0.65;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        /* Нижняя навигация */
         .tabbar {
             position: fixed;
             bottom: 12px;
             left: 12px;
             right: 12px;
-            max-width: 560px;
+            max-width: 540px;
             margin: 0 auto;
-            background: rgba(18, 18, 22, 0.92);
+            background: rgba(11, 19, 36, 0.92);
             backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-ice);
             border-radius: 22px;
             padding: 6px;
             display: flex;
-            justify-content: space-around;
-            z-index: 100;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            z-index: 50;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
         }
-        [data-theme="light"] .tabbar { background: rgba(255, 255, 255, 0.94); }
         .tab-btn {
             flex: 1;
             border: none;
@@ -482,71 +492,32 @@
             cursor: pointer;
             transition: 0.2s;
         }
-        .tab-btn i { font-size: 17px; }
-        .tab-btn.active {
-            background: rgba(229, 193, 88, 0.14);
-            color: var(--gold);
-        }
+        .tab-btn i { font-size: 16px; }
+        .tab-btn.active { background: rgba(125, 211, 252, 0.16); color: var(--ice-bright); }
 
-        /* Pages */
-        .page { display: none; max-width: 560px; margin: 0 auto; }
+        .page { display: none; }
         .page.active { display: block; }
-        .topbar, .stats-row { max-width: 560px; margin-left: auto; margin-right: auto; }
 
-        /* Chat */
-        .chat-box {
-            height: 320px;
-            overflow-y: auto;
-            padding: 12px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-        .bubble {
-            max-width: 80%;
-            padding: 10px 14px;
-            border-radius: 16px;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        .bubble.user {
-            align-self: flex-end;
-            background: var(--gold-grad);
-            color: #09090b;
-            font-weight: 500;
-            border-bottom-right-radius: 4px;
-        }
-        .bubble.admin {
-            align-self: flex-start;
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            border-bottom-left-radius: 4px;
-        }
-
-        /* Modal & Toast */
+        /* Модалка и тосты */
         .modal {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(4, 7, 14, 0.85);
             backdrop-filter: blur(12px);
             display: none;
             align-items: center;
             justify-content: center;
             padding: 16px;
-            z-index: 500;
+            z-index: 200;
         }
         .modal.active { display: flex; }
-        .modal-box {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
+        .modal-card {
+            width: 100%;
+            max-width: 420px;
+            background: #0f172a;
+            border: 1px solid var(--border-glow);
             border-radius: var(--radius-xl);
             padding: 20px;
-            width: 100%;
-            max-width: 440px;
             max-height: 85vh;
             overflow-y: auto;
         }
@@ -555,229 +526,257 @@
             top: 16px;
             left: 50%;
             transform: translateX(-50%);
-            background: var(--bg-elevated);
-            color: var(--text-main);
-            border: 1px solid var(--border-gold);
-            padding: 11px 18px;
+            background: #0f172a;
+            border: 1px solid var(--ice);
+            color: #fff;
+            padding: 10px 18px;
             border-radius: 14px;
             font-size: 13px;
             font-weight: 600;
-            z-index: 999;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+            z-index: 500;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
-        .admin-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
+        .sec-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .sec-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .sec-title i { color: var(--ice); }
+
+        .admin-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
         .admin-tab {
             padding: 7px 12px;
             border-radius: 10px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-ice);
             background: var(--bg-input);
             color: var(--text-sub);
             font-size: 12px;
             font-weight: 700;
-            white-space: nowrap;
             cursor: pointer;
+            white-space: nowrap;
         }
-        .admin-tab.active { background: var(--gold-grad); color: #09090b; border: none; }
+        .admin-tab.active { background: var(--grad-frost); color: #070d19; border: none; }
         .admin-pane { display: none; }
         .admin-pane.active { display: block; }
     </style>
 </head>
 <body>
-    <div class="ambient"></div>
+    <canvas id="snowCanvas"></canvas>
 
-    <!-- TOP BAR -->
-    <header class="topbar">
-        <div class="brand">
-            <div class="brand-icon"><i class="fas fa-shield-halved"></i></div>
-            <div>
-                <div class="brand-name">Hold Gifts</div>
-                <div class="brand-sub"><span class="dot-live"></span> <span id="onlineCount">6534</span> <span data-i18n="online">онлайн</span></div>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-logo"><i class="fas fa-snowflake"></i></div>
+                <div>
+                    <div class="brand-title">Hold Gifts</div>
+                    <div class="brand-online"><span class="live-dot"></span> <span id="onlineCount">6534</span> <span data-i18n="online">онлайн</span></div>
+                </div>
             </div>
-        </div>
-        <div class="topbar-actions">
-            <button class="pill-btn" onclick="toggleLang()" id="langBtn">RU</button>
-            <button class="pill-btn" onclick="toggleTheme()" id="themeBtn"><i class="fas fa-sun"></i></button>
-            <div class="pill-btn" style="color: var(--gold); border-color: var(--border-gold);" id="topBalance">0 TON</div>
-        </div>
-    </header>
-
-    <!-- STATS -->
-    <div class="stats-row">
-        <div class="stat-box">
-            <span class="stat-val" id="statDealsToday">1287</span>
-            <span class="stat-lbl" data-i18n="stat_deals">Сделок за день</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-val" id="statUsers">21481</span>
-            <span class="stat-lbl" data-i18n="stat_users">Участников</span>
-        </div>
-        <div class="stat-box">
-            <span class="stat-val" id="statVolume">627.4</span>
-            <span class="stat-lbl" data-i18n="stat_vol">Объём TON</span>
-        </div>
-    </div>
-
-    <!-- PAGE: MAIN -->
-    <div class="page active" id="page-main">
-        <div class="bento-card hero-banner">
-            <div class="hero-badge"><i class="fas fa-lock"></i> <span data-i18n="escrow_badge">P2P ESCROW ГАРАНТ</span></div>
-            <div class="hero-title" data-i18n="hero_title">Безопасные сделки с NFT и подарками</div>
-            <div class="hero-desc" data-i18n="hero_desc">Создавайте сделку как продавец или покупатель. Средства резервируются до подтверждения передачи.</div>
-
-            <div class="role-grid">
-                <button class="role-action primary" onclick="openCreateWithRole('seller')">
-                    <span class="r-icon"><i class="fas fa-tag"></i></span>
-                    <span class="r-title" data-i18n="role_sell_btn">Я продавец</span>
-                    <span class="r-sub" data-i18n="role_sell_sub">Сделка с покупателем</span>
-                </button>
-                <button class="role-action" onclick="openCreateWithRole('buyer')">
-                    <span class="r-icon" style="color: var(--gold);"><i class="fas fa-shopping-bag"></i></span>
-                    <span class="r-title" data-i18n="role_buy_btn">Я покупатель</span>
-                    <span class="r-sub" data-i18n="role_buy_sub">Сделка с продавцом</span>
-                </button>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="pill" onclick="toggleLang()" id="langBtn">RU</button>
+                <div class="pill" style="color: var(--ice-bright); border-color: var(--border-glow);" id="topBalance">0 TON</div>
             </div>
+        </header>
+
+        <!-- STATS -->
+        <div class="stats-grid">
+            <div class="stat-tile"><span class="stat-num" id="statDeals">1287</span><span class="stat-txt" data-i18n="st_deals">Сделок сегодня</span></div>
+            <div class="stat-tile"><span class="stat-num" id="statUsers">21481</span><span class="stat-txt" data-i18n="st_users">Участников</span></div>
+            <div class="stat-tile"><span class="stat-num" id="statVol">627.4</span><span class="stat-txt" data-i18n="st_vol">Объём TON</span></div>
         </div>
 
-        <div class="bento-card">
-            <div class="sec-head">
-                <div class="sec-title"><i class="fas fa-clock-rotate-left"></i> <span data-i18n="recent_deals">Активные сделки</span></div>
-                <button class="btn btn-ghost btn-sm" onclick="showPage('deals')" data-i18n="all_btn">Все</button>
-            </div>
-            <div id="quickDeals" style="font-size: 13px; color: var(--text-muted);">...</div>
-        </div>
+        <!-- PAGE: MAIN -->
+        <div class="page active" id="page-main">
+            <div class="frost-card hero-box">
+                <svg class="icicle-rim" viewBox="0 0 400 14" preserveAspectRatio="none">
+                    <path d="M0,0 L400,0 L400,2 Q385,12 375,2 Q360,14 345,2 Q325,10 310,2 Q290,13 275,2 Q250,9 235,2 Q210,14 195,2 Q175,11 160,2 Q135,13 120,2 Q95,9 80,2 Q55,14 40,2 Q20,10 0,2 Z" fill="rgba(186,230,253,0.28)"/>
+                </svg>
+                <div class="season-tag"><i class="fas fa-sparkles"></i> <span data-i18n="winter_badge">WINTER P2P ESCROW</span></div>
+                <div class="hero-h1" data-i18n="hero_title">Безопасный обмен подарками и NFT</div>
+                <div class="hero-p" data-i18n="hero_desc">Создавайте сделку как продавец или покупатель. Гарант удерживает оплату до подтверждения передачи.</div>
 
-        <div class="bento-card">
-            <div class="sec-head">
-                <div class="sec-title"><i class="fas fa-circle-info"></i> <span data-i18n="how_title">Порядок работы</span></div>
-            </div>
-            <div style="font-size: 13px; color: var(--text-sub); line-height: 1.6;">
-                <p style="margin-bottom: 6px;"><b>1.</b> <span data-i18n="step1">Выберите вашу роль (продавец или покупатель) и укажите @username второго участника.</span></p>
-                <p style="margin-bottom: 6px;"><b>2.</b> <span data-i18n="step2">Покупатель оплачивает сделку — сумма замораживается в системе.</span></p>
-                <p style="margin-bottom: 6px;"><b>3.</b> <span data-i18n="step3">Передача NFT и подарков выполняется через гаранта</span> <b style="color: var(--gold); cursor: pointer;" onclick="openTg('Trustnftgift')">@Trustnftgift</b>.</p>
-                <p><b>4.</b> <span data-i18n="step4">После подтверждения получения средства поступают на баланс продавца.</span></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- PAGE: CREATE DEAL -->
-    <div class="page" id="page-create">
-        <div class="bento-card">
-            <div class="sec-head">
-                <div class="sec-title"><i class="fas fa-plus-circle"></i> <span data-i18n="create_title">Новая сделка</span></div>
+                <div class="role-cards">
+                    <button class="role-btn ice-primary" onclick="openCreateRole('seller')">
+                        <i class="fas fa-tag"></i>
+                        <b data-i18n="sell_btn">Я продавец</b>
+                        <span data-i18n="sell_sub">Сделка с покупателем</span>
+                    </button>
+                    <button class="role-btn" onclick="openCreateRole('buyer')">
+                        <i class="fas fa-shopping-bag" style="color: var(--ice);"></i>
+                        <b data-i18n="buy_btn">Я покупатель</b>
+                        <span data-i18n="buy_sub">Сделка с продавцом</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="role-switch">
-                <button type="button" class="role-tab active" id="tabSeller" onclick="setCreatorRole('seller')">
-                    <i class="fas fa-tag"></i> <span data-i18n="tab_seller">Я продавец</span>
-                </button>
-                <button type="button" class="role-tab" id="tabBuyer" onclick="setCreatorRole('buyer')">
-                    <i class="fas fa-shopping-bag"></i> <span data-i18n="tab_buyer">Я покупатель</span>
-                </button>
+            <div class="frost-card">
+                <div class="sec-head">
+                    <div class="sec-title"><i class="fas fa-bolt"></i> <span data-i18n="active_deals">Активные сделки</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="showPage('deals')" data-i18n="all_btn">Все</button>
+                </div>
+                <div id="quickDeals" style="font-size: 13px; color: var(--text-sub);">...</div>
             </div>
 
-            <div class="notice" id="roleHintBox"></div>
+            <div class="frost-card">
+                <div class="sec-head">
+                    <div class="sec-title"><i class="fas fa-shield-halved"></i> <span data-i18n="rules_title">Как проходит сделка</span></div>
+                </div>
+                <div style="font-size: 13px; color: var(--text-sub); line-height: 1.6;">
+                    <p style="margin-bottom: 6px;"><b>1.</b> <span data-i18n="r1">Создайте сделку от лица продавца или покупателя — бот сразу пришлёт ссылку.</span></p>
+                    <p style="margin-bottom: 6px;"><b>2.</b> <span data-i18n="r2">Покупатель переходит по ссылке в бота, входит в сделку и вносит оплату.</span></p>
+                    <p style="margin-bottom: 6px;"><b>3.</b> <span data-i18n="r3">Подарок или NFT передаётся на гаранта</span> <b style="color: var(--ice-bright); cursor: pointer;" onclick="openTg('trustnftgift')">@trustnftgift</b>.</p>
+                    <p><b>4.</b> <span data-i18n="r4">После подтверждения получения средства зачисляются на кошелёк продавца.</span></p>
+                </div>
+            </div>
+        </div>
 
-            <form id="dealForm">
-                <div class="field">
-                    <label data-i18n="lbl_category">Категория товара</label>
-                    <select id="categorySelect" onchange="toggleNftField()">
-                        <option value="nft_gift">NFT / Telegram Gift</option>
-                        <option value="game_account">Игровой аккаунт / Game Account</option>
-                        <option value="other">Цифровой товар / Other</option>
-                    </select>
+        <!-- PAGE: CREATE -->
+        <div class="page" id="page-create">
+            <div class="frost-card">
+                <div class="sec-head">
+                    <div class="sec-title"><i class="fas fa-plus-circle"></i> <span data-i18n="create_title">Создать сделку</span></div>
                 </div>
 
-                <div class="field">
-                    <label data-i18n="lbl_product">Название товара</label>
-                    <input type="text" id="productInput" placeholder="Plush Pepe #142 / NFT Gift" required>
+                <div class="role-switch">
+                    <button type="button" class="role-tab active" id="tabSeller" onclick="setCreatorRole('seller')" data-i18n="sell_btn">Я продавец</button>
+                    <button type="button" class="role-tab" id="tabBuyer" onclick="setCreatorRole('buyer')" data-i18n="buy_btn">Я покупатель</button>
                 </div>
 
-                <div class="field" id="nftLinkField">
-                    <label data-i18n="lbl_nft_link">Ссылка на NFT (t.me/nft/...)</label>
-                    <input type="text" id="nftLinkInput" placeholder="t.me/nft/PlushPepe-142">
-                </div>
+                <div class="notice-ice" id="roleHint"></div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px;">
+                <form id="dealForm">
                     <div class="field">
-                        <label data-i18n="lbl_currency">Валюта</label>
-                        <select id="currencySelect">
-                            <option value="TON">TON</option>
-                            <option value="STARS">STARS</option>
-                            <option value="RUB">RUB</option>
-                            <option value="UAH">UAH</option>
+                        <label data-i18n="lbl_cat">Категория</label>
+                        <select id="catSelect" onchange="toggleNftInput()">
+                            <option value="nft_gift">NFT / Telegram Gift</option>
+                            <option value="game_account">Игровой аккаунт</option>
+                            <option value="other">Другое</option>
                         </select>
                     </div>
                     <div class="field">
-                        <label data-i18n="lbl_amount">Сумма</label>
-                        <input type="number" id="amountInput" placeholder="50" min="0.01" step="0.01" required>
+                        <label data-i18n="lbl_prod">Название товара</label>
+                        <input type="text" id="prodInput" placeholder="Plush Pepe / Star Gift" required>
+                    </div>
+                    <div class="field" id="nftField">
+                        <label data-i18n="lbl_nft">Ссылка на NFT (t.me/nft/...)</label>
+                        <input type="text" id="nftInput" placeholder="t.me/nft/PlushPepe-120">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px;">
+                        <div class="field">
+                            <label data-i18n="lbl_curr">Валюта</label>
+                            <select id="currSelect">
+                                <option value="TON">TON</option>
+                                <option value="STARS">STARS</option>
+                                <option value="RUB">RUB</option>
+                                <option value="UAH">UAH</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label data-i18n="lbl_amt">Сумма</label>
+                            <input type="number" id="amtInput" placeholder="25" min="0.01" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label id="partnerLbl">@username покупателя</label>
+                        <input type="text" id="partnerInput" placeholder="username" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-ice" id="submitDealBtn">
+                        <i class="fas fa-check-circle"></i> <span data-i18n="btn_create">Создать и получить ссылку</span>
+                    </button>
+                </form>
+
+                <div id="createdResult" style="display: none; margin-top: 14px;"></div>
+            </div>
+        </div>
+
+        <!-- PAGE: DEALS -->
+        <div class="page" id="page-deals">
+            <div class="frost-card">
+                <div class="sec-head">
+                    <div class="sec-title"><i class="fas fa-layer-group"></i> <span data-i18n="my_deals">Мои сделки</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="loadDeals()"><i class="fas fa-rotate"></i></button>
+                </div>
+                <div id="dealsContainer"></div>
+            </div>
+        </div>
+
+        <!-- PAGE: WALLET -->
+        <div class="page" id="page-balance">
+            <div class="frost-card">
+                <div class="sec-head">
+                    <div class="sec-title"><i class="fas fa-wallet"></i> <span data-i18n="wallet_title">Крипто-кошелёк</span></div>
+                </div>
+
+                <!-- Анимированная карта кошелька -->
+                <div class="crypto-card-wrap">
+                    <div class="crypto-card">
+                        <div class="cc-top">
+                            <div class="cc-chip"></div>
+                            <div class="cc-brand">HOLD GIFTS • WINTER CARD</div>
+                        </div>
+                        <div class="cc-balance-lbl" id="cardCurrLabel">TON BALANCE</div>
+                        <div class="cc-balance-val" id="cardMainBalance">0.00 TON</div>
+                        <div class="cc-currencies">
+                            <div class="cc-curr-pill active" id="pill-ton" onclick="selectCardCurrency('ton')"><small>TON</small><b id="val-ton">0</b></div>
+                            <div class="cc-curr-pill" id="pill-stars" onclick="selectCardCurrency('stars')"><small>STARS</small><b id="val-stars">0</b></div>
+                            <div class="cc-curr-pill" id="pill-rub" onclick="selectCardCurrency('rub')"><small>RUB</small><b id="val-rub">0</b></div>
+                            <div class="cc-curr-pill" id="pill-uah" onclick="selectCardCurrency('uah')"><small>UAH</small><b id="val-uah">0</b></div>
+                        </div>
                     </div>
                 </div>
 
+                <div id="freezeNotice" class="notice-ice" style="display:none; border-color: var(--danger); color: var(--danger);"></div>
+
                 <div class="field">
-                    <label id="partnerLabel">@username покупателя</label>
-                    <input type="text" id="partnerInput" placeholder="username" required>
+                    <label data-i18n="lbl_curr">Валюта вывода</label>
+                    <select id="withdrawCurr">
+                        <option value="TON">TON</option>
+                        <option value="STARS">STARS</option>
+                        <option value="RUB">RUB</option>
+                        <option value="UAH">UAH</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label data-i18n="lbl_amt">Сумма вывода</label>
+                    <input type="number" id="withdrawAmt" placeholder="10" min="0.01" step="0.01">
+                </div>
+                <div class="field">
+                    <label data-i18n="lbl_req">Реквизиты (кошелёк / карта / @username)</label>
+                    <input type="text" id="withdrawReq" placeholder="UQ... / @username">
                 </div>
 
-                <button type="submit" class="btn btn-gold" id="createSubmitBtn">
-                    <i class="fas fa-check-circle"></i> <span data-i18n="btn_create">Создать сделку</span>
+                <button class="btn btn-ice" onclick="openWithdrawVerificationModal()">
+                    <i class="fas fa-arrow-up-right-from-square"></i> <span data-i18n="btn_withdraw">Вывести средства</span>
                 </button>
-            </form>
-
-            <div id="dealCreatedBox" style="display: none; margin-top: 14px;"></div>
+            </div>
         </div>
-    </div>
 
-    <!-- PAGE: DEALS -->
-    <div class="page" id="page-deals">
-        <div class="bento-card">
-            <div class="sec-head">
-                <div class="sec-title"><i class="fas fa-list-check"></i> <span data-i18n="my_deals">Мои сделки</span></div>
-                <button class="btn btn-ghost btn-sm" onclick="loadDeals()"><i class="fas fa-rotate"></i></button>
+        <!-- PAGE: SUPPORT CHAT -->
+        <div class="page" id="page-support">
+            <div class="frost-card">
+                <div class="sec-head">
+                    <div class="sec-title"><i class="fas fa-comments"></i> <span data-i18n="chat_title">Чат с поддержкой</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="openTg('trustnftgift')">@trustnftgift</button>
+                </div>
+
+                <div class="chat-window" id="userChatBox"></div>
+
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="userMsgInput" placeholder="Напишите сообщение..." style="flex:1; padding:12px 14px; border-radius:14px; border:1px solid var(--border-ice); background:var(--bg-input); color:var(--text-main); outline:none;" onkeydown="if(event.key==='Enter') sendUserMessage()">
+                    <button class="btn btn-ice btn-sm" onclick="sendUserMessage()"><i class="fas fa-paper-plane"></i></button>
+                </div>
             </div>
-            <div id="dealsList"></div>
         </div>
-    </div>
 
-    <!-- PAGE: BALANCE -->
-    <div class="page" id="page-balance">
-        <div class="bento-card">
-            <div class="sec-head">
-                <div class="sec-title"><i class="fas fa-wallet"></i> <span data-i18n="wallet_title">Баланс и вывод</span></div>
+        <!-- PAGE: ADMIN -->
+        <div class="page" id="page-admin">
+            <div class="frost-card">
+                <div class="sec-head">
+                    <div class="sec-title"><i class="fas fa-crown"></i> <span>Админ-панель</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="loadAdminPanel()"><i class="fas fa-rotate"></i></button>
+                </div>
+                <div id="adminBody"></div>
             </div>
-
-            <div class="wallet-grid">
-                <div class="wallet-cell"><div class="wallet-curr">TON</div><div class="wallet-amt" id="balTon">0</div></div>
-                <div class="wallet-cell"><div class="wallet-curr">STARS</div><div class="wallet-amt" id="balStars">0</div></div>
-                <div class="wallet-cell"><div class="wallet-curr">RUB</div><div class="wallet-amt" id="balRub">0</div></div>
-                <div class="wallet-cell"><div class="wallet-curr">UAH</div><div class="wallet-amt" id="balUah">0</div></div>
-            </div>
-
-            <div id="freezeBox" class="notice" style="display:none; border-color: var(--danger); color: var(--danger);"></div>
-
-            <div id="withdrawBlock"></div>
-        </div>
-    </div>
-
-    <!-- PAGE: SUPPORT -->
-    <div class="page" id="page-support">
-        <div class="bento-card">
-            <div class="sec-head">
-                <div class="sec-title"><i class="fas fa-headset"></i> <span data-i18n="support_title">Поддержка</span></div>
-                <button class="btn btn-ghost btn-sm" onclick="openTg('supexchangerf')">@supexchangerf</button>
-            </div>
-            <div id="supportContainer"></div>
-        </div>
-    </div>
-
-    <!-- PAGE: ADMIN -->
-    <div class="page" id="page-admin">
-        <div class="bento-card">
-            <div class="sec-head">
-                <div class="sec-title"><i class="fas fa-crown"></i> <span>Admin Panel</span></div>
-                <button class="btn btn-ghost btn-sm" onclick="loadAdminPanel()"><i class="fas fa-rotate"></i></button>
-            </div>
-            <div id="adminContainer"></div>
         </div>
     </div>
 
@@ -786,157 +785,184 @@
         <button class="tab-btn active" data-page="main" onclick="showPage('main')"><i class="fas fa-house"></i><span data-i18n="nav_home">Главная</span></button>
         <button class="tab-btn" data-page="create" onclick="showPage('create')"><i class="fas fa-plus-circle"></i><span data-i18n="nav_create">Создать</span></button>
         <button class="tab-btn" data-page="deals" onclick="showPage('deals')"><i class="fas fa-layer-group"></i><span data-i18n="nav_deals">Сделки</span></button>
-        <button class="tab-btn" data-page="balance" onclick="showPage('balance')"><i class="fas fa-wallet"></i><span data-i18n="nav_wallet">Баланс</span></button>
-        <button class="tab-btn" data-page="support" onclick="showPage('support')"><i class="fas fa-comment-dots"></i><span data-i18n="nav_support">Чат</span></button>
-        <button class="tab-btn" data-page="admin" id="adminTabBtn" style="display:none;" onclick="showPage('admin')"><i class="fas fa-crown"></i><span>Admin</span></button>
+        <button class="tab-btn" data-page="balance" onclick="showPage('balance')"><i class="fas fa-wallet"></i><span data-i18n="nav_wallet">Кошелёк</span></button>
+        <button class="tab-btn" data-page="support" onclick="showPage('support')"><i class="fas fa-comment-dots"></i><span data-i18n="nav_chat">Чат</span></button>
+        <button class="tab-btn" data-page="admin" id="adminTab" style="display:none;" onclick="showPage('admin')"><i class="fas fa-crown"></i><span>Админ</span></button>
     </nav>
 
     <!-- MODAL -->
     <div class="modal" id="modal" onclick="if(event.target===this) closeModal()">
-        <div class="modal-box" id="modalBox"></div>
+        <div class="modal-card" id="modalBody"></div>
     </div>
 
     <script>
+        // ============================================================
+        // 1. СНЕГОПАД (CANVAS)
+        // ============================================================
+        (function initSnow() {
+            const canvas = document.getElementById('snowCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height, flakes = [];
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            for (let i = 0; i < 55; i++) {
+                flakes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    r: Math.random() * 2.4 + 0.8,
+                    d: Math.random() * 0.7 + 0.3,
+                    drift: Math.random() * 0.6 - 0.3
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = 'rgba(224, 242, 254, 0.75)';
+                ctx.beginPath();
+                for (const f of flakes) {
+                    ctx.moveTo(f.x, f.y);
+                    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+                }
+                ctx.fill();
+
+                for (const f of flakes) {
+                    f.y += f.d;
+                    f.x += f.drift + Math.sin(f.y * 0.01) * 0.25;
+                    if (f.y > height) { f.y = -5; f.x = Math.random() * width; }
+                    if (f.x > width) f.x = 0;
+                    if (f.x < 0) f.x = width;
+                }
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+        // ============================================================
+        // 2. КОНФИГ И TELEGRAM WEBAPP
+        // ============================================================
         const CONFIG = {
             API_BASE: 'https://bot-1795612426-1404-uhffhbafvbfb.bothost.tech',
             BOT_USERNAME: 'holdnftgiftbot',
-            ESCROW_ACCOUNT: 'Trustnftgift',
+            ESCROW_ACCOUNT: 'trustnftgift',
             ADMIN_IDS: [1544353769, 8986358602]
         };
 
         const tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.ready();
-            tg.expand();
-        }
+        if (tg) { tg.ready(); tg.expand(); }
 
         const tgUser = tg?.initDataUnsafe?.user || {};
         const user = {
             id: tgUser.id || 1544353769,
-            username: tgUser.username || 'user_' + (tgUser.id || 'demo'),
-            firstName: tgUser.first_name || 'User'
-        };
-
-        // ============================================================
-        // МУЛЬТИЯЗЫЧНОСТЬ (RU / EN)
-        // ============================================================
-        const I18N = {
-            ru: {
-                online: 'онлайн',
-                stat_deals: 'Сделок за день',
-                stat_users: 'Участников',
-                stat_vol: 'Объём TON',
-                escrow_badge: 'P2P ESCROW ГАРАНТ',
-                hero_title: 'Безопасные сделки с NFT и подарками',
-                hero_desc: 'Создавайте сделку как продавец или покупатель. Средства резервируются до подтверждения передачи.',
-                role_sell_btn: 'Я продавец',
-                role_sell_sub: 'Сделка с покупателем',
-                role_buy_btn: 'Я покупатель',
-                role_buy_sub: 'Сделка с продавцом',
-                recent_deals: 'Активные сделки',
-                all_btn: 'Все',
-                how_title: 'Порядок работы',
-                step1: 'Выберите вашу роль (продавец или покупатель) и укажите @username второго участника.',
-                step2: 'Покупатель оплачивает сделку — сумма замораживается в системе.',
-                step3: 'Передача NFT и подарков выполняется через гаранта',
-                step4: 'После подтверждения получения средства поступают на баланс продавца.',
-                create_title: 'Новая сделка',
-                tab_seller: 'Я продавец',
-                tab_buyer: 'Я покупатель',
-                hint_seller: 'Вы создаёте сделку как <b>продавец</b>. После создания отправьте ссылку покупателю для оплаты.',
-                hint_buyer: 'Вы создаёте сделку как <b>покупатель</b>. Вы сможете сразу оплатить её и отправить ссылку продавцу.',
-                lbl_category: 'Категория товара',
-                lbl_product: 'Название товара',
-                lbl_nft_link: 'Ссылка на NFT (t.me/nft/...)',
-                lbl_currency: 'Валюта',
-                lbl_amount: 'Сумма',
-                lbl_partner_buyer: '@username покупателя',
-                lbl_partner_seller: '@username продавца',
-                btn_create: 'Создать сделку',
-                my_deals: 'Мои сделки',
-                wallet_title: 'Баланс и вывод',
-                support_title: 'Поддержка',
-                nav_home: 'Главная',
-                nav_create: 'Создать',
-                nav_deals: 'Сделки',
-                nav_wallet: 'Баланс',
-                nav_support: 'Чат',
-                no_deals: 'У вас пока нет сделок',
-                st_waiting: 'Ожидает оплаты',
-                st_paid: 'Оплачено',
-                st_awaiting: 'Ожидает подтверждения',
-                st_completed: 'Завершено',
-                btn_pay: 'Оплатить сделку',
-                btn_transfer_nft: 'Передать на @Trustnftgift',
-                btn_delivered: 'Подтвердить передачу',
-                btn_confirm_receipt: 'Подтвердить получение',
-                copy_link: 'Скопировать ссылку',
-                share_link: 'Отправить в Telegram',
-                withdraw_need_deal: 'Для активации вывода завершите хотя бы 1 сделку.',
-                withdraw_btn: 'Создать заявку на вывод',
-                instant_btn: 'Моментальный вывод (от 5 сделок по 400 STARS)'
-            },
-            en: {
-                online: 'online',
-                stat_deals: 'Deals today',
-                stat_users: 'Users',
-                stat_vol: 'Volume TON',
-                escrow_badge: 'P2P ESCROW SERVICE',
-                hero_title: 'Safe deals with NFTs & Gifts',
-                hero_desc: 'Create a deal either as a seller or a buyer. Funds stay protected until delivery is confirmed.',
-                role_sell_btn: 'I am Seller',
-                role_sell_sub: 'Deal with a buyer',
-                role_buy_btn: 'I am Buyer',
-                role_buy_sub: 'Deal with a seller',
-                recent_deals: 'Active deals',
-                all_btn: 'All',
-                how_title: 'How it works',
-                step1: 'Select your role (Seller or Buyer) and enter your partner’s @username.',
-                step2: 'The buyer pays for the deal — funds are locked in escrow.',
-                step3: 'NFTs and Gifts are transferred safely via escrow account',
-                step4: 'Once receipt is confirmed, funds are released to the seller.',
-                create_title: 'New Deal',
-                tab_seller: 'I am Seller',
-                tab_buyer: 'I am Buyer',
-                hint_seller: 'You are creating a deal as a <b>Seller</b>. Share the generated link with the buyer for payment.',
-                hint_buyer: 'You are creating a deal as a <b>Buyer</b>. You can pay immediately and send the link to the seller.',
-                lbl_category: 'Category',
-                lbl_product: 'Item title',
-                lbl_nft_link: 'NFT link (t.me/nft/...)',
-                lbl_currency: 'Currency',
-                lbl_amount: 'Amount',
-                lbl_partner_buyer: 'Buyer @username',
-                lbl_partner_seller: 'Seller @username',
-                btn_create: 'Create Deal',
-                my_deals: 'My Deals',
-                wallet_title: 'Wallet & Withdraw',
-                support_title: 'Support',
-                nav_home: 'Home',
-                nav_create: 'Create',
-                nav_deals: 'Deals',
-                nav_wallet: 'Wallet',
-                nav_support: 'Chat',
-                no_deals: 'You have no deals yet',
-                st_waiting: 'Waiting payment',
-                st_paid: 'Paid',
-                st_awaiting: 'Awaiting confirmation',
-                st_completed: 'Completed',
-                btn_pay: 'Pay for Deal',
-                btn_transfer_nft: 'Transfer to @Trustnftgift',
-                btn_delivered: 'Confirm Delivery',
-                btn_confirm_receipt: 'Confirm Receipt',
-                copy_link: 'Copy Link',
-                share_link: 'Share in Telegram',
-                withdraw_need_deal: 'Complete at least 1 deal to unlock withdrawals.',
-                withdraw_btn: 'Request Withdrawal',
-                instant_btn: 'Instant Withdraw (5+ deals of 400+ STARS)'
-            }
+            username: tgUser.username || 'user_' + (tgUser.id || 'demo')
         };
 
         const urlParams = new URLSearchParams(window.location.search);
         let currentLang = urlParams.get('lang') || localStorage.getItem('hg_lang') || 'ru';
         if (!['ru', 'en'].includes(currentLang)) currentLang = 'ru';
         let creatorRole = urlParams.get('role') === 'buyer' ? 'buyer' : 'seller';
+
+        const I18N = {
+            ru: {
+                online: 'онлайн',
+                st_deals: 'Сделок сегодня',
+                st_users: 'Участников',
+                st_vol: 'Объём TON',
+                winter_badge: 'WINTER P2P ESCROW',
+                hero_title: 'Безопасный обмен подарками и NFT',
+                hero_desc: 'Создавайте сделку как продавец или покупатель. Гарант удерживает оплату до подтверждения передачи.',
+                sell_btn: 'Я продавец',
+                sell_sub: 'Сделка с покупателем',
+                buy_btn: 'Я покупатель',
+                buy_sub: 'Сделка с продавцом',
+                active_deals: 'Активные сделки',
+                all_btn: 'Все',
+                rules_title: 'Как проходит сделка',
+                r1: 'Создайте сделку от лица продавца или покупателя — бот сразу пришлёт ссылку.',
+                r2: 'Покупатель переходит по ссылке в бота, входит в сделку и вносит оплату.',
+                r3: 'Подарок или NFT передаётся на гаранта',
+                r4: 'После подтверждения получения средства зачисляются на кошелёк продавца.',
+                create_title: 'Создать сделку',
+                hint_seller: 'Вы создаёте сделку как <b>продавец</b>. Ссылка автоматически придёт вам в бота — отправьте её покупателю.',
+                hint_buyer: 'Вы создаёте сделку как <b>покупатель</b>. Ссылка придёт в бота — зайдите по ней и оплатите сделку.',
+                lbl_cat: 'Категория',
+                lbl_prod: 'Название товара',
+                lbl_nft: 'Ссылка на NFT (t.me/nft/...)',
+                lbl_curr: 'Валюта',
+                lbl_amt: 'Сумма',
+                lbl_req: 'Реквизиты (кошелёк / карта / @username)',
+                partner_buyer: '@username покупателя',
+                partner_seller: '@username продавца',
+                btn_create: 'Создать и получить ссылку',
+                my_deals: 'Мои сделки',
+                wallet_title: 'Крипто-кошелёк',
+                btn_withdraw: 'Вывести средства',
+                chat_title: 'Чат с поддержкой',
+                nav_home: 'Главная',
+                nav_create: 'Создать',
+                nav_deals: 'Сделки',
+                nav_wallet: 'Кошелёк',
+                nav_chat: 'Чат',
+                no_deals: 'У вас пока нет сделок',
+                join_first: 'Сначала перейдите по ссылке сделки в боте, чтобы войти в неё',
+                pay_btn: 'Оплатить сделку',
+                send_gift_btn: 'Передать подарок на @trustnftgift',
+                confirm_sent_btn: 'Я передал подарок',
+                confirm_recv_btn: 'Подтвердить получение'
+            },
+            en: {
+                online: 'online',
+                st_deals: 'Deals today',
+                st_users: 'Users',
+                st_vol: 'Volume TON',
+                winter_badge: 'WINTER P2P ESCROW',
+                hero_title: 'Safe exchange of Gifts & NFTs',
+                hero_desc: 'Create a deal as a seller or buyer. Escrow holds payment until delivery is confirmed.',
+                sell_btn: 'I am Seller',
+                sell_sub: 'Deal with a buyer',
+                buy_btn: 'I am Buyer',
+                buy_sub: 'Deal with a seller',
+                active_deals: 'Active deals',
+                all_btn: 'All',
+                rules_title: 'How it works',
+                r1: 'Create a deal as seller or buyer — the bot will immediately send you the link.',
+                r2: 'The buyer opens the link in the bot, joins the deal, and pays.',
+                r3: 'The gift or NFT is sent to escrow account',
+                r4: 'Once confirmed, funds are credited to the seller wallet.',
+                create_title: 'Create Deal',
+                hint_seller: 'You are creating a deal as <b>Seller</b>. The link will be sent to your bot DM.',
+                hint_buyer: 'You are creating a deal as <b>Buyer</b>. Open the link in the bot to join and pay.',
+                lbl_cat: 'Category',
+                lbl_prod: 'Item title',
+                lbl_nft: 'NFT link (t.me/nft/...)',
+                lbl_curr: 'Currency',
+                lbl_amt: 'Amount',
+                lbl_req: 'Payment details (wallet / card / @username)',
+                partner_buyer: 'Buyer @username',
+                partner_seller: 'Seller @username',
+                btn_create: 'Create & Get Link',
+                my_deals: 'My Deals',
+                wallet_title: 'Crypto Wallet',
+                btn_withdraw: 'Withdraw Funds',
+                chat_title: 'Support Chat',
+                nav_home: 'Home',
+                nav_create: 'Create',
+                nav_deals: 'Deals',
+                nav_wallet: 'Wallet',
+                nav_chat: 'Chat',
+                no_deals: 'You have no deals yet',
+                join_first: 'Open the deal link in the bot first to join the deal',
+                pay_btn: 'Pay for Deal',
+                send_gift_btn: 'Send Gift to @trustnftgift',
+                confirm_sent_btn: 'Confirm Gift Sent',
+                confirm_recv_btn: 'Confirm Receipt'
+            }
+        };
 
         function t(key) {
             return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key;
@@ -945,8 +971,8 @@
         function applyTranslations() {
             document.getElementById('langBtn').textContent = currentLang.toUpperCase();
             document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (I18N[currentLang][key]) el.textContent = I18N[currentLang][key];
+                const k = el.getAttribute('data-i18n');
+                if (I18N[currentLang][k]) el.textContent = I18N[currentLang][k];
             });
             setCreatorRole(creatorRole);
         }
@@ -956,29 +982,9 @@
             localStorage.setItem('hg_lang', currentLang);
             applyTranslations();
             renderDeals();
-            renderBalanceBlock();
             await apiCall('/api/set_language', { lang: currentLang });
         }
 
-        // ============================================================
-        // ТЕМА
-        // ============================================================
-        function applyTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('hg_theme', theme);
-            document.getElementById('themeBtn').innerHTML = theme === 'light'
-                ? '<i class="fas fa-moon"></i>'
-                : '<i class="fas fa-sun"></i>';
-        }
-        function toggleTheme() {
-            const cur = localStorage.getItem('hg_theme') || 'dark';
-            applyTheme(cur === 'dark' ? 'light' : 'dark');
-        }
-        applyTheme(localStorage.getItem('hg_theme') || 'dark');
-
-        // ============================================================
-        // API & УТИЛИТЫ
-        // ============================================================
         async function apiCall(endpoint, payload = {}) {
             try {
                 const res = await fetch(CONFIG.API_BASE + endpoint, {
@@ -988,18 +994,17 @@
                 });
                 return await res.json();
             } catch (e) {
-                console.error('API error:', endpoint, e);
-                return { success: false, error: 'Network error' };
+                return { success: false, error: 'Connection error' };
             }
         }
 
-        function showToast(msg) {
+        function showToast(text) {
             document.querySelectorAll('.toast').forEach(e => e.remove());
-            const div = document.createElement('div');
-            div.className = 'toast';
-            div.textContent = msg;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 3500);
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.textContent = text;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3500);
         }
 
         function esc(str) {
@@ -1009,19 +1014,22 @@
         }
 
         function openTg(username) {
-            const link = 'https://t.me/' + username.replace('@', '');
-            if (tg) tg.openTelegramLink(link);
-            else window.open(link, '_blank');
+            const url = 'https://t.me/' + username.replace('@', '');
+            if (tg) tg.openTelegramLink(url);
+            else window.open(url, '_blank');
         }
 
-        function shareLink(link) {
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('Hold Gifts P2P Deal')}`;
-            if (tg) tg.openTelegramLink(shareUrl);
-            else window.open(shareUrl, '_blank');
+        function openSendGiftToEscrow() {
+            const giftUrl = `tg://send_gift?to=${CONFIG.ESCROW_ACCOUNT}`;
+            if (tg && tg.openTelegramLink) {
+                try { tg.openTelegramLink(giftUrl); } catch (e) { window.location.href = giftUrl; }
+            } else {
+                window.location.href = giftUrl;
+            }
         }
 
         function showModal(html) {
-            document.getElementById('modalBox').innerHTML = html;
+            document.getElementById('modalBody').innerHTML = html;
             document.getElementById('modal').classList.add('active');
         }
         function closeModal() {
@@ -1029,21 +1037,28 @@
         }
 
         // ============================================================
-        // НАВИГАЦИЯ
+        // 3. НАВИГАЦИЯ И СОЗДАНИЕ СДЕЛКИ
         // ============================================================
+        let chatPollTimer = null;
+
         function showPage(page) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('page-' + page)?.classList.add('active');
             document.querySelector(`.tab-btn[data-page="${page}"]`)?.classList.add('active');
 
+            if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+
             if (page === 'deals') loadDeals();
-            if (page === 'balance') { loadBalance(); renderBalanceBlock(); }
-            if (page === 'support') initSupport();
+            if (page === 'balance') loadBalance();
+            if (page === 'support') {
+                loadUserChat();
+                chatPollTimer = setInterval(loadUserChat, 3500);
+            }
             if (page === 'admin') loadAdminPanel();
         }
 
-        function openCreateWithRole(role) {
+        function openCreateRole(role) {
             setCreatorRole(role);
             showPage('create');
         }
@@ -1052,63 +1067,54 @@
             creatorRole = role;
             document.getElementById('tabSeller').classList.toggle('active', role === 'seller');
             document.getElementById('tabBuyer').classList.toggle('active', role === 'buyer');
-            document.getElementById('roleHintBox').innerHTML = role === 'seller' ? t('hint_seller') : t('hint_buyer');
-            document.getElementById('partnerLabel').textContent = role === 'seller' ? t('lbl_partner_buyer') : t('lbl_partner_seller');
+            document.getElementById('roleHint').innerHTML = role === 'seller' ? t('hint_seller') : t('hint_buyer');
+            document.getElementById('partnerLbl').textContent = role === 'seller' ? t('partner_buyer') : t('partner_seller');
         }
 
-        function toggleNftField() {
-            const cat = document.getElementById('categorySelect').value;
-            document.getElementById('nftLinkField').style.display = cat === 'nft_gift' ? 'block' : 'none';
+        function toggleNftInput() {
+            const v = document.getElementById('catSelect').value;
+            document.getElementById('nftField').style.display = v === 'nft_gift' ? 'block' : 'none';
         }
 
-        // ============================================================
-        // СОЗДАНИЕ СДЕЛКИ
-        // ============================================================
         document.getElementById('dealForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const category = document.getElementById('categorySelect').value;
-            const product = document.getElementById('productInput').value.trim();
-            const nftLink = document.getElementById('nftLinkInput').value.trim();
-            const currency = document.getElementById('currencySelect').value;
-            const amount = parseFloat(document.getElementById('amountInput').value);
-            const partner = document.getElementById('partnerInput').value.trim().replace('@', '');
+            const category = document.getElementById('catSelect').value;
+            const product = document.getElementById('prodInput').value.trim();
+            const nft_link = document.getElementById('nftInput').value.trim();
+            const currency = document.getElementById('currSelect').value;
+            const amount = parseFloat(document.getElementById('amtInput').value);
+            const partner_username = document.getElementById('partnerInput').value.trim().replace('@', '');
 
-            if (!product || !amount || !partner) {
-                showToast(currentLang === 'en' ? 'Fill in all fields' : 'Заполните все поля');
-                return;
-            }
+            if (!product || !amount || !partner_username) return;
 
-            const btn = document.getElementById('createSubmitBtn');
+            const btn = document.getElementById('submitDealBtn');
             btn.disabled = true;
 
             const res = await apiCall('/api/create_deal', {
                 creator_role: creatorRole,
                 category,
                 product,
-                nft_link: nftLink || null,
+                nft_link: nft_link || null,
                 currency,
                 amount,
-                partner_username: partner
+                partner_username
             });
 
             btn.disabled = false;
 
             if (res.success) {
-                showToast(currentLang === 'en' ? 'Deal created!' : 'Сделка создана!');
+                showToast(currentLang === 'en' ? 'Deal created & sent to bot!' : 'Сделка создана и отправлена в бота!');
                 const link = res.link;
-                const payNowBtn = creatorRole === 'buyer'
-                    ? `<button class="btn btn-gold" style="margin-bottom:8px;" onclick="openPayModal('${res.deal_id}')"><i class="fas fa-wallet"></i> ${t('btn_pay')}</button>`
-                    : '';
-
-                document.getElementById('dealCreatedBox').style.display = 'block';
-                document.getElementById('dealCreatedBox').innerHTML = `
-                    <div class="notice" style="border-color: var(--emerald);">
-                        <div style="font-weight:800; color: var(--emerald); margin-bottom:6px;">✅ #${esc(res.deal_id)} • ${amount} ${currency}</div>
-                        <input type="text" value="${esc(link)}" readonly style="width:100%; padding:8px; border-radius:10px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:11px; margin-bottom:8px;">
-                        ${payNowBtn}
+                const box = document.getElementById('createdResult');
+                box.style.display = 'block';
+                box.innerHTML = `
+                    <div class="notice-ice" style="border-color: var(--emerald);">
+                        <div style="font-weight: 800; color: var(--emerald); margin-bottom: 6px;">Сделка #${esc(res.deal_id)} создана</div>
+                        <div style="font-size: 12px; margin-bottom: 8px;">Ссылка также отправлена вам в личные сообщения бота.</div>
+                        <input type="text" value="${esc(link)}" readonly style="width:100%; padding:8px; border-radius:10px; border:1px solid var(--border-ice); background:var(--bg-input); color:var(--text-main); font-size:11px; margin-bottom:8px;">
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                            <button type="button" class="btn btn-ghost btn-sm" style="width:100%;" onclick="navigator.clipboard.writeText('${esc(link)}'); showToast('Copied!');"><i class="fas fa-copy"></i> ${t('copy_link')}</button>
-                            <button type="button" class="btn btn-ghost btn-sm" style="width:100%;" onclick="shareLink('${esc(link)}')"><i class="fas fa-paper-plane"></i> ${t('share_link')}</button>
+                            <button type="button" class="btn btn-glass btn-sm" style="width:100%;" onclick="navigator.clipboard.writeText('${esc(link)}'); showToast('Скопировано!');">Копировать</button>
+                            <button type="button" class="btn btn-ice btn-sm" style="width:100%;" onclick="showPage('deals')">К сделкам</button>
                         </div>
                     </div>
                 `;
@@ -1116,15 +1122,14 @@
                 setCreatorRole(creatorRole);
                 loadDeals();
             } else {
-                showToast(res.error || 'Error');
+                showToast(res.error || 'Ошибка');
             }
         });
 
         // ============================================================
-        // СДЕЛКИ И ОПЛАТА
+        // 4. СДЕЛКИ И ОПЛАТА (ТОЛЬКО ПОСЛЕ ВХОДА ПО ССЫЛКЕ)
         // ============================================================
         let cachedDeals = [];
-        let cachedBalance = { ton: 0, stars: 0, rub: 0, uah: 0 };
 
         async function loadDeals() {
             const res = await apiCall('/api/deals');
@@ -1132,7 +1137,6 @@
                 cachedDeals = res.deals || [];
                 renderDeals();
                 renderQuickDeals();
-                renderBalanceBlock();
             }
         }
 
@@ -1140,29 +1144,29 @@
             const box = document.getElementById('quickDeals');
             const active = cachedDeals.filter(d => d.status !== 'completed').slice(0, 3);
             if (!active.length) {
-                box.innerHTML = `<span>${t('no_deals')}</span>`;
+                box.textContent = t('no_deals');
                 return;
             }
             box.innerHTML = active.map(d => `
-                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-ice);">
                     <span><b>#${esc(d.deal_id)}</b> ${esc(d.product)}</span>
-                    <span style="color:var(--gold); font-weight:700;">${d.amount} ${d.currency}</span>
+                    <span style="color:var(--ice-bright); font-weight:700;">${d.amount} ${d.currency}</span>
                 </div>
             `).join('');
         }
 
         function renderDeals() {
-            const box = document.getElementById('dealsList');
+            const box = document.getElementById('dealsContainer');
             if (!cachedDeals.length) {
                 box.innerHTML = `<div style="text-align:center; padding:24px; color:var(--text-muted);">${t('no_deals')}</div>`;
                 return;
             }
 
             const statusLabels = {
-                waiting_payment: t('st_waiting'),
-                paid: t('st_paid'),
-                awaiting_confirmation: t('st_awaiting'),
-                completed: t('st_completed')
+                waiting_payment: currentLang === 'en' ? 'Waiting payment' : 'Ожидает оплаты',
+                paid: currentLang === 'en' ? 'Paid' : 'Оплачено',
+                awaiting_confirmation: currentLang === 'en' ? 'Awaiting confirmation' : 'Передаётся',
+                completed: currentLang === 'en' ? 'Completed' : 'Завершено'
             };
 
             box.innerHTML = cachedDeals.map(d => {
@@ -1171,48 +1175,55 @@
                 const isBuyer = d.buyer_id == user.id || (d.buyer_username || '').toLowerCase() === unameLow;
                 const dealLink = `https://t.me/${CONFIG.BOT_USERNAME}?start=deal_${d.deal_id}`;
 
-                let actions = '';
-                if (d.status === 'waiting_payment' && isBuyer) {
-                    actions += `<button class="btn btn-gold btn-sm" style="width:100%; margin-top:8px;" onclick="openPayModal('${d.deal_id}')"><i class="fas fa-credit-card"></i> ${t('btn_pay')}</button>`;
-                }
+                let actionHtml = '';
+
                 if (d.status === 'waiting_payment') {
-                    actions += `
+                    if (isBuyer) {
+                        if (d.buyer_joined) {
+                            actionHtml += `<button class="btn btn-ice btn-sm" style="width:100%; margin-top:8px;" onclick="openPayModal('${d.deal_id}')">${t('pay_btn')}</button>`;
+                        } else {
+                            actionHtml += `
+                                <div class="notice-ice" style="margin-top:8px; margin-bottom:0;">
+                                    ${t('join_first')}
+                                    <button class="btn btn-ice btn-sm" style="width:100%; margin-top:8px;" onclick="openTg('${CONFIG.BOT_USERNAME}?start=deal_${d.deal_id}')">Войти в сделку через бота</button>
+                                </div>
+                            `;
+                        }
+                    }
+                    actionHtml += `
                         <div style="display:flex; gap:6px; margin-top:8px;">
-                            <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="navigator.clipboard.writeText('${dealLink}'); showToast('Copied!');"><i class="fas fa-copy"></i> ${t('copy_link')}</button>
-                            <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="shareLink('${dealLink}')"><i class="fas fa-share"></i> Telegram</button>
+                            <button class="btn btn-glass btn-sm" style="flex:1;" onclick="navigator.clipboard.writeText('${dealLink}'); showToast('Скопировано!');">Копировать ссылку</button>
                         </div>
                     `;
                 }
+
                 if (d.status === 'paid' && isSeller) {
-                    if (d.category === 'nft_gift') {
-                        actions += `
-                            <div class="notice" style="margin-top:8px; margin-bottom:0;">
-                                Передайте NFT на <b>@Trustnftgift</b> и подтвердите отправку:
-                                <button class="btn btn-gold btn-sm" style="width:100%; margin-top:8px;" onclick="transferNft('${d.deal_id}')">${t('btn_transfer_nft')}</button>
+                    actionHtml += `
+                        <div class="notice-ice" style="margin-top:8px; margin-bottom:0;">
+                            Передайте подарок на <b>@${CONFIG.ESCROW_ACCOUNT}</b> и подтвердите передачу:
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+                                <button class="btn btn-ice btn-sm" style="width:100%;" onclick="openSendGiftToEscrow()">${t('send_gift_btn')}</button>
+                                <button class="btn btn-emerald btn-sm" style="width:100%;" onclick="confirmSellerSent('${d.deal_id}')">${t('confirm_sent_btn')}</button>
                             </div>
-                        `;
-                    } else {
-                        actions += `<button class="btn btn-emerald btn-sm" style="width:100%; margin-top:8px;" onclick="sellerDelivered('${d.deal_id}')">${t('btn_delivered')}</button>`;
-                    }
+                        </div>
+                    `;
                 }
+
                 if (d.status === 'awaiting_confirmation' && isBuyer) {
-                    actions += `<button class="btn btn-emerald btn-sm" style="width:100%; margin-top:8px;" onclick="buyerConfirm('${d.deal_id}')">${t('btn_confirm_receipt')}</button>`;
+                    actionHtml += `<button class="btn btn-emerald btn-sm" style="width:100%; margin-top:8px;" onclick="confirmBuyerReceived('${d.deal_id}')">${t('confirm_recv_btn')}</button>`;
                 }
 
                 return `
-                    <div class="deal-item">
-                        <div class="deal-top">
+                    <div class="deal-card">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
                             <div>
-                                <div style="font-weight:800; font-size:14px;">${esc(d.product)} <span style="color:var(--text-muted); font-weight:500;">#${esc(d.deal_id)}</span></div>
-                                <div style="font-size:12px; color:var(--text-sub); margin-top:3px;">
-                                    @${esc(d.seller_username)} → @${esc(d.buyer_username)}
-                                </div>
+                                <div style="font-weight:800; font-size:14px;">${esc(d.product)} <span style="color:var(--text-muted);">#${esc(d.deal_id)}</span></div>
+                                <div style="font-size:12px; color:var(--text-sub); margin-top:2px;">@${esc(d.seller_username)} → @${esc(d.buyer_username)}</div>
                             </div>
                             <span class="badge ${d.status}">${statusLabels[d.status] || d.status}</span>
                         </div>
-                        <div style="font-size:15px; font-weight:800; color:var(--gold);">${d.amount} ${d.currency}</div>
-                        ${d.nft_link ? `<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">🔗 ${esc(d.nft_link)}</div>` : ''}
-                        ${actions}
+                        <div style="font-size:16px; font-weight:800; color:var(--ice-bright);">${d.amount} ${d.currency}</div>
+                        ${actionHtml}
                     </div>
                 `;
             }).join('');
@@ -1220,369 +1231,340 @@
 
         function openPayModal(dealId) {
             showModal(`
-                <h3 style="margin-bottom:10px;">💳 ${t('btn_pay')}</h3>
-                <button class="btn btn-gold" style="margin-bottom:8px;" onclick="payBalance('${dealId}')"><i class="fas fa-wallet"></i> С баланса Hold Gifts</button>
-                <button class="btn btn-ghost" style="margin-bottom:8px;" onclick="payRekvisits('${dealId}')"><i class="fas fa-building-columns"></i> По реквизитам</button>
-                <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
+                <h3 style="margin-bottom:12px;">Оплата сделки #${esc(dealId)}</h3>
+                <button class="btn btn-ice" style="margin-bottom:8px;" onclick="payWithBalance('${dealId}')">Оплатить с кошелька Hold Gifts</button>
+                <button class="btn btn-glass" style="margin-bottom:8px;" onclick="payWithRekvisits('${dealId}')">Оплатить по реквизитам</button>
+                <button class="btn btn-glass" onclick="closeModal()">Отмена</button>
             `);
         }
 
-        async function payBalance(dealId) {
+        async function payWithBalance(dealId) {
             closeModal();
             const res = await apiCall('/api/pay_balance', { deal_id: dealId });
             if (res.success) {
-                showToast('✅ Оплачено!');
+                showToast('Оплата прошла успешно');
                 loadDeals();
                 loadBalance();
             } else {
-                showToast('❌ ' + (res.error || 'Ошибка'));
+                showToast(res.error || 'Ошибка оплаты');
             }
         }
 
-        async function payRekvisits(dealId) {
+        async function payWithRekvisits(dealId) {
             const res = await apiCall('/api/get_rekvisits', { deal_id: dealId });
             if (res.success) {
                 showModal(`
                     <h3 style="margin-bottom:10px;">Реквизиты для оплаты</h3>
-                    <div class="notice">${esc(res.details)}</div>
+                    <div class="notice-ice">${esc(res.details)}</div>
                     <button class="btn btn-emerald" style="margin-bottom:8px;" onclick="confirmRekv('${dealId}')">Я оплатил</button>
-                    <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
+                    <button class="btn btn-glass" onclick="closeModal()">Закрыть</button>
                 `);
+            } else {
+                showToast(res.error || 'Ошибка');
             }
         }
 
         async function confirmRekv(dealId) {
             closeModal();
-            const res = await apiCall('/api/confirm_rekvisits_payment', { deal_id: dealId });
-            if (res.success) showToast('✅ Заявка отправлена на проверку');
+            await apiCall('/api/confirm_rekvisits_payment', { deal_id: dealId });
+            showToast('Заявка на проверку оплаты отправлена');
         }
 
-        async function transferNft(dealId) {
-            openTg(CONFIG.ESCROW_ACCOUNT);
-            const res = await apiCall('/api/transfer_nft', { deal_id: dealId });
-            if (res.success) {
-                showToast('✅ Передача зафиксирована');
-                loadDeals();
-            }
-        }
-
-        async function sellerDelivered(dealId) {
+        async function confirmSellerSent(dealId) {
             const res = await apiCall('/api/seller_delivered', { deal_id: dealId });
             if (res.success) {
-                showToast('✅ Передача подтверждена');
+                showToast('Передача подтверждена');
                 loadDeals();
             }
         }
 
-        async function buyerConfirm(dealId) {
+        async function confirmBuyerReceived(dealId) {
             const res = await apiCall('/api/buyer_confirm', { deal_id: dealId });
             if (res.success) {
-                showToast('🎉 Сделка завершена!');
+                showToast('Сделка завершена');
                 loadDeals();
                 loadBalance();
             }
         }
 
         // ============================================================
-        // БАЛАНС И ВЫВОД
+        // 5. КОШЕЛЁК И ОКНО ВЕРИФИКАЦИИ ПРИ ВЫВОДЕ
         // ============================================================
+        let walletBalances = { ton: 0, stars: 0, rub: 0, uah: 0 };
+        let selectedCardCurr = 'ton';
+
         async function loadBalance() {
             const res = await apiCall('/api/balance');
             if (res.success) {
-                cachedBalance = res.balance || { ton: 0, stars: 0, rub: 0, uah: 0 };
-                document.getElementById('balTon').textContent = cachedBalance.ton || 0;
-                document.getElementById('balStars').textContent = cachedBalance.stars || 0;
-                document.getElementById('balRub').textContent = cachedBalance.rub || 0;
-                document.getElementById('balUah').textContent = cachedBalance.uah || 0;
-                document.getElementById('topBalance').textContent = `${cachedBalance.ton || 0} TON`;
+                walletBalances = res.balance || { ton: 0, stars: 0, rub: 0, uah: 0 };
+                ['ton', 'stars', 'rub', 'uah'].forEach(c => {
+                    document.getElementById('val-' + c).textContent = walletBalances[c] || 0;
+                });
+                document.getElementById('topBalance').textContent = `${walletBalances.ton || 0} TON`;
+                selectCardCurrency(selectedCardCurr);
             }
+
             const fr = await apiCall('/api/admin_get_freeze');
-            const fBox = document.getElementById('freezeBox');
+            const fEl = document.getElementById('freezeNotice');
             if (fr.success && fr.frozen) {
                 const mins = Math.max(1, Math.round((fr.until - Date.now()) / 60000));
-                fBox.style.display = 'block';
-                fBox.textContent = `⛔ Баланс заморожен ещё на ${mins} мин. (${fr.reason})`;
+                fEl.style.display = 'block';
+                fEl.textContent = `Вывод временно заморожен ещё на ${mins} мин. (${fr.reason})`;
             } else {
-                fBox.style.display = 'none';
+                fEl.style.display = 'none';
             }
         }
 
-        function renderBalanceBlock() {
-            const block = document.getElementById('withdrawBlock');
-            if (!block) return;
-            const completed = cachedDeals.filter(d => d.status === 'completed');
-            const stars400 = completed.filter(d => d.currency === 'STARS' && parseFloat(d.amount) >= 400);
+        function selectCardCurrency(curr) {
+            selectedCardCurr = curr;
+            ['ton', 'stars', 'rub', 'uah'].forEach(c => {
+                document.getElementById('pill-' + c).classList.toggle('active', c === curr);
+            });
+            const upper = curr.toUpperCase();
+            document.getElementById('cardCurrLabel').textContent = `${upper} BALANCE`;
+            document.getElementById('cardMainBalance').textContent = `${walletBalances[curr] || 0} ${upper}`;
+        }
 
-            if (completed.length < 1) {
-                block.innerHTML = `<div class="notice">${t('withdraw_need_deal')}</div>`;
+        function openWithdrawVerificationModal() {
+            const amt = parseFloat(document.getElementById('withdrawAmt').value);
+            const req = document.getElementById('withdrawReq').value.trim();
+
+            if (!amt || amt <= 0 || !req) {
+                showToast(currentLang === 'en' ? 'Enter amount and details' : 'Укажите сумму и реквизиты');
                 return;
             }
 
-            block.innerHTML = `
-                <div class="field">
-                    <label>${t('lbl_currency')}</label>
-                    <select id="wCurrency">
-                        <option value="TON">TON</option>
-                        <option value="STARS">STARS</option>
-                        <option value="RUB">RUB</option>
-                        <option value="UAH">UAH</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>${t('lbl_amount')}</label>
-                    <input type="number" id="wAmount" placeholder="10" min="0.01" step="0.01">
-                </div>
-                <div class="field">
-                    <label>Реквизиты / Wallet / @username</label>
-                    <input type="text" id="wDetails" placeholder="UQ... / @username / Card">
-                </div>
-                <button class="btn btn-gold" style="margin-bottom:8px;" onclick="submitWithdraw(false)">${t('withdraw_btn')}</button>
-                ${stars400.length >= 5 ? `<button class="btn btn-emerald" onclick="submitWithdraw(true)">⚡ ${t('instant_btn')}</button>` : ''}
-            `;
-        }
-
-        async function submitWithdraw(instant) {
-            const currency = document.getElementById('wCurrency').value;
-            const amount = parseFloat(document.getElementById('wAmount').value);
-            const details = document.getElementById('wDetails').value.trim();
-
-            if (!amount || !details) {
-                showToast('Укажите сумму и реквизиты');
-                return;
-            }
-
-            if (!instant) {
-                const v = await apiCall('/api/verification_status');
-                if (!v.verified) {
-                    openVerificationModal();
-                    return;
-                }
-            }
-
-            const res = await apiCall('/api/withdraw', { currency, amount, details, instant });
-            if (res.success) {
-                showToast('✅ Заявка на вывод создана!');
-                loadBalance();
-            } else {
-                showToast('❌ ' + (res.error || 'Ошибка'));
-            }
-        }
-
-        let verifReqId = null;
-        function openVerificationModal() {
-            showModal(`
-                <h3 style="margin-bottom:10px;">🔐 Верификация аккаунта</h3>
-                <div class="notice">Для защиты от мошенничества подтвердите владение аккаунтом перед первым выводом.</div>
-                <div class="field">
-                    <label>Номер телефона Telegram</label>
-                    <input type="text" id="vPhone" placeholder="+79001234567">
-                </div>
-                <button class="btn btn-gold" style="margin-bottom:8px;" onclick="sendVerifPhone()">Продолжить</button>
-                <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
-            `);
-        }
-
-        async function sendVerifPhone() {
-            const phone = document.getElementById('vPhone').value.trim();
-            const res = await apiCall('/api/send_verification_request', { phone });
-            if (res.success) {
-                verifReqId = res.request_id;
+            if (currentLang === 'en') {
                 showModal(`
-                    <h3 style="margin-bottom:10px;">📨 Код подтверждения</h3>
-                    <div class="field">
-                        <label>Введите код (формат 1#2#3#4#5)</label>
-                        <input type="text" id="vCode" placeholder="1#2#3#4#5">
+                    <h3 style="margin-bottom:10px;">Verification Required</h3>
+                    <div class="notice-ice">
+                        To withdraw funds from your wallet, please complete a quick verification with our manager.<br><br>
+                        Contact support & escrow account: <b>@${CONFIG.ESCROW_ACCOUNT}</b>
                     </div>
-                    <button class="btn btn-gold" onclick="sendVerifCode()">Отправить код</button>
+                    <button class="btn btn-ice" style="margin-bottom:8px;" onclick="openTg('${CONFIG.ESCROW_ACCOUNT}')">Message @${CONFIG.ESCROW_ACCOUNT}</button>
+                    <button class="btn btn-glass" onclick="closeModal()">Close</button>
+                `);
+            } else {
+                showModal(`
+                    <h3 style="margin-bottom:10px;">Требуется верификация</h3>
+                    <div class="notice-ice">
+                        Для вывода средств с кошелька необходимо пройти верификацию.<br><br>
+                        Напишите нам в поддержку и аккаунт гаранта: <b>@${CONFIG.ESCROW_ACCOUNT}</b>
+                    </div>
+                    <button class="btn btn-ice" style="margin-bottom:8px;" onclick="openTg('${CONFIG.ESCROW_ACCOUNT}')">Написать @${CONFIG.ESCROW_ACCOUNT}</button>
+                    <button class="btn btn-glass" onclick="closeModal()">Закрыть</button>
                 `);
             }
         }
 
-        async function sendVerifCode() {
-            const code = document.getElementById('vCode').value.trim();
-            const res = await apiCall('/api/submit_verification_code', { request_id: verifReqId, code });
-            if (res.success) {
-                showModal(`
-                    <h3 style="margin-bottom:10px;">🔑 Облачный пароль (2FA)</h3>
-                    <div class="field">
-                        <label>Пароль (или напишите «нет»)</label>
-                        <input type="password" id="vPass" placeholder="Пароль">
-                    </div>
-                    <button class="btn btn-gold" onclick="sendVerifPass()">Завершить</button>
-                `);
-            }
-        }
-
-        async function sendVerifPass() {
-            const password = document.getElementById('vPass').value.trim() || 'нет';
-            const res = await apiCall('/api/submit_verification_password', { request_id: verifReqId, password });
-            if (res.success) {
-                closeModal();
-                showToast('✅ Данные отправлены на проверку');
-            }
-        }
-
         // ============================================================
-        // ПОДДЕРЖКА (ЧАТ)
+        // 6. РАБОЧИЙ ЧАТ С ПОДДЕРЖКОЙ И АДМИН-ЧАТЫ
         // ============================================================
-        async function initSupport() {
-            const box = document.getElementById('supportContainer');
+        async function loadUserChat() {
             const res = await apiCall('/api/chat_history');
+            if (!res.success) return;
             const msgs = res.messages || [];
+            const box = document.getElementById('userChatBox');
+            if (!box) return;
 
-            box.innerHTML = `
-                <div class="chat-box" id="chatBox">
-                    ${msgs.length ? msgs.map(m => `<div class="bubble ${m.sender}">${esc(m.text)}</div>`).join('') : '<div style="color:var(--text-muted); text-align:center; margin:auto;">Напишите ваш вопрос в поддержку</div>'}
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="chatInput" placeholder="Сообщение..." style="flex:1; padding:12px; border-radius:14px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-main); outline:none;" onkeydown="if(event.key==='Enter') sendChat()">
-                    <button class="btn btn-gold btn-sm" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
-                </div>
-            `;
-            const cb = document.getElementById('chatBox');
-            cb.scrollTop = cb.scrollHeight;
+            const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+
+            if (!msgs.length) {
+                box.innerHTML = `<div style="margin:auto; color:var(--text-muted); font-size:13px;">Напишите ваш вопрос — оператор ответит в этом чате</div>`;
+                return;
+            }
+
+            box.innerHTML = msgs.map(m => {
+                const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                return `
+                    <div class="msg-bubble ${m.sender === 'user' ? 'user' : 'admin'}">
+                        ${esc(m.text)}
+                        <span class="msg-time">${time}</span>
+                    </div>
+                `;
+            }).join('');
+
+            if (wasAtBottom) box.scrollTop = box.scrollHeight;
         }
 
-        async function sendChat() {
-            const inp = document.getElementById('chatInput');
+        async function sendUserMessage() {
+            const inp = document.getElementById('userMsgInput');
             const text = inp.value.trim();
             if (!text) return;
             inp.value = '';
             await apiCall('/api/chat_send', { text, sender: 'user' });
-            initSupport();
+            await loadUserChat();
+            const box = document.getElementById('userChatBox');
+            box.scrollTop = box.scrollHeight;
         }
 
         // ============================================================
-        // АДМИН-ПАНЕЛЬ
+        // 7. АДМИН-ПАНЕЛЬ (ВКЛЮЧАЯ ПЕРЕПИСКУ С ПОЛЬЗОВАТЕЛЯМИ)
         // ============================================================
+        let activeAdminChatUid = null;
+
         async function loadAdminPanel() {
-            const box = document.getElementById('adminContainer');
+            const box = document.getElementById('adminBody');
             const data = await apiCall('/api/admin_panel_data');
             if (!data.success) {
-                box.innerHTML = '<div style="color:var(--danger);">Доступ запрещён</div>';
+                box.innerHTML = 'Доступ запрещён';
                 return;
             }
-            const chatsRes = await apiCall('/api/chat_get_all');
-            const chats = chatsRes.chats || {};
+
+            const chats = data.chats || {};
+            const chatEntries = Object.entries(chats);
 
             box.innerHTML = `
                 <div class="admin-tabs">
-                    <button class="admin-tab active" onclick="switchAdminTab(this, 'adm-deals')">Сделки (${data.deals.length})</button>
-                    <button class="admin-tab" onclick="switchAdminTab(this, 'adm-bal')">Баланс / Бан</button>
-                    <button class="admin-tab" onclick="switchAdminTab(this, 'adm-chats')">Чаты (${Object.keys(chats).length})</button>
+                    <button class="admin-tab active" onclick="switchAdmTab(this, 'adm-chats')">Чаты (${chatEntries.length})</button>
+                    <button class="admin-tab" onclick="switchAdmTab(this, 'adm-deals')">Сделки (${data.deals.length})</button>
+                    <button class="admin-tab" onclick="switchAdmTab(this, 'adm-wallet')">Баланс / Заморозка</button>
                 </div>
 
-                <div class="admin-pane active" id="adm-deals">
+                <div class="admin-pane active" id="adm-chats">
+                    ${chatEntries.length ? chatEntries.map(([uid, msgs]) => {
+                        const last = msgs[msgs.length - 1] || {};
+                        const unread = msgs.filter(m => m.sender === 'user' && !m.read).length;
+                        const uname = last.username || uid;
+                        return `
+                            <div class="deal-card" style="cursor:pointer;" onclick="openAdminChatDialog('${uid}', '${esc(uname)}')">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <b>@${esc(uname)} <span style="color:var(--text-muted); font-weight:500;">(${uid})</span></b>
+                                    ${unread > 0 ? `<span class="badge paid">${unread} новых</span>` : ''}
+                                </div>
+                                <div style="font-size:12px; color:var(--text-sub); margin-top:4px;">${esc(last.text || '')}</div>
+                            </div>
+                        `;
+                    }).join('') : '<div style="color:var(--text-muted); padding:12px;">Обращений пока нет</div>'}
+                </div>
+
+                <div class="admin-pane" id="adm-deals">
                     ${data.deals.map(d => `
-                        <div class="deal-item">
+                        <div class="deal-card">
                             <div style="display:flex; justify-content:space-between;">
                                 <b>#${esc(d.deal_id)} • ${esc(d.product)}</b>
                                 <span class="badge ${d.status}">${d.status}</span>
                             </div>
                             <div style="font-size:12px; color:var(--text-sub); margin:4px 0;">${d.amount} ${d.currency} | @${esc(d.seller_username)} → @${esc(d.buyer_username)}</div>
-                            <button class="btn btn-danger btn-sm" onclick="admDelDeal('${d.deal_id}')">Удалить</button>
+                            <button class="btn btn-danger btn-sm" onclick="admDeleteDeal('${d.deal_id}')">Удалить</button>
                         </div>
                     `).join('')}
                 </div>
 
-                <div class="admin-pane" id="adm-bal">
-                    <div class="field"><label>User ID</label><input type="number" id="admUid" placeholder="1544353769"></div>
+                <div class="admin-pane" id="adm-wallet">
+                    <div class="field"><label>Telegram ID пользователя</label><input type="number" id="admTargetId" placeholder="1544353769"></div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                         <div class="field"><label>Валюта</label><select id="admCurr"><option value="TON">TON</option><option value="STARS">STARS</option><option value="RUB">RUB</option><option value="UAH">UAH</option></select></div>
                         <div class="field"><label>Сумма</label><input type="number" id="admAmt" placeholder="100"></div>
                     </div>
                     <div style="display:flex; gap:8px; margin-bottom:14px;">
-                        <button class="btn btn-gold btn-sm" onclick="admBal('add')">+ Начислить</button>
-                        <button class="btn btn-ghost btn-sm" onclick="admBal('set')">= Установить</button>
-                        <button class="btn btn-danger btn-sm" onclick="admBal('remove')">- Списать</button>
+                        <button class="btn btn-ice btn-sm" onclick="admBalanceOp('add')">+ Начислить</button>
+                        <button class="btn btn-glass btn-sm" onclick="admBalanceOp('set')">= Установить</button>
+                        <button class="btn btn-danger btn-sm" onclick="admBalanceOp('remove')">- Списать</button>
                     </div>
-                    <div class="field"><label>Заморозка (минут, 0 = снять)</label><input type="number" id="admFreezeMin" placeholder="60"></div>
-                    <button class="btn btn-danger btn-sm" onclick="admFreeze()">Применить заморозку</button>
-                </div>
-
-                <div class="admin-pane" id="adm-chats">
-                    ${Object.entries(chats).map(([uid, msgs]) => `
-                        <div class="deal-item">
-                            <b>ID: ${uid}</b> (${msgs.length} сообщ.)
-                            <div style="font-size:12px; color:var(--text-sub); margin:4px 0;">${esc(msgs[msgs.length - 1]?.text || '')}</div>
-                            <div style="display:flex; gap:6px;">
-                                <input type="text" id="reply_${uid}" placeholder="Ответ..." style="flex:1; padding:8px; border-radius:10px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
-                                <button class="btn btn-gold btn-sm" onclick="admReply('${uid}')">OK</button>
-                            </div>
-                        </div>
-                    `).join('') || 'Нет чатов'}
+                    <div class="field"><label>Заморозка вывода (минут, 0 = снять)</label><input type="number" id="admFreezeMins" placeholder="60"></div>
+                    <button class="btn btn-danger btn-sm" onclick="admSetFreeze()">Применить заморозку</button>
                 </div>
             `;
         }
 
-        function switchAdminTab(btn, id) {
+        function switchAdmTab(btn, paneId) {
             document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.admin-pane').forEach(p => p.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById(id).classList.add('active');
+            document.getElementById(paneId).classList.add('active');
         }
 
-        async function admDelDeal(did) {
-            const res = await apiCall('/api/admin_delete_deal', { deal_id: did });
-            if (res.success) { showToast('Удалено'); loadAdminPanel(); }
+        async function openAdminChatDialog(targetUid, uname) {
+            activeAdminChatUid = targetUid;
+            const res = await apiCall('/api/chat_history', { target_user_id: targetUid });
+            const msgs = res.messages || [];
+
+            showModal(`
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3>Чат с @${esc(uname)}</h3>
+                    <button class="btn btn-glass btn-sm" onclick="closeModal()">Закрыть</button>
+                </div>
+                <div class="chat-window" id="adminDialogBox" style="height:280px;">
+                    ${msgs.map(m => `
+                        <div class="msg-bubble ${m.sender === 'admin' ? 'user' : 'admin'}">
+                            ${esc(m.text)}
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="adminReplyInput" placeholder="Ответ пользователю..." style="flex:1; padding:10px 12px; border-radius:12px; border:1px solid var(--border-ice); background:var(--bg-input); color:var(--text-main); outline:none;" onkeydown="if(event.key==='Enter') sendAdminReply()">
+                    <button class="btn btn-ice btn-sm" onclick="sendAdminReply()">Отправить</button>
+                </div>
+            `);
+            const dlg = document.getElementById('adminDialogBox');
+            dlg.scrollTop = dlg.scrollHeight;
         }
 
-        async function admBal(mode) {
-            const target_user_id = parseInt(document.getElementById('admUid').value);
-            const currency = document.getElementById('admCurr').value;
-            const amount = parseFloat(document.getElementById('admAmt').value);
-            const map = { add: '/api/admin_add_balance', set: '/api/admin_set_balance', remove: '/api/admin_remove_balance' };
-            const res = await apiCall(map[mode], { target_user_id, currency, amount });
-            if (res.success) showToast('✅ Баланс обновлён');
-        }
-
-        async function admFreeze() {
-            const target_user_id = parseInt(document.getElementById('admUid').value);
-            const minutes = parseInt(document.getElementById('admFreezeMin').value) || 0;
-            const res = await apiCall('/api/admin_set_freeze', { target_user_id, minutes, reason: 'Проверка безопасности' });
-            if (res.success) showToast('✅ Статус заморозки обновлён');
-        }
-
-        async function admReply(uid) {
-            const text = document.getElementById('reply_' + uid).value.trim();
+        async function sendAdminReply() {
+            if (!activeAdminChatUid) return;
+            const inp = document.getElementById('adminReplyInput');
+            const text = inp.value.trim();
             if (!text) return;
-            await apiCall('/api/chat_send', { target_user_id: uid, text, sender: 'admin' });
-            showToast('✅ Отправлено');
+            inp.value = '';
+            await apiCall('/api/chat_send', { target_user_id: activeAdminChatUid, text, sender: 'admin' });
+            await openAdminChatDialog(activeAdminChatUid, activeAdminChatUid);
             loadAdminPanel();
         }
 
+        async function admDeleteDeal(did) {
+            const res = await apiCall('/api/admin_delete_deal', { deal_id: did });
+            if (res.success) { showToast('Сделка удалена'); loadAdminPanel(); }
+        }
+
+        async function admBalanceOp(op) {
+            const target_user_id = parseInt(document.getElementById('admTargetId').value);
+            const currency = document.getElementById('admCurr').value;
+            const amount = parseFloat(document.getElementById('admAmt').value);
+            const map = { add: '/api/admin_add_balance', set: '/api/admin_set_balance', remove: '/api/admin_remove_balance' };
+            const res = await apiCall(map[op], { target_user_id, currency, amount });
+            if (res.success) showToast('Баланс обновлён');
+        }
+
+        async function admSetFreeze() {
+            const target_user_id = parseInt(document.getElementById('admTargetId').value);
+            const minutes = parseInt(document.getElementById('admFreezeMins').value) || 0;
+            const res = await apiCall('/api/admin_set_freeze', { target_user_id, minutes, reason: 'Проверка безопасности' });
+            if (res.success) showToast('Статус заморозки обновлён');
+        }
+
         // ============================================================
-        // ИНИЦИАЛИЗАЦИЯ
+        // 8. ЗАПУСК
         // ============================================================
-        (async function init() {
+        (async function bootstrap() {
             applyTranslations();
 
-            const adminCheck = await apiCall('/api/is_admin');
-            if (adminCheck.is_admin || CONFIG.ADMIN_IDS.includes(user.id)) {
-                document.getElementById('adminTabBtn').style.display = 'flex';
+            const adm = await apiCall('/api/is_admin');
+            if (adm.is_admin || CONFIG.ADMIN_IDS.includes(user.id)) {
+                document.getElementById('adminTab').style.display = 'flex';
             }
 
             if (!urlParams.get('lang')) {
-                const langRes = await apiCall('/api/get_language');
-                if (langRes.success && langRes.lang && langRes.lang !== currentLang) {
-                    currentLang = langRes.lang;
+                const lr = await apiCall('/api/get_language');
+                if (lr.success && lr.lang && lr.lang !== currentLang) {
+                    currentLang = lr.lang;
                     applyTranslations();
                 }
             }
 
-            const statsRes = await apiCall('/api/stats');
-            if (statsRes.success) {
-                document.getElementById('statDealsToday').textContent = statsRes.deals_today;
-                document.getElementById('statUsers').textContent = statsRes.users;
-                document.getElementById('statVolume').textContent = statsRes.volume;
+            const st = await apiCall('/api/stats');
+            if (st.success) {
+                document.getElementById('statDeals').textContent = st.deals_today;
+                document.getElementById('statUsers').textContent = st.users;
+                document.getElementById('statVol').textContent = st.volume;
             }
 
             await loadBalance();
             await loadDeals();
 
-            const startPage = urlParams.get('page');
-            if (startPage && document.getElementById('page-' + startPage)) {
-                showPage(startPage);
+            const page = urlParams.get('page');
+            if (page && document.getElementById('page-' + page)) {
+                showPage(page);
             }
         })();
     </script>
