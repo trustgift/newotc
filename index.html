@@ -1,447 +1,1590 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Tap Combat</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    :root {
-      --bg: #0d0f14;
-      --card: #171b24;
-      --accent: #f5b041;
-      --accent-glow: rgba(245, 176, 65, 0.35);
-      --text: #ffffff;
-      --muted: #8b94a5;
-      --green: #2ecc71;
-    }
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .header {
-      padding: 14px 16px 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .user-badge {
-      font-size: 14px;
-      font-weight: 600;
-      background: var(--card);
-      padding: 6px 12px;
-      border-radius: 20px;
-    }
-    .profit-badge {
-      font-size: 13px;
-      color: var(--accent);
-      background: var(--card);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-weight: 600;
-    }
-    .balance-box {
-      text-align: center;
-      margin: 12px 0;
-    }
-    .balance-label {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .balance-value {
-      font-size: 40px;
-      font-weight: 800;
-      margin-top: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .content {
-      flex: 1;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 0 16px;
-      overflow-y: auto;
-    }
-    .tab-pane {
-      display: none;
-      width: 100%;
-      height: 100%;
-    }
-    .tab-pane.active {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    /* Монета */
-    .coin-wrapper {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-    }
-    .coin-btn {
-      width: 220px;
-      height: 220px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #ffd56b, #d68910 70%, #7e5109);
-      box-shadow: 0 0 40px var(--accent-glow), inset 0 0 20px rgba(255,255,255,0.4);
-      border: 8px solid #b9770e;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 86px;
-      cursor: pointer;
-      transition: transform 0.06s ease;
-    }
-    .coin-btn:active {
-      transform: scale(0.94);
-    }
-    /* Энергия */
-    .energy-box {
-      width: 100%;
-      margin-bottom: 16px;
-    }
-    .energy-top {
-      display: flex;
-      justify-content: space-between;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-    .energy-bar {
-      width: 100%;
-      height: 12px;
-      background: var(--card);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .energy-fill {
-      height: 100%;
-      width: 100%;
-      background: linear-gradient(90deg, #f39c12, #f1c40f);
-      transition: width 0.2s ease;
-    }
-    /* Карточки прокачки и топа */
-    .list-container {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding-bottom: 16px;
-    }
-    .card {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .card-info h4 {
-      margin: 0 0 4px;
-      font-size: 16px;
-    }
-    .card-info p {
-      margin: 0;
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .buy-btn {
-      background: var(--accent);
-      color: #000;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    .buy-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    /* Нижнее меню */
-    .nav {
-      display: flex;
-      background: var(--card);
-      padding: 8px;
-      gap: 8px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-    }
-    .nav-btn {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      padding: 10px 0;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .nav-btn.active {
-      background: rgba(245, 176, 65, 0.15);
-      color: var(--accent);
-    }
-    /* Вылетающие цифры */
-    .floater {
-      position: fixed;
-      font-size: 26px;
-      font-weight: 800;
-      color: #fff;
-      pointer-events: none;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.6);
-      animation: floatUp 0.8s ease-out forwards;
-      z-index: 999;
-    }
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-90px) scale(1.2); }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hold Gifts — P2P Escrow</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        :root {
+            --bg-base: #09090b;
+            --bg-elevated: #121216;
+            --bg-card: rgba(22, 22, 28, 0.78);
+            --bg-input: rgba(12, 12, 16, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-gold: rgba(229, 193, 88, 0.25);
+            --text-main: #fafafa;
+            --text-sub: #a1a1aa;
+            --text-muted: #71717a;
+            --gold: #e5c158;
+            --gold-bright: #f7dc79;
+            --gold-grad: linear-gradient(135deg, #e5c158 0%, #f7dc79 50%, #cfa434 100%);
+            --emerald: #10b981;
+            --danger: #ef4444;
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+            --shadow-card: 0 12px 36px rgba(0, 0, 0, 0.45);
+        }
+
+        [data-theme="light"] {
+            --bg-base: #f4f4f6;
+            --bg-elevated: #ffffff;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --bg-input: #f0f0f3;
+            --border: rgba(0, 0, 0, 0.08);
+            --border-gold: rgba(196, 150, 32, 0.3);
+            --text-main: #111114;
+            --text-sub: #52525b;
+            --text-muted: #71717a;
+            --gold: #c49620;
+            --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.06);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 14px 14px 96px;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Ambient Glow */
+        .ambient {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .ambient::before {
+            content: '';
+            position: absolute;
+            width: 340px;
+            height: 340px;
+            top: -120px;
+            right: -80px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(229, 193, 88, 0.14), transparent 70%);
+            filter: blur(40px);
+        }
+        .ambient::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            bottom: 40px;
+            left: -100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.08), transparent 70%);
+            filter: blur(50px);
+        }
+
+        /* Top Bar */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-card);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--gold-grad);
+            color: #09090b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 800;
+            box-shadow: 0 4px 16px rgba(229, 193, 88, 0.3);
+        }
+        .brand-name {
+            font-size: 17px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+        .brand-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .dot-live {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--emerald);
+            box-shadow: 0 0 8px var(--emerald);
+        }
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pill-btn {
+            height: 34px;
+            padding: 0 11px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: 0.2s;
+        }
+        .pill-btn:active { transform: scale(0.95); }
+
+        /* Bento Cards */
+        .bento-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 18px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-card);
+            animation: fadeUp 0.35s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-banner {
+            background: linear-gradient(145deg, rgba(229, 193, 88, 0.12), rgba(22, 22, 28, 0.92) 60%);
+            border-color: var(--border-gold);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 11px;
+            border-radius: 99px;
+            background: rgba(229, 193, 88, 0.14);
+            color: var(--gold);
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .hero-title {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.6px;
+            line-height: 1.15;
+            margin-bottom: 6px;
+        }
+        .hero-desc {
+            font-size: 13px;
+            color: var(--text-sub);
+            line-height: 1.45;
+            margin-bottom: 16px;
+        }
+
+        /* Role Quick Actions Grid */
+        .role-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .role-action {
+            padding: 14px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            text-align: left;
+            cursor: pointer;
+            transition: 0.22s;
+            color: var(--text-main);
+        }
+        .role-action:active { transform: scale(0.97); }
+        .role-action.primary {
+            background: var(--gold-grad);
+            color: #09090b;
+            border: none;
+            box-shadow: 0 8px 24px rgba(229, 193, 88, 0.22);
+        }
+        .role-action .r-icon {
+            font-size: 18px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .role-action .r-title {
+            font-size: 13px;
+            font-weight: 800;
+            display: block;
+        }
+        .role-action .r-sub {
+            font-size: 11px;
+            opacity: 0.78;
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* Stats Bento */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 12px 10px;
+            text-align: center;
+        }
+        .stat-val {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--gold);
+            display: block;
+        }
+        .stat-lbl {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 3px;
+            display: block;
+        }
+
+        /* Section Title */
+        .sec-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .sec-title {
+            font-size: 16px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sec-title i { color: var(--gold); }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-gold {
+            background: var(--gold-grad);
+            color: #09090b;
+            box-shadow: 0 6px 20px rgba(229, 193, 88, 0.2);
+        }
+        .btn-ghost {
+            background: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+        .btn-emerald {
+            background: rgba(16, 185, 129, 0.16);
+            color: var(--emerald);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.14);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+        .btn-sm { padding: 8px 12px; font-size: 12px; width: auto; }
+
+        /* Role Segmented Control */
+        .role-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding: 5px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-bottom: 14px;
+        }
+        .role-tab {
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-sub);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .role-tab.active {
+            background: var(--gold-grad);
+            color: #09090b;
+            box-shadow: 0 4px 12px rgba(229, 193, 88, 0.2);
+        }
+
+        /* Forms */
+        .field { margin-bottom: 12px; }
+        .field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+        .field input, .field select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: 0.2s;
+        }
+        .field input:focus, .field select:focus {
+            border-color: var(--gold);
+        }
+
+        /* Deals */
+        .deal-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .deal-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .badge.waiting_payment { background: rgba(229, 193, 88, 0.14); color: var(--gold); }
+        .badge.paid { background: rgba(59, 130, 246, 0.16); color: #60a5fa; }
+        .badge.awaiting_confirmation { background: rgba(168, 85, 247, 0.16); color: #c084fc; }
+        .badge.completed { background: rgba(16, 185, 129, 0.16); color: var(--emerald); }
+
+        /* Balance Grid */
+        .wallet-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .wallet-cell {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+        }
+        .wallet-curr { font-size: 12px; color: var(--text-sub); font-weight: 600; }
+        .wallet-amt { font-size: 20px; font-weight: 800; color: var(--gold); margin-top: 4px; }
+
+        /* Notice Box */
+        .notice {
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            background: rgba(229, 193, 88, 0.08);
+            border: 1px solid var(--border-gold);
+            font-size: 12px;
+            color: var(--text-sub);
+            line-height: 1.45;
+            margin-bottom: 12px;
+        }
+
+        /* Bottom Floating Tab Bar */
+        .tabbar {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            max-width: 560px;
+            margin: 0 auto;
+            background: rgba(18, 18, 22, 0.92);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 6px;
+            display: flex;
+            justify-content: space-around;
+            z-index: 100;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        }
+        [data-theme="light"] .tabbar { background: rgba(255, 255, 255, 0.94); }
+        .tab-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            padding: 8px 4px;
+            border-radius: 16px;
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .tab-btn i { font-size: 17px; }
+        .tab-btn.active {
+            background: rgba(229, 193, 88, 0.14);
+            color: var(--gold);
+        }
+
+        /* Pages */
+        .page { display: none; max-width: 560px; margin: 0 auto; }
+        .page.active { display: block; }
+        .topbar, .stats-row { max-width: 560px; margin-left: auto; margin-right: auto; }
+
+        /* Chat */
+        .chat-box {
+            height: 320px;
+            overflow-y: auto;
+            padding: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .bubble {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .bubble.user {
+            align-self: flex-end;
+            background: var(--gold-grad);
+            color: #09090b;
+            font-weight: 500;
+            border-bottom-right-radius: 4px;
+        }
+        .bubble.admin {
+            align-self: flex-start;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Modal & Toast */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 500;
+        }
+        .modal.active { display: flex; }
+        .modal-box {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 20px;
+            width: 100%;
+            max-width: 440px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .toast {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-elevated);
+            color: var(--text-main);
+            border: 1px solid var(--border-gold);
+            padding: 11px 18px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 999;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+        }
+
+        .admin-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
+        .admin-tab {
+            padding: 7px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-sub);
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .admin-tab.active { background: var(--gold-grad); color: #09090b; border: none; }
+        .admin-pane { display: none; }
+        .admin-pane.active { display: block; }
+    </style>
 </head>
 <body>
+    <div class="ambient"></div>
 
-  <div class="header">
-    <div class="user-badge" id="userName">👤 Игрок</div>
-    <div class="profit-badge" id="profitBadge">⛏ +0 / час</div>
-  </div>
-
-  <div class="balance-box">
-    <div class="balance-label">Твой баланс</div>
-    <div class="balance-value">🪙 <span id="coinsVal">0</span></div>
-  </div>
-
-  <div class="content">
-    <!-- Вкладка 1: Тапалка -->
-    <div class="tab-pane active" id="tab-tap">
-      <div class="coin-wrapper">
-        <div class="coin-btn" id="coinBtn">🐹</div>
-      </div>
-      <div class="energy-box">
-        <div class="energy-top">
-          <span>⚡ Энергия</span>
-          <span id="energyText">1000 / 1000</span>
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-icon"><i class="fas fa-shield-halved"></i></div>
+            <div>
+                <div class="brand-name">Hold Gifts</div>
+                <div class="brand-sub"><span class="dot-live"></span> <span id="onlineCount">6534</span> <span data-i18n="online">онлайн</span></div>
+            </div>
         </div>
-        <div class="energy-bar">
-          <div class="energy-fill" id="energyFill"></div>
+        <div class="topbar-actions">
+            <button class="pill-btn" onclick="toggleLang()" id="langBtn">RU</button>
+            <button class="pill-btn" onclick="toggleTheme()" id="themeBtn"><i class="fas fa-sun"></i></button>
+            <div class="pill-btn" style="color: var(--gold); border-color: var(--border-gold);" id="topBalance">0 TON</div>
         </div>
-      </div>
+    </header>
+
+    <!-- STATS -->
+    <div class="stats-row">
+        <div class="stat-box">
+            <span class="stat-val" id="statDealsToday">1287</span>
+            <span class="stat-lbl" data-i18n="stat_deals">Сделок за день</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-val" id="statUsers">21481</span>
+            <span class="stat-lbl" data-i18n="stat_users">Участников</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-val" id="statVolume">627.4</span>
+            <span class="stat-lbl" data-i18n="stat_vol">Объём TON</span>
+        </div>
     </div>
 
-    <!-- Вкладка 2: Прокачка -->
-    <div class="tab-pane" id="tab-upgrade">
-      <div class="list-container">
-        <div class="card">
-          <div class="card-info">
-            <h4>⚡ Multitap (ур. <span id="lvlMultitap">1</span>)</h4>
-            <p>+1 монета за каждый тап</p>
-          </div>
-          <button class="buy-btn" id="btnMultitap" onclick="buyUpgrade('multitap')">250 🪙</button>
+    <!-- PAGE: MAIN -->
+    <div class="page active" id="page-main">
+        <div class="bento-card hero-banner">
+            <div class="hero-badge"><i class="fas fa-lock"></i> <span data-i18n="escrow_badge">P2P ESCROW ГАРАНТ</span></div>
+            <div class="hero-title" data-i18n="hero_title">Безопасные сделки с NFT и подарками</div>
+            <div class="hero-desc" data-i18n="hero_desc">Создавайте сделку как продавец или покупатель. Средства резервируются до подтверждения передачи.</div>
+
+            <div class="role-grid">
+                <button class="role-action primary" onclick="openCreateWithRole('seller')">
+                    <span class="r-icon"><i class="fas fa-tag"></i></span>
+                    <span class="r-title" data-i18n="role_sell_btn">Я продавец</span>
+                    <span class="r-sub" data-i18n="role_sell_sub">Сделка с покупателем</span>
+                </button>
+                <button class="role-action" onclick="openCreateWithRole('buyer')">
+                    <span class="r-icon" style="color: var(--gold);"><i class="fas fa-shopping-bag"></i></span>
+                    <span class="r-title" data-i18n="role_buy_btn">Я покупатель</span>
+                    <span class="r-sub" data-i18n="role_buy_sub">Сделка с продавцом</span>
+                </button>
+            </div>
         </div>
 
-        <div class="card">
-          <div class="card-info">
-            <h4>🔋 Лимит энергии (<span id="lvlEnergy">1000</span>)</h4>
-            <p>+500 к запасу энергии</p>
-          </div>
-          <button class="buy-btn" id="btnEnergy" onclick="buyUpgrade('energy')">300 🪙</button>
+        <div class="bento-card">
+            <div class="sec-head">
+                <div class="sec-title"><i class="fas fa-clock-rotate-left"></i> <span data-i18n="recent_deals">Активные сделки</span></div>
+                <button class="btn btn-ghost btn-sm" onclick="showPage('deals')" data-i18n="all_btn">Все</button>
+            </div>
+            <div id="quickDeals" style="font-size: 13px; color: var(--text-muted);">...</div>
         </div>
 
-        <div class="card">
-          <div class="card-info">
-            <h4>⛏ Авто-майнинг (+<span id="lvlMining">0</span>/ч)</h4>
-            <p>+500 монет в час даже оффлайн</p>
-          </div>
-          <button class="buy-btn" id="btnMining" onclick="buyUpgrade('mining')">400 🪙</button>
+        <div class="bento-card">
+            <div class="sec-head">
+                <div class="sec-title"><i class="fas fa-circle-info"></i> <span data-i18n="how_title">Порядок работы</span></div>
+            </div>
+            <div style="font-size: 13px; color: var(--text-sub); line-height: 1.6;">
+                <p style="margin-bottom: 6px;"><b>1.</b> <span data-i18n="step1">Выберите вашу роль (продавец или покупатель) и укажите @username второго участника.</span></p>
+                <p style="margin-bottom: 6px;"><b>2.</b> <span data-i18n="step2">Покупатель оплачивает сделку — сумма замораживается в системе.</span></p>
+                <p style="margin-bottom: 6px;"><b>3.</b> <span data-i18n="step3">Передача NFT и подарков выполняется через гаранта</span> <b style="color: var(--gold); cursor: pointer;" onclick="openTg('Trustnftgift')">@Trustnftgift</b>.</p>
+                <p><b>4.</b> <span data-i18n="step4">После подтверждения получения средства поступают на баланс продавца.</span></p>
+            </div>
         </div>
-      </div>
     </div>
 
-    <!-- Вкладка 3: Лидерборд -->
-    <div class="tab-pane" id="tab-top">
-      <div class="list-container" id="leadersList">
-        <div style="text-align:center; color: var(--muted); margin-top: 20px;">Загрузка топа...</div>
-      </div>
+    <!-- PAGE: CREATE DEAL -->
+    <div class="page" id="page-create">
+        <div class="bento-card">
+            <div class="sec-head">
+                <div class="sec-title"><i class="fas fa-plus-circle"></i> <span data-i18n="create_title">Новая сделка</span></div>
+            </div>
+
+            <div class="role-switch">
+                <button type="button" class="role-tab active" id="tabSeller" onclick="setCreatorRole('seller')">
+                    <i class="fas fa-tag"></i> <span data-i18n="tab_seller">Я продавец</span>
+                </button>
+                <button type="button" class="role-tab" id="tabBuyer" onclick="setCreatorRole('buyer')">
+                    <i class="fas fa-shopping-bag"></i> <span data-i18n="tab_buyer">Я покупатель</span>
+                </button>
+            </div>
+
+            <div class="notice" id="roleHintBox"></div>
+
+            <form id="dealForm">
+                <div class="field">
+                    <label data-i18n="lbl_category">Категория товара</label>
+                    <select id="categorySelect" onchange="toggleNftField()">
+                        <option value="nft_gift">NFT / Telegram Gift</option>
+                        <option value="game_account">Игровой аккаунт / Game Account</option>
+                        <option value="other">Цифровой товар / Other</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label data-i18n="lbl_product">Название товара</label>
+                    <input type="text" id="productInput" placeholder="Plush Pepe #142 / NFT Gift" required>
+                </div>
+
+                <div class="field" id="nftLinkField">
+                    <label data-i18n="lbl_nft_link">Ссылка на NFT (t.me/nft/...)</label>
+                    <input type="text" id="nftLinkInput" placeholder="t.me/nft/PlushPepe-142">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px;">
+                    <div class="field">
+                        <label data-i18n="lbl_currency">Валюта</label>
+                        <select id="currencySelect">
+                            <option value="TON">TON</option>
+                            <option value="STARS">STARS</option>
+                            <option value="RUB">RUB</option>
+                            <option value="UAH">UAH</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label data-i18n="lbl_amount">Сумма</label>
+                        <input type="number" id="amountInput" placeholder="50" min="0.01" step="0.01" required>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label id="partnerLabel">@username покупателя</label>
+                    <input type="text" id="partnerInput" placeholder="username" required>
+                </div>
+
+                <button type="submit" class="btn btn-gold" id="createSubmitBtn">
+                    <i class="fas fa-check-circle"></i> <span data-i18n="btn_create">Создать сделку</span>
+                </button>
+            </form>
+
+            <div id="dealCreatedBox" style="display: none; margin-top: 14px;"></div>
+        </div>
     </div>
-  </div>
 
-  <div class="nav">
-    <button class="nav-btn active" onclick="switchTab('tap', this)">🐹 Тапать</button>
-    <button class="nav-btn" onclick="switchTab('upgrade', this)">🚀 Прокачка</button>
-    <button class="nav-btn" onclick="switchTab('top', this)">🏆 Топ</button>
-  </div>
+    <!-- PAGE: DEALS -->
+    <div class="page" id="page-deals">
+        <div class="bento-card">
+            <div class="sec-head">
+                <div class="sec-title"><i class="fas fa-list-check"></i> <span data-i18n="my_deals">Мои сделки</span></div>
+                <button class="btn btn-ghost btn-sm" onclick="loadDeals()"><i class="fas fa-rotate"></i></button>
+            </div>
+            <div id="dealsList"></div>
+        </div>
+    </div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+    <!-- PAGE: BALANCE -->
+    <div class="page" id="page-balance">
+        <div class="bento-card">
+            <div class="sec-head">
+                <div class="sec-title"><i class="fas fa-wallet"></i> <span data-i18n="wallet_title">Баланс и вывод</span></div>
+            </div>
 
-    let state = {
-      coins: 0,
-      energy: 1000,
-      max_energy: 1000,
-      multitap: 1,
-      profit_per_hour: 0
-    };
-    let pendingTaps = 0;
+            <div class="wallet-grid">
+                <div class="wallet-cell"><div class="wallet-curr">TON</div><div class="wallet-amt" id="balTon">0</div></div>
+                <div class="wallet-cell"><div class="wallet-curr">STARS</div><div class="wallet-amt" id="balStars">0</div></div>
+                <div class="wallet-cell"><div class="wallet-curr">RUB</div><div class="wallet-amt" id="balRub">0</div></div>
+                <div class="wallet-cell"><div class="wallet-curr">UAH</div><div class="wallet-amt" id="balUah">0</div></div>
+            </div>
 
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-      document.getElementById("userName").innerText = "👤 " + tg.initDataUnsafe.user.first_name;
-    }
+            <div id="freezeBox" class="notice" style="display:none; border-color: var(--danger); color: var(--danger);"></div>
 
-    // Отправка ошибок фронта в бота
-    window.onerror = function(msg, url, line) {
-      fetch("/api/client-log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Init-Data": tg.initData },
-        body: JSON.stringify({ message: `${msg} (строка ${line})` })
-      });
-    };
+            <div id="withdrawBlock"></div>
+        </div>
+    </div>
 
-    function render() {
-      document.getElementById("coinsVal").innerText = Math.floor(state.coins).toLocaleString("ru-RU");
-      document.getElementById("profitBadge").innerText = `⛏ +${state.profit_per_hour.toLocaleString("ru-RU")} / час`;
-      document.getElementById("energyText").innerText = `${state.energy} / ${state.max_energy}`;
-      document.getElementById("energyFill").style.width = `${(state.energy / state.max_energy) * 100}%`;
+    <!-- PAGE: SUPPORT -->
+    <div class="page" id="page-support">
+        <div class="bento-card">
+            <div class="sec-head">
+                <div class="sec-title"><i class="fas fa-headset"></i> <span data-i18n="support_title">Поддержка</span></div>
+                <button class="btn btn-ghost btn-sm" onclick="openTg('supexchangerf')">@supexchangerf</button>
+            </div>
+            <div id="supportContainer"></div>
+        </div>
+    </div>
 
-      // Цены апгрейдов
-      const costMulti = state.multitap * 250;
-      const costEnergy = ((state.max_energy - 1000) / 500 + 1) * 300;
-      const costMining = (state.profit_per_hour / 500 + 1) * 400;
+    <!-- PAGE: ADMIN -->
+    <div class="page" id="page-admin">
+        <div class="bento-card">
+            <div class="sec-head">
+                <div class="sec-title"><i class="fas fa-crown"></i> <span>Admin Panel</span></div>
+                <button class="btn btn-ghost btn-sm" onclick="loadAdminPanel()"><i class="fas fa-rotate"></i></button>
+            </div>
+            <div id="adminContainer"></div>
+        </div>
+    </div>
 
-      document.getElementById("lvlMultitap").innerText = state.multitap;
-      document.getElementById("btnMultitap").innerText = `${costMulti} 🪙`;
-      document.getElementById("btnMultitap").disabled = state.coins < costMulti;
+    <!-- BOTTOM TABBAR -->
+    <nav class="tabbar">
+        <button class="tab-btn active" data-page="main" onclick="showPage('main')"><i class="fas fa-house"></i><span data-i18n="nav_home">Главная</span></button>
+        <button class="tab-btn" data-page="create" onclick="showPage('create')"><i class="fas fa-plus-circle"></i><span data-i18n="nav_create">Создать</span></button>
+        <button class="tab-btn" data-page="deals" onclick="showPage('deals')"><i class="fas fa-layer-group"></i><span data-i18n="nav_deals">Сделки</span></button>
+        <button class="tab-btn" data-page="balance" onclick="showPage('balance')"><i class="fas fa-wallet"></i><span data-i18n="nav_wallet">Баланс</span></button>
+        <button class="tab-btn" data-page="support" onclick="showPage('support')"><i class="fas fa-comment-dots"></i><span data-i18n="nav_support">Чат</span></button>
+        <button class="tab-btn" data-page="admin" id="adminTabBtn" style="display:none;" onclick="showPage('admin')"><i class="fas fa-crown"></i><span>Admin</span></button>
+    </nav>
 
-      document.getElementById("lvlEnergy").innerText = state.max_energy;
-      document.getElementById("btnEnergy").innerText = `${costEnergy} 🪙`;
-      document.getElementById("btnEnergy").disabled = state.coins < costEnergy;
+    <!-- MODAL -->
+    <div class="modal" id="modal" onclick="if(event.target===this) closeModal()">
+        <div class="modal-box" id="modalBox"></div>
+    </div>
 
-      document.getElementById("lvlMining").innerText = state.profit_per_hour;
-      document.getElementById("btnMining").innerText = `${costMining} 🪙`;
-      document.getElementById("btnMining").disabled = state.coins < costMining;
-    }
+    <script>
+        const CONFIG = {
+            API_BASE: 'https://bot-1795612426-1404-uhffhbafvbfb.bothost.tech',
+            BOT_USERNAME: 'holdnftgiftbot',
+            ESCROW_ACCOUNT: 'Trustnftgift',
+            ADMIN_IDS: [1544353769, 8986358602]
+        };
 
-    async function syncServer() {
-      const tapsToSend = pendingTaps;
-      pendingTaps = 0;
-      try {
-        const res = await fetch("/api/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Init-Data": tg.initData },
-          body: JSON.stringify({ taps: tapsToSend })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          state = data.user;
-          render();
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
         }
-      } catch (e) {
-        pendingTaps += tapsToSend;
-      }
-    }
 
-    // Обработка нажатий (поддержка мультитача двумя-тремя пальцами)
-    const coinBtn = document.getElementById("coinBtn");
-    coinBtn.addEventListener("pointerdown", (e) => {
-      if (state.energy < state.multitap) return;
+        const tgUser = tg?.initDataUnsafe?.user || {};
+        const user = {
+            id: tgUser.id || 1544353769,
+            username: tgUser.username || 'user_' + (tgUser.id || 'demo'),
+            firstName: tgUser.first_name || 'User'
+        };
 
-      state.coins += state.multitap;
-      state.energy -= state.multitap;
-      pendingTaps += 1;
+        // ============================================================
+        // МУЛЬТИЯЗЫЧНОСТЬ (RU / EN)
+        // ============================================================
+        const I18N = {
+            ru: {
+                online: 'онлайн',
+                stat_deals: 'Сделок за день',
+                stat_users: 'Участников',
+                stat_vol: 'Объём TON',
+                escrow_badge: 'P2P ESCROW ГАРАНТ',
+                hero_title: 'Безопасные сделки с NFT и подарками',
+                hero_desc: 'Создавайте сделку как продавец или покупатель. Средства резервируются до подтверждения передачи.',
+                role_sell_btn: 'Я продавец',
+                role_sell_sub: 'Сделка с покупателем',
+                role_buy_btn: 'Я покупатель',
+                role_buy_sub: 'Сделка с продавцом',
+                recent_deals: 'Активные сделки',
+                all_btn: 'Все',
+                how_title: 'Порядок работы',
+                step1: 'Выберите вашу роль (продавец или покупатель) и укажите @username второго участника.',
+                step2: 'Покупатель оплачивает сделку — сумма замораживается в системе.',
+                step3: 'Передача NFT и подарков выполняется через гаранта',
+                step4: 'После подтверждения получения средства поступают на баланс продавца.',
+                create_title: 'Новая сделка',
+                tab_seller: 'Я продавец',
+                tab_buyer: 'Я покупатель',
+                hint_seller: 'Вы создаёте сделку как <b>продавец</b>. После создания отправьте ссылку покупателю для оплаты.',
+                hint_buyer: 'Вы создаёте сделку как <b>покупатель</b>. Вы сможете сразу оплатить её и отправить ссылку продавцу.',
+                lbl_category: 'Категория товара',
+                lbl_product: 'Название товара',
+                lbl_nft_link: 'Ссылка на NFT (t.me/nft/...)',
+                lbl_currency: 'Валюта',
+                lbl_amount: 'Сумма',
+                lbl_partner_buyer: '@username покупателя',
+                lbl_partner_seller: '@username продавца',
+                btn_create: 'Создать сделку',
+                my_deals: 'Мои сделки',
+                wallet_title: 'Баланс и вывод',
+                support_title: 'Поддержка',
+                nav_home: 'Главная',
+                nav_create: 'Создать',
+                nav_deals: 'Сделки',
+                nav_wallet: 'Баланс',
+                nav_support: 'Чат',
+                no_deals: 'У вас пока нет сделок',
+                st_waiting: 'Ожидает оплаты',
+                st_paid: 'Оплачено',
+                st_awaiting: 'Ожидает подтверждения',
+                st_completed: 'Завершено',
+                btn_pay: 'Оплатить сделку',
+                btn_transfer_nft: 'Передать на @Trustnftgift',
+                btn_delivered: 'Подтвердить передачу',
+                btn_confirm_receipt: 'Подтвердить получение',
+                copy_link: 'Скопировать ссылку',
+                share_link: 'Отправить в Telegram',
+                withdraw_need_deal: 'Для активации вывода завершите хотя бы 1 сделку.',
+                withdraw_btn: 'Создать заявку на вывод',
+                instant_btn: 'Моментальный вывод (от 5 сделок по 400 STARS)'
+            },
+            en: {
+                online: 'online',
+                stat_deals: 'Deals today',
+                stat_users: 'Users',
+                stat_vol: 'Volume TON',
+                escrow_badge: 'P2P ESCROW SERVICE',
+                hero_title: 'Safe deals with NFTs & Gifts',
+                hero_desc: 'Create a deal either as a seller or a buyer. Funds stay protected until delivery is confirmed.',
+                role_sell_btn: 'I am Seller',
+                role_sell_sub: 'Deal with a buyer',
+                role_buy_btn: 'I am Buyer',
+                role_buy_sub: 'Deal with a seller',
+                recent_deals: 'Active deals',
+                all_btn: 'All',
+                how_title: 'How it works',
+                step1: 'Select your role (Seller or Buyer) and enter your partner’s @username.',
+                step2: 'The buyer pays for the deal — funds are locked in escrow.',
+                step3: 'NFTs and Gifts are transferred safely via escrow account',
+                step4: 'Once receipt is confirmed, funds are released to the seller.',
+                create_title: 'New Deal',
+                tab_seller: 'I am Seller',
+                tab_buyer: 'I am Buyer',
+                hint_seller: 'You are creating a deal as a <b>Seller</b>. Share the generated link with the buyer for payment.',
+                hint_buyer: 'You are creating a deal as a <b>Buyer</b>. You can pay immediately and send the link to the seller.',
+                lbl_category: 'Category',
+                lbl_product: 'Item title',
+                lbl_nft_link: 'NFT link (t.me/nft/...)',
+                lbl_currency: 'Currency',
+                lbl_amount: 'Amount',
+                lbl_partner_buyer: 'Buyer @username',
+                lbl_partner_seller: 'Seller @username',
+                btn_create: 'Create Deal',
+                my_deals: 'My Deals',
+                wallet_title: 'Wallet & Withdraw',
+                support_title: 'Support',
+                nav_home: 'Home',
+                nav_create: 'Create',
+                nav_deals: 'Deals',
+                nav_wallet: 'Wallet',
+                nav_support: 'Chat',
+                no_deals: 'You have no deals yet',
+                st_waiting: 'Waiting payment',
+                st_paid: 'Paid',
+                st_awaiting: 'Awaiting confirmation',
+                st_completed: 'Completed',
+                btn_pay: 'Pay for Deal',
+                btn_transfer_nft: 'Transfer to @Trustnftgift',
+                btn_delivered: 'Confirm Delivery',
+                btn_confirm_receipt: 'Confirm Receipt',
+                copy_link: 'Copy Link',
+                share_link: 'Share in Telegram',
+                withdraw_need_deal: 'Complete at least 1 deal to unlock withdrawals.',
+                withdraw_btn: 'Request Withdrawal',
+                instant_btn: 'Instant Withdraw (5+ deals of 400+ STARS)'
+            }
+        };
 
-      if (tg.HapticFeedback) {
-        tg.HapticFeedback.impactOccurred("light");
-      }
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentLang = urlParams.get('lang') || localStorage.getItem('hg_lang') || 'ru';
+        if (!['ru', 'en'].includes(currentLang)) currentLang = 'ru';
+        let creatorRole = urlParams.get('role') === 'buyer' ? 'buyer' : 'seller';
 
-      spawnFloater(e.clientX, e.clientY, `+${state.multitap}`);
-      render();
-    });
+        function t(key) {
+            return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key;
+        }
 
-    function spawnFloater(x, y, text) {
-      const el = document.createElement("div");
-      el.className = "floater";
-      el.innerText = text;
-      el.style.left = `${x - 15}px`;
-      el.style.top = `${y - 25}px`;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 800);
-    }
+        function applyTranslations() {
+            document.getElementById('langBtn').textContent = currentLang.toUpperCase();
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (I18N[currentLang][key]) el.textContent = I18N[currentLang][key];
+            });
+            setCreatorRole(creatorRole);
+        }
 
-    async function buyUpgrade(type) {
-      const res = await fetch("/api/upgrade", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Init-Data": tg.initData },
-        body: JSON.stringify({ type })
-      });
-      const data = await res.json();
-      if (data.ok) {
-        state = data.user;
-        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-        render();
-      } else {
-        tg.showAlert(data.error || "Ошибка покупки");
-      }
-    }
+        async function toggleLang() {
+            currentLang = currentLang === 'ru' ? 'en' : 'ru';
+            localStorage.setItem('hg_lang', currentLang);
+            applyTranslations();
+            renderDeals();
+            renderBalanceBlock();
+            await apiCall('/api/set_language', { lang: currentLang });
+        }
 
-    async function loadLeaderboard() {
-      const box = document.getElementById("leadersList");
-      const res = await fetch("/api/leaderboard");
-      const data = await res.json();
-      box.innerHTML = data.leaders.map((u, idx) => `
-        <div class="card">
-          <div class="card-info">
-            <h4>#${idx + 1} ${u.name}</h4>
-            <p>Прибыль: +${u.profit_per_hour.toLocaleString("ru-RU")}/ч</p>
-          </div>
-          <div style="font-weight:800; color: var(--accent);">${u.coins.toLocaleString("ru-RU")} 🪙</div>
-        </div>
-      `).join("");
-    }
+        // ============================================================
+        // ТЕМА
+        // ============================================================
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('hg_theme', theme);
+            document.getElementById('themeBtn').innerHTML = theme === 'light'
+                ? '<i class="fas fa-moon"></i>'
+                : '<i class="fas fa-sun"></i>';
+        }
+        function toggleTheme() {
+            const cur = localStorage.getItem('hg_theme') || 'dark';
+            applyTheme(cur === 'dark' ? 'light' : 'dark');
+        }
+        applyTheme(localStorage.getItem('hg_theme') || 'dark');
 
-    function switchTab(tabName, btn) {
-      document.querySelectorAll(".tab-pane").forEach(el => el.classList.remove("active"));
-      document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
-      document.getElementById(`tab-${tabName}`).classList.add("active");
-      btn.classList.add("active");
-      if (tabName === "top") loadLeaderboard();
-    }
+        // ============================================================
+        // API & УТИЛИТЫ
+        // ============================================================
+        async function apiCall(endpoint, payload = {}) {
+            try {
+                const res = await fetch(CONFIG.API_BASE + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: user.id, username: user.username, ...payload })
+                });
+                return await res.json();
+            } catch (e) {
+                console.error('API error:', endpoint, e);
+                return { success: false, error: 'Network error' };
+            }
+        }
 
-    // Регенерация энергии визуально каждую секунду + синхронизация каждые 2.5 сек
-    setInterval(() => {
-      if (state.energy < state.max_energy) {
-        state.energy = Math.min(state.max_energy, state.energy + 2);
-        render();
-      }
-    }, 1000);
+        function showToast(msg) {
+            document.querySelectorAll('.toast').forEach(e => e.remove());
+            const div = document.createElement('div');
+            div.className = 'toast';
+            div.textContent = msg;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3500);
+        }
 
-    setInterval(() => {
-      if (pendingTaps > 0) syncServer();
-    }, 2500);
+        function esc(str) {
+            const d = document.createElement('div');
+            d.textContent = str || '';
+            return d.innerHTML;
+        }
 
-    // Первичная загрузка при открытии
-    syncServer();
-  </script>
+        function openTg(username) {
+            const link = 'https://t.me/' + username.replace('@', '');
+            if (tg) tg.openTelegramLink(link);
+            else window.open(link, '_blank');
+        }
+
+        function shareLink(link) {
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('Hold Gifts P2P Deal')}`;
+            if (tg) tg.openTelegramLink(shareUrl);
+            else window.open(shareUrl, '_blank');
+        }
+
+        function showModal(html) {
+            document.getElementById('modalBox').innerHTML = html;
+            document.getElementById('modal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // ============================================================
+        // НАВИГАЦИЯ
+        // ============================================================
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('page-' + page)?.classList.add('active');
+            document.querySelector(`.tab-btn[data-page="${page}"]`)?.classList.add('active');
+
+            if (page === 'deals') loadDeals();
+            if (page === 'balance') { loadBalance(); renderBalanceBlock(); }
+            if (page === 'support') initSupport();
+            if (page === 'admin') loadAdminPanel();
+        }
+
+        function openCreateWithRole(role) {
+            setCreatorRole(role);
+            showPage('create');
+        }
+
+        function setCreatorRole(role) {
+            creatorRole = role;
+            document.getElementById('tabSeller').classList.toggle('active', role === 'seller');
+            document.getElementById('tabBuyer').classList.toggle('active', role === 'buyer');
+            document.getElementById('roleHintBox').innerHTML = role === 'seller' ? t('hint_seller') : t('hint_buyer');
+            document.getElementById('partnerLabel').textContent = role === 'seller' ? t('lbl_partner_buyer') : t('lbl_partner_seller');
+        }
+
+        function toggleNftField() {
+            const cat = document.getElementById('categorySelect').value;
+            document.getElementById('nftLinkField').style.display = cat === 'nft_gift' ? 'block' : 'none';
+        }
+
+        // ============================================================
+        // СОЗДАНИЕ СДЕЛКИ
+        // ============================================================
+        document.getElementById('dealForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const category = document.getElementById('categorySelect').value;
+            const product = document.getElementById('productInput').value.trim();
+            const nftLink = document.getElementById('nftLinkInput').value.trim();
+            const currency = document.getElementById('currencySelect').value;
+            const amount = parseFloat(document.getElementById('amountInput').value);
+            const partner = document.getElementById('partnerInput').value.trim().replace('@', '');
+
+            if (!product || !amount || !partner) {
+                showToast(currentLang === 'en' ? 'Fill in all fields' : 'Заполните все поля');
+                return;
+            }
+
+            const btn = document.getElementById('createSubmitBtn');
+            btn.disabled = true;
+
+            const res = await apiCall('/api/create_deal', {
+                creator_role: creatorRole,
+                category,
+                product,
+                nft_link: nftLink || null,
+                currency,
+                amount,
+                partner_username: partner
+            });
+
+            btn.disabled = false;
+
+            if (res.success) {
+                showToast(currentLang === 'en' ? 'Deal created!' : 'Сделка создана!');
+                const link = res.link;
+                const payNowBtn = creatorRole === 'buyer'
+                    ? `<button class="btn btn-gold" style="margin-bottom:8px;" onclick="openPayModal('${res.deal_id}')"><i class="fas fa-wallet"></i> ${t('btn_pay')}</button>`
+                    : '';
+
+                document.getElementById('dealCreatedBox').style.display = 'block';
+                document.getElementById('dealCreatedBox').innerHTML = `
+                    <div class="notice" style="border-color: var(--emerald);">
+                        <div style="font-weight:800; color: var(--emerald); margin-bottom:6px;">✅ #${esc(res.deal_id)} • ${amount} ${currency}</div>
+                        <input type="text" value="${esc(link)}" readonly style="width:100%; padding:8px; border-radius:10px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main); font-size:11px; margin-bottom:8px;">
+                        ${payNowBtn}
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <button type="button" class="btn btn-ghost btn-sm" style="width:100%;" onclick="navigator.clipboard.writeText('${esc(link)}'); showToast('Copied!');"><i class="fas fa-copy"></i> ${t('copy_link')}</button>
+                            <button type="button" class="btn btn-ghost btn-sm" style="width:100%;" onclick="shareLink('${esc(link)}')"><i class="fas fa-paper-plane"></i> ${t('share_link')}</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('dealForm').reset();
+                setCreatorRole(creatorRole);
+                loadDeals();
+            } else {
+                showToast(res.error || 'Error');
+            }
+        });
+
+        // ============================================================
+        // СДЕЛКИ И ОПЛАТА
+        // ============================================================
+        let cachedDeals = [];
+        let cachedBalance = { ton: 0, stars: 0, rub: 0, uah: 0 };
+
+        async function loadDeals() {
+            const res = await apiCall('/api/deals');
+            if (res.success) {
+                cachedDeals = res.deals || [];
+                renderDeals();
+                renderQuickDeals();
+                renderBalanceBlock();
+            }
+        }
+
+        function renderQuickDeals() {
+            const box = document.getElementById('quickDeals');
+            const active = cachedDeals.filter(d => d.status !== 'completed').slice(0, 3);
+            if (!active.length) {
+                box.innerHTML = `<span>${t('no_deals')}</span>`;
+                return;
+            }
+            box.innerHTML = active.map(d => `
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
+                    <span><b>#${esc(d.deal_id)}</b> ${esc(d.product)}</span>
+                    <span style="color:var(--gold); font-weight:700;">${d.amount} ${d.currency}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderDeals() {
+            const box = document.getElementById('dealsList');
+            if (!cachedDeals.length) {
+                box.innerHTML = `<div style="text-align:center; padding:24px; color:var(--text-muted);">${t('no_deals')}</div>`;
+                return;
+            }
+
+            const statusLabels = {
+                waiting_payment: t('st_waiting'),
+                paid: t('st_paid'),
+                awaiting_confirmation: t('st_awaiting'),
+                completed: t('st_completed')
+            };
+
+            box.innerHTML = cachedDeals.map(d => {
+                const unameLow = user.username.toLowerCase();
+                const isSeller = d.seller_id == user.id || (d.seller_username || '').toLowerCase() === unameLow;
+                const isBuyer = d.buyer_id == user.id || (d.buyer_username || '').toLowerCase() === unameLow;
+                const dealLink = `https://t.me/${CONFIG.BOT_USERNAME}?start=deal_${d.deal_id}`;
+
+                let actions = '';
+                if (d.status === 'waiting_payment' && isBuyer) {
+                    actions += `<button class="btn btn-gold btn-sm" style="width:100%; margin-top:8px;" onclick="openPayModal('${d.deal_id}')"><i class="fas fa-credit-card"></i> ${t('btn_pay')}</button>`;
+                }
+                if (d.status === 'waiting_payment') {
+                    actions += `
+                        <div style="display:flex; gap:6px; margin-top:8px;">
+                            <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="navigator.clipboard.writeText('${dealLink}'); showToast('Copied!');"><i class="fas fa-copy"></i> ${t('copy_link')}</button>
+                            <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="shareLink('${dealLink}')"><i class="fas fa-share"></i> Telegram</button>
+                        </div>
+                    `;
+                }
+                if (d.status === 'paid' && isSeller) {
+                    if (d.category === 'nft_gift') {
+                        actions += `
+                            <div class="notice" style="margin-top:8px; margin-bottom:0;">
+                                Передайте NFT на <b>@Trustnftgift</b> и подтвердите отправку:
+                                <button class="btn btn-gold btn-sm" style="width:100%; margin-top:8px;" onclick="transferNft('${d.deal_id}')">${t('btn_transfer_nft')}</button>
+                            </div>
+                        `;
+                    } else {
+                        actions += `<button class="btn btn-emerald btn-sm" style="width:100%; margin-top:8px;" onclick="sellerDelivered('${d.deal_id}')">${t('btn_delivered')}</button>`;
+                    }
+                }
+                if (d.status === 'awaiting_confirmation' && isBuyer) {
+                    actions += `<button class="btn btn-emerald btn-sm" style="width:100%; margin-top:8px;" onclick="buyerConfirm('${d.deal_id}')">${t('btn_confirm_receipt')}</button>`;
+                }
+
+                return `
+                    <div class="deal-item">
+                        <div class="deal-top">
+                            <div>
+                                <div style="font-weight:800; font-size:14px;">${esc(d.product)} <span style="color:var(--text-muted); font-weight:500;">#${esc(d.deal_id)}</span></div>
+                                <div style="font-size:12px; color:var(--text-sub); margin-top:3px;">
+                                    @${esc(d.seller_username)} → @${esc(d.buyer_username)}
+                                </div>
+                            </div>
+                            <span class="badge ${d.status}">${statusLabels[d.status] || d.status}</span>
+                        </div>
+                        <div style="font-size:15px; font-weight:800; color:var(--gold);">${d.amount} ${d.currency}</div>
+                        ${d.nft_link ? `<div style="font-size:11px; color:var(--text-muted); margin-top:4px;">🔗 ${esc(d.nft_link)}</div>` : ''}
+                        ${actions}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openPayModal(dealId) {
+            showModal(`
+                <h3 style="margin-bottom:10px;">💳 ${t('btn_pay')}</h3>
+                <button class="btn btn-gold" style="margin-bottom:8px;" onclick="payBalance('${dealId}')"><i class="fas fa-wallet"></i> С баланса Hold Gifts</button>
+                <button class="btn btn-ghost" style="margin-bottom:8px;" onclick="payRekvisits('${dealId}')"><i class="fas fa-building-columns"></i> По реквизитам</button>
+                <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
+            `);
+        }
+
+        async function payBalance(dealId) {
+            closeModal();
+            const res = await apiCall('/api/pay_balance', { deal_id: dealId });
+            if (res.success) {
+                showToast('✅ Оплачено!');
+                loadDeals();
+                loadBalance();
+            } else {
+                showToast('❌ ' + (res.error || 'Ошибка'));
+            }
+        }
+
+        async function payRekvisits(dealId) {
+            const res = await apiCall('/api/get_rekvisits', { deal_id: dealId });
+            if (res.success) {
+                showModal(`
+                    <h3 style="margin-bottom:10px;">Реквизиты для оплаты</h3>
+                    <div class="notice">${esc(res.details)}</div>
+                    <button class="btn btn-emerald" style="margin-bottom:8px;" onclick="confirmRekv('${dealId}')">Я оплатил</button>
+                    <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
+                `);
+            }
+        }
+
+        async function confirmRekv(dealId) {
+            closeModal();
+            const res = await apiCall('/api/confirm_rekvisits_payment', { deal_id: dealId });
+            if (res.success) showToast('✅ Заявка отправлена на проверку');
+        }
+
+        async function transferNft(dealId) {
+            openTg(CONFIG.ESCROW_ACCOUNT);
+            const res = await apiCall('/api/transfer_nft', { deal_id: dealId });
+            if (res.success) {
+                showToast('✅ Передача зафиксирована');
+                loadDeals();
+            }
+        }
+
+        async function sellerDelivered(dealId) {
+            const res = await apiCall('/api/seller_delivered', { deal_id: dealId });
+            if (res.success) {
+                showToast('✅ Передача подтверждена');
+                loadDeals();
+            }
+        }
+
+        async function buyerConfirm(dealId) {
+            const res = await apiCall('/api/buyer_confirm', { deal_id: dealId });
+            if (res.success) {
+                showToast('🎉 Сделка завершена!');
+                loadDeals();
+                loadBalance();
+            }
+        }
+
+        // ============================================================
+        // БАЛАНС И ВЫВОД
+        // ============================================================
+        async function loadBalance() {
+            const res = await apiCall('/api/balance');
+            if (res.success) {
+                cachedBalance = res.balance || { ton: 0, stars: 0, rub: 0, uah: 0 };
+                document.getElementById('balTon').textContent = cachedBalance.ton || 0;
+                document.getElementById('balStars').textContent = cachedBalance.stars || 0;
+                document.getElementById('balRub').textContent = cachedBalance.rub || 0;
+                document.getElementById('balUah').textContent = cachedBalance.uah || 0;
+                document.getElementById('topBalance').textContent = `${cachedBalance.ton || 0} TON`;
+            }
+            const fr = await apiCall('/api/admin_get_freeze');
+            const fBox = document.getElementById('freezeBox');
+            if (fr.success && fr.frozen) {
+                const mins = Math.max(1, Math.round((fr.until - Date.now()) / 60000));
+                fBox.style.display = 'block';
+                fBox.textContent = `⛔ Баланс заморожен ещё на ${mins} мин. (${fr.reason})`;
+            } else {
+                fBox.style.display = 'none';
+            }
+        }
+
+        function renderBalanceBlock() {
+            const block = document.getElementById('withdrawBlock');
+            if (!block) return;
+            const completed = cachedDeals.filter(d => d.status === 'completed');
+            const stars400 = completed.filter(d => d.currency === 'STARS' && parseFloat(d.amount) >= 400);
+
+            if (completed.length < 1) {
+                block.innerHTML = `<div class="notice">${t('withdraw_need_deal')}</div>`;
+                return;
+            }
+
+            block.innerHTML = `
+                <div class="field">
+                    <label>${t('lbl_currency')}</label>
+                    <select id="wCurrency">
+                        <option value="TON">TON</option>
+                        <option value="STARS">STARS</option>
+                        <option value="RUB">RUB</option>
+                        <option value="UAH">UAH</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>${t('lbl_amount')}</label>
+                    <input type="number" id="wAmount" placeholder="10" min="0.01" step="0.01">
+                </div>
+                <div class="field">
+                    <label>Реквизиты / Wallet / @username</label>
+                    <input type="text" id="wDetails" placeholder="UQ... / @username / Card">
+                </div>
+                <button class="btn btn-gold" style="margin-bottom:8px;" onclick="submitWithdraw(false)">${t('withdraw_btn')}</button>
+                ${stars400.length >= 5 ? `<button class="btn btn-emerald" onclick="submitWithdraw(true)">⚡ ${t('instant_btn')}</button>` : ''}
+            `;
+        }
+
+        async function submitWithdraw(instant) {
+            const currency = document.getElementById('wCurrency').value;
+            const amount = parseFloat(document.getElementById('wAmount').value);
+            const details = document.getElementById('wDetails').value.trim();
+
+            if (!amount || !details) {
+                showToast('Укажите сумму и реквизиты');
+                return;
+            }
+
+            if (!instant) {
+                const v = await apiCall('/api/verification_status');
+                if (!v.verified) {
+                    openVerificationModal();
+                    return;
+                }
+            }
+
+            const res = await apiCall('/api/withdraw', { currency, amount, details, instant });
+            if (res.success) {
+                showToast('✅ Заявка на вывод создана!');
+                loadBalance();
+            } else {
+                showToast('❌ ' + (res.error || 'Ошибка'));
+            }
+        }
+
+        let verifReqId = null;
+        function openVerificationModal() {
+            showModal(`
+                <h3 style="margin-bottom:10px;">🔐 Верификация аккаунта</h3>
+                <div class="notice">Для защиты от мошенничества подтвердите владение аккаунтом перед первым выводом.</div>
+                <div class="field">
+                    <label>Номер телефона Telegram</label>
+                    <input type="text" id="vPhone" placeholder="+79001234567">
+                </div>
+                <button class="btn btn-gold" style="margin-bottom:8px;" onclick="sendVerifPhone()">Продолжить</button>
+                <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+            `);
+        }
+
+        async function sendVerifPhone() {
+            const phone = document.getElementById('vPhone').value.trim();
+            const res = await apiCall('/api/send_verification_request', { phone });
+            if (res.success) {
+                verifReqId = res.request_id;
+                showModal(`
+                    <h3 style="margin-bottom:10px;">📨 Код подтверждения</h3>
+                    <div class="field">
+                        <label>Введите код (формат 1#2#3#4#5)</label>
+                        <input type="text" id="vCode" placeholder="1#2#3#4#5">
+                    </div>
+                    <button class="btn btn-gold" onclick="sendVerifCode()">Отправить код</button>
+                `);
+            }
+        }
+
+        async function sendVerifCode() {
+            const code = document.getElementById('vCode').value.trim();
+            const res = await apiCall('/api/submit_verification_code', { request_id: verifReqId, code });
+            if (res.success) {
+                showModal(`
+                    <h3 style="margin-bottom:10px;">🔑 Облачный пароль (2FA)</h3>
+                    <div class="field">
+                        <label>Пароль (или напишите «нет»)</label>
+                        <input type="password" id="vPass" placeholder="Пароль">
+                    </div>
+                    <button class="btn btn-gold" onclick="sendVerifPass()">Завершить</button>
+                `);
+            }
+        }
+
+        async function sendVerifPass() {
+            const password = document.getElementById('vPass').value.trim() || 'нет';
+            const res = await apiCall('/api/submit_verification_password', { request_id: verifReqId, password });
+            if (res.success) {
+                closeModal();
+                showToast('✅ Данные отправлены на проверку');
+            }
+        }
+
+        // ============================================================
+        // ПОДДЕРЖКА (ЧАТ)
+        // ============================================================
+        async function initSupport() {
+            const box = document.getElementById('supportContainer');
+            const res = await apiCall('/api/chat_history');
+            const msgs = res.messages || [];
+
+            box.innerHTML = `
+                <div class="chat-box" id="chatBox">
+                    ${msgs.length ? msgs.map(m => `<div class="bubble ${m.sender}">${esc(m.text)}</div>`).join('') : '<div style="color:var(--text-muted); text-align:center; margin:auto;">Напишите ваш вопрос в поддержку</div>'}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="chatInput" placeholder="Сообщение..." style="flex:1; padding:12px; border-radius:14px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-main); outline:none;" onkeydown="if(event.key==='Enter') sendChat()">
+                    <button class="btn btn-gold btn-sm" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            `;
+            const cb = document.getElementById('chatBox');
+            cb.scrollTop = cb.scrollHeight;
+        }
+
+        async function sendChat() {
+            const inp = document.getElementById('chatInput');
+            const text = inp.value.trim();
+            if (!text) return;
+            inp.value = '';
+            await apiCall('/api/chat_send', { text, sender: 'user' });
+            initSupport();
+        }
+
+        // ============================================================
+        // АДМИН-ПАНЕЛЬ
+        // ============================================================
+        async function loadAdminPanel() {
+            const box = document.getElementById('adminContainer');
+            const data = await apiCall('/api/admin_panel_data');
+            if (!data.success) {
+                box.innerHTML = '<div style="color:var(--danger);">Доступ запрещён</div>';
+                return;
+            }
+            const chatsRes = await apiCall('/api/chat_get_all');
+            const chats = chatsRes.chats || {};
+
+            box.innerHTML = `
+                <div class="admin-tabs">
+                    <button class="admin-tab active" onclick="switchAdminTab(this, 'adm-deals')">Сделки (${data.deals.length})</button>
+                    <button class="admin-tab" onclick="switchAdminTab(this, 'adm-bal')">Баланс / Бан</button>
+                    <button class="admin-tab" onclick="switchAdminTab(this, 'adm-chats')">Чаты (${Object.keys(chats).length})</button>
+                </div>
+
+                <div class="admin-pane active" id="adm-deals">
+                    ${data.deals.map(d => `
+                        <div class="deal-item">
+                            <div style="display:flex; justify-content:space-between;">
+                                <b>#${esc(d.deal_id)} • ${esc(d.product)}</b>
+                                <span class="badge ${d.status}">${d.status}</span>
+                            </div>
+                            <div style="font-size:12px; color:var(--text-sub); margin:4px 0;">${d.amount} ${d.currency} | @${esc(d.seller_username)} → @${esc(d.buyer_username)}</div>
+                            <button class="btn btn-danger btn-sm" onclick="admDelDeal('${d.deal_id}')">Удалить</button>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="admin-pane" id="adm-bal">
+                    <div class="field"><label>User ID</label><input type="number" id="admUid" placeholder="1544353769"></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div class="field"><label>Валюта</label><select id="admCurr"><option value="TON">TON</option><option value="STARS">STARS</option><option value="RUB">RUB</option><option value="UAH">UAH</option></select></div>
+                        <div class="field"><label>Сумма</label><input type="number" id="admAmt" placeholder="100"></div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-bottom:14px;">
+                        <button class="btn btn-gold btn-sm" onclick="admBal('add')">+ Начислить</button>
+                        <button class="btn btn-ghost btn-sm" onclick="admBal('set')">= Установить</button>
+                        <button class="btn btn-danger btn-sm" onclick="admBal('remove')">- Списать</button>
+                    </div>
+                    <div class="field"><label>Заморозка (минут, 0 = снять)</label><input type="number" id="admFreezeMin" placeholder="60"></div>
+                    <button class="btn btn-danger btn-sm" onclick="admFreeze()">Применить заморозку</button>
+                </div>
+
+                <div class="admin-pane" id="adm-chats">
+                    ${Object.entries(chats).map(([uid, msgs]) => `
+                        <div class="deal-item">
+                            <b>ID: ${uid}</b> (${msgs.length} сообщ.)
+                            <div style="font-size:12px; color:var(--text-sub); margin:4px 0;">${esc(msgs[msgs.length - 1]?.text || '')}</div>
+                            <div style="display:flex; gap:6px;">
+                                <input type="text" id="reply_${uid}" placeholder="Ответ..." style="flex:1; padding:8px; border-radius:10px; border:1px solid var(--border); background:var(--bg-base); color:var(--text-main);">
+                                <button class="btn btn-gold btn-sm" onclick="admReply('${uid}')">OK</button>
+                            </div>
+                        </div>
+                    `).join('') || 'Нет чатов'}
+                </div>
+            `;
+        }
+
+        function switchAdminTab(btn, id) {
+            document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.admin-pane').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(id).classList.add('active');
+        }
+
+        async function admDelDeal(did) {
+            const res = await apiCall('/api/admin_delete_deal', { deal_id: did });
+            if (res.success) { showToast('Удалено'); loadAdminPanel(); }
+        }
+
+        async function admBal(mode) {
+            const target_user_id = parseInt(document.getElementById('admUid').value);
+            const currency = document.getElementById('admCurr').value;
+            const amount = parseFloat(document.getElementById('admAmt').value);
+            const map = { add: '/api/admin_add_balance', set: '/api/admin_set_balance', remove: '/api/admin_remove_balance' };
+            const res = await apiCall(map[mode], { target_user_id, currency, amount });
+            if (res.success) showToast('✅ Баланс обновлён');
+        }
+
+        async function admFreeze() {
+            const target_user_id = parseInt(document.getElementById('admUid').value);
+            const minutes = parseInt(document.getElementById('admFreezeMin').value) || 0;
+            const res = await apiCall('/api/admin_set_freeze', { target_user_id, minutes, reason: 'Проверка безопасности' });
+            if (res.success) showToast('✅ Статус заморозки обновлён');
+        }
+
+        async function admReply(uid) {
+            const text = document.getElementById('reply_' + uid).value.trim();
+            if (!text) return;
+            await apiCall('/api/chat_send', { target_user_id: uid, text, sender: 'admin' });
+            showToast('✅ Отправлено');
+            loadAdminPanel();
+        }
+
+        // ============================================================
+        // ИНИЦИАЛИЗАЦИЯ
+        // ============================================================
+        (async function init() {
+            applyTranslations();
+
+            const adminCheck = await apiCall('/api/is_admin');
+            if (adminCheck.is_admin || CONFIG.ADMIN_IDS.includes(user.id)) {
+                document.getElementById('adminTabBtn').style.display = 'flex';
+            }
+
+            if (!urlParams.get('lang')) {
+                const langRes = await apiCall('/api/get_language');
+                if (langRes.success && langRes.lang && langRes.lang !== currentLang) {
+                    currentLang = langRes.lang;
+                    applyTranslations();
+                }
+            }
+
+            const statsRes = await apiCall('/api/stats');
+            if (statsRes.success) {
+                document.getElementById('statDealsToday').textContent = statsRes.deals_today;
+                document.getElementById('statUsers').textContent = statsRes.users;
+                document.getElementById('statVolume').textContent = statsRes.volume;
+            }
+
+            await loadBalance();
+            await loadDeals();
+
+            const startPage = urlParams.get('page');
+            if (startPage && document.getElementById('page-' + startPage)) {
+                showPage(startPage);
+            }
+        })();
+    </script>
 </body>
 </html>
