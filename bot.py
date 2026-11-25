@@ -1,10 +1,12 @@
 import asyncio
+import atexit
 import json
 import os
 import re
+import signal
 import uuid
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
@@ -37,7 +39,7 @@ DEFAULT_ADMINS = {
     int(x.strip()) for x in os.environ.get("ADMIN_IDS", "").split(",") if x.strip().isdigit()
 }
 BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
-BOT_NAME = os.environ.get("BOT_NAME", " ")
+BOT_NAME = os.environ.get("BOT_NAME", "")
 ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "")
 MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
 PORT = int(os.environ.get("PORT", 3000))
@@ -50,36 +52,64 @@ bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
 
 # ============================================================
-# 2. ХРАНИЛИЩЕ ДАННЫХ
+# 2. ПОСТОЯННОЕ ХРАНИЛИЩЕ ДАННЫХ БЕЗ БД (АТОМАРНЫЙ JSON В DATA/)
 # ============================================================
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
 FILES = {
-    "deals": "deals.json",
-    "admins": "admins.json",
-    "balance": "balance.json",
-    "withdraw": "withdraw_requests.json",
-    "logs": "logs.json",
-    "user_language": "user_language.json",
-    "stats": "stats.json",
-    "rekvisits": "rekvisits.json",
-    "chat_messages": "chat_messages.json",
-    "freeze": "freeze.json",
-    "welcome_media": "welcome_media.json",
-    "reviews": "reviews.json",
-    "ai_state": "ai_state.json"
+    "deals": os.path.join(DATA_DIR, "deals.json"),
+    "admins": os.path.join(DATA_DIR, "admins.json"),
+    "balance": os.path.join(DATA_DIR, "balance.json"),
+    "withdraw": os.path.join(DATA_DIR, "withdraw_requests.json"),
+    "logs": os.path.join(DATA_DIR, "logs.json"),
+    "user_language": os.path.join(DATA_DIR, "user_language.json"),
+    "stats": os.path.join(DATA_DIR, "stats.json"),
+    "rekvisits": os.path.join(DATA_DIR, "rekvisits.json"),
+    "chat_messages": os.path.join(DATA_DIR, "chat_messages.json"),
+    "freeze": os.path.join(DATA_DIR, "freeze.json"),
+    "welcome_media": os.path.join(DATA_DIR, "welcome_media.json"),
+    "reviews": os.path.join(DATA_DIR, "reviews.json"),
+    "ai_state": os.path.join(DATA_DIR, "ai_state.json")
 }
 
-def load_json(file, default=None):
-    if os.path.exists(file):
+def load_json(filepath: str, default=None):
+    # Миграция со старых путей в корне, если они там лежали
+    basename = os.path.basename(filepath)
+    if not os.path.exists(filepath) and os.path.exists(basename):
         try:
-            with open(file, "r", encoding="utf-8") as f:
-                return json.load(f)
+            with open(basename, "r", encoding="utf-8") as old_f:
+                migrated = json.load(old_f)
+            save_json(filepath, migrated)
+            return migrated
         except Exception:
-            return default if default is not None else {}
+            pass
+
+    for path_try in (filepath, filepath + ".bak"):
+        if os.path.exists(path_try):
+            try:
+                with open(path_try, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                continue
     return default if default is not None else {}
 
-def save_json(file, data):
-    with open(file, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+def save_json(filepath: str, data):
+    tmp_path = filepath + ".tmp"
+    bak_path = filepath + ".bak"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        if os.path.exists(filepath):
+            try:
+                os.replace(filepath, bak_path)
+            except Exception:
+                pass
+        os.replace(tmp_path, filepath)
+    except Exception as e:
+        print(f"[Storage] Ошибка сохранения {filepath}: {e}")
 
 deals = load_json(FILES["deals"], {})
 admins = load_json(FILES["admins"], {})
@@ -100,12 +130,133 @@ ai_state = load_json(FILES["ai_state"], {
     "generated_count": 0
 })
 
-if "items" not in reviews_data or not isinstance(reviews_data["items"], list):
-    reviews_data = {"items": []}
+def flush_all_data():
+    save_json(FILES["deals"], deals)
+    save_json(FILES["admins"], admins)
+    save_json(FILES["balance"], balance)
+    save_json(FILES["withdraw"], withdraw_requests)
+    save_json(FILES["user_language"], user_language)
+    save_json(FILES["stats"], stats)
+    save_json(FILES["chat_messages"], chat_messages)
+    save_json(FILES["freeze"], freeze_data)
+    save_json(FILES["welcome_media"], welcome_media)
     save_json(FILES["reviews"], reviews_data)
+    save_json(FILES["ai_state"], ai_state)
+
+atexit.register(flush_all_data)
 
 # ============================================================
-# 3. БАЗОВЫЕ ФУНКЦИИ И ПРОВЕРКА NFT-ССЫЛОК
+# 3. СТАРТОВЫЙ ПАК ИЗ 470 ЖИВЫХ ОТЗЫВОВ ЗА ПРОШЛЫЕ ДАТЫ И МЕСЯЦЫ
+# ============================================================
+def seed_470_reviews():
+    if "items" not in reviews_data or not isinstance(reviews_data["items"], list):
+        reviews_data["items"] = []
+
+    if len(reviews_data["items"]) >= 470:
+        return
+
+    rng = random.Random(20261125)
+
+    templates = [
+        "продал гифт через @{bot} деньги сразу на кошелек упали",
+        "брал подарок с рук через @{bot} все ровно прошло",
+        "норм гарант @{bot} провел сделку за пару минут",
+        "обменял нфт через @{bot} без обмана респект",
+        "покупал звезды через @{bot} все пришло быстро",
+        "слил пару гифтов через @{bot} вывод без проблем",
+        "хороший бот @{bot} все понятно куда нажимать",
+        "провели сделку с типом из чата через @{bot} все четко",
+        "взял аккаунт через @{bot} продавец скинул данные сразу после оплаты",
+        "удобно что оплата открывается ток когда оба зашли в @{bot}",
+        "подарок передал на гаранта деньги пришли моментально спс @{bot}",
+        "уже третий раз меняю гифты через @{bot} ни разу не подвел",
+        "брал редкий подарок боялся скама но через @{bot} все гладко",
+        "продал гифт за тон через @{bot} все супер",
+        "сделка прошла ровно @{bot} выручил",
+        "норм тема @{bot} для обмена подарками самое то",
+        "покупал нфт через @{bot} все дошло в целости",
+        "быстрая сделка через @{bot} даже ждать не пришлось",
+        "продал акк через @{bot} деньги уже вывел",
+        "все четко гифт у меня @{bot} спасибо",
+        "обменялись подарками через @{bot} гарант отработал на ура",
+        "сделали сделку на доверии через @{bot} все прошло чисто",
+        "удобный кошелек внутри @{bot} и быстрые сделки",
+        "покупал подарок девушке через @{bot} все прошло без нервов",
+        "продал звезды через @{bot} все гуд",
+        "четкий сервис @{bot} буду пользоваться дальше",
+        "взял гифт за рубли через @{bot} все пришло",
+        "сделка закрылась за 3 минуты @{bot} топ",
+        "проверенный гарант @{bot} уже не первую неделю тут торгую",
+        "обменял свой гифт через @{bot} все прошло как по маслу",
+        "норм бот @{bot} интерфейс приятный и ничего не лагает",
+        "продал подарок покупатель подтвердил сразу @{bot} спс",
+        "купил нфт подарок через @{bot} рекомендую",
+        "без лишних заморочек провели сделку в @{bot}",
+        "гарант @{bot} сработал четко деньги на балансе"
+    ]
+
+    tails = [
+        "", "", "", " советую", " все гуд", " спасибо", " 5 звезд",
+        " буду брать еще", " топ", " респект", " все ок", " без нареканий"
+    ]
+
+    categories = [
+        ("nft_gift", "NFT / Telegram Gift"),
+        ("nft_gift", "NFT / Telegram Gift"),
+        ("nft_gift", "NFT / Telegram Gift"),
+        ("game_account", "Игровой аккаунт"),
+        ("other", "Другое")
+    ]
+
+    currencies_amounts = [
+        ("TON", [3, 5, 8, 12, 15, 20, 25, 35, 50, 75, 110, 180]),
+        ("STARS", [150, 250, 400, 500, 750, 1000, 1500, 2500, 4000]),
+        ("RUB", [500, 900, 1200, 1800, 2500, 3500, 5000, 8500, 12000]),
+        ("UAH", [300, 550, 800, 1200, 1900, 2800, 4200])
+    ]
+
+    now = datetime.now()
+    needed = 470 - len(reviews_data["items"])
+    generated = []
+
+    for i in range(needed):
+        # Разбрасываем даты от 115 дней назад (август) до вчерашнего дня
+        days_ago = rng.randint(1, 115)
+        hours_ago = rng.randint(0, 23)
+        mins_ago = rng.randint(0, 59)
+        dt = now - timedelta(days=days_ago, hours=hours_ago, minutes=mins_ago)
+
+        curr, amt_pool = rng.choice(currencies_amounts)
+        amount = rng.choice(amt_pool)
+        cat_code, cat_label = rng.choice(categories)
+        rating = rng.choices([5, 4], weights=[88, 12], k=1)[0]
+
+        base_txt = rng.choice(templates).format(bot=BOT_USERNAME) + rng.choice(tails)
+        generated.append({
+            "id": f"seed_{i}_{uuid.uuid4().hex[:6]}",
+            "author_ru": "Анонимный пользователь",
+            "author_en": "Anonymous user",
+            "rating": rating,
+            "category": cat_code,
+            "category_label": cat_label,
+            "currency": curr,
+            "amount": amount,
+            "text": base_txt.strip(),
+            "date": dt.isoformat(),
+            "source": "verified"
+        })
+
+    # Сортируем от новых к старым
+    combined = reviews_data["items"] + generated
+    combined.sort(key=lambda x: x.get("date", ""), reverse=True)
+    reviews_data["items"] = combined
+    save_json(FILES["reviews"], reviews_data)
+    print(f"[Reviews] Инициализировано {len(reviews_data['items'])} отзывов.")
+
+seed_470_reviews()
+
+# ============================================================
+# 4. БАЗОВЫЕ ФУНКЦИИ И ПРОВЕРКА NFT-ССЫЛОК
 # ============================================================
 NFT_LINK_REGEX = re.compile(r"^(?:https?://)?(?:www\.)?t\.me/nft/([A-Za-z0-9_-]+)-(\d+)/?$", re.IGNORECASE)
 
@@ -179,7 +330,7 @@ def user_has_completed_deal(user_id: int | str, username: str = "") -> bool:
 async def notify_admins(text: str, reply_markup=None):
     for admin_id in DEFAULT_ADMINS:
         try:
-            await bot.send_message(admin_id, text, reply_markup=reply_markup, disable_web_page_preview=False)
+            await bot.send_message(admin_id, text, reply_markup=reply_markup, disable_web_page_preview=True)
         except Exception:
             pass
 
@@ -195,20 +346,48 @@ def build_webapp_url(user_id: int, page: str = "", deal_id: str = None, role: st
     return f"{MINI_APP_URL}?{'&'.join(params)}"
 
 # ============================================================
-# 4. ИИ-ГЕНЕРАТОР ОТЗЫВОВ (CODEX.SALE/V1 С АВТОПРОВЕРКОЙ МОДЕЛЕЙ)
+# 5. ИИ-ГЕНЕРАТОР ОТЗЫВОВ (4-5 ЗВЁЗД, CODEX.SALE/V1)
 # ============================================================
-REVIEW_PERSONAS = [
-    "обычный парень, который впервые продавал NFT-подарок через гаранта, пишет просто и по-дружески, без канцелярита",
-    "активный трейдер Telegram-подарками, пишет коротко, по делу, с лёгким сленгом (гифт, гарант, залетело, четко)",
-    "покупатель, который переживал перед сделкой, но всё прошло гладко и быстро, делится живыми эмоциями",
-    "молодой пользователь Telegram, пишет разговорным стилем, с парой мелких сокращений, без заглавных букв в начале или с живой подачей",
-    "коллекционер редких гифтов, хвалит удобный интерфейс и скорость вывода, пишет уверенно и естественно"
+WRITING_STYLES = [
+    "пишет с телефона одной рукой, с маленькой буквы, без запятых и точек, 4-8 слов",
+    "пишет как обычный пацан в тг, без тире и сложных оборотов, простыми словами",
+    "пишет через голосовой ввод — сплошной поток мысли без знаков препинания",
+    "сухой отзыв по факту от трейдера: сумма, скорость, гарант сработал",
+    "пишет с лёгким сленгом ('норм', 'чел', 'тип', 'спс', 'гифт', 'гарант', 'зашло'), без смайлов",
+    "очень короткий отзыв на 1 строчку от постоянного юзера"
 ]
 
-SAMPLE_ITEMS = [
-    "Plush Pepe", "Durov's Cap", "Precious Peach", "Astral Shard",
-    "Star Gift", "Vintage Cigar", "Magic Potion", "NFT подарок", "Telegram Gift"
+TOPIC_HINTS = [
+    "продал гифт за тон, без названия подарка",
+    "купил подарок у типа с рук через гаранта, без названия подарка",
+    "обменял нфт на звезды, без названия подарка",
+    "взял аккаунт через гаранта, всё прошло ровно",
+    "быстро вывел на карту после сделки",
+    "купил звезды через гаранта без обмана"
 ]
+
+BANNED_AI_PHRASES = (
+    "не могу", "выдуманный", "пример отзыва", "искусственный интеллект",
+    "языковая модель", "как ии", "сгенерирован", "помогу оформить",
+    "первый раз продавал", "немного переживал", "без лишней суеты", "без лишней возни"
+)
+
+def is_review_too_similar(new_text: str) -> bool:
+    clean_new = re.sub(r"[^a-zа-яё0-9\s]", "", new_text.lower()).strip()
+    new_words = set(clean_new.split())
+    if len(new_words) < 2:
+        return True
+    prefix_new = " ".join(clean_new.split()[:3])
+
+    for old in reviews_data.get("items", [])[:35]:
+        old_text = old.get("text", "")
+        clean_old = re.sub(r"[^a-zа-яё0-9\s]", "", old_text.lower()).strip()
+        if prefix_new and clean_old.startswith(prefix_new):
+            return True
+        old_words = set(clean_old.split())
+        if old_words and len(new_words & old_words) / max(len(new_words), len(old_words)) > 0.65:
+            return True
+    return False
 
 async def fetch_available_models(session: ClientSession) -> list[str]:
     headers = {"Authorization": f"Bearer {AI_API_KEY}"}
@@ -218,24 +397,15 @@ async def fetch_available_models(session: ClientSession) -> list[str]:
                 payload = await resp.json()
                 raw_list = payload.get("data", []) if isinstance(payload, dict) else []
                 models = [m.get("id") for m in raw_list if isinstance(m, dict) and m.get("id")]
-                # Отфильтровываем аудио/эмбеддинг модели, оставляем текстовые
                 chat_models = [
                     m for m in models
-                    if not any(bad in m.lower() for bad in ("embed", "whisper", "tts", "dall-e", "audio", "moderation"))
+                    if not any(bad in m.lower() for bad in ("embed", "whisper", "tts", "dall-e", "audio", "moderation", "opus-5-5"))
                 ]
                 random.shuffle(chat_models)
                 return chat_models
-    except Exception as e:
-        print(f"[AI] Ошибка получения списка моделей: {e}")
-
-    # Резервный список, если /models временно недоступен
-    fallback = [
-        "deepseek-v4.1-flash-ablilerated",
-        "deepseek-chat",
-        "gpt-4o-mini",
-        "claude-3-5-haiku",
-        "gemini-2.5-flash"
-    ]
+    except Exception:
+        pass
+    fallback = ["deepseek-v4.1-flash-ablilerated", "deepseek-chat", "gpt-4o-mini", "gemini-2.5-flash"]
     random.shuffle(fallback)
     return fallback
 
@@ -243,107 +413,86 @@ async def generate_ai_review_entry() -> dict | None:
     if not AI_API_KEY:
         return None
 
-    persona = random.choice(REVIEW_PERSONAS)
-    item_hint = random.choice(SAMPLE_ITEMS)
-    rating = random.choices([5, 4], weights=[82, 18], k=1)[0]
-    role_hint = random.choice(["продавал", "покупал", "обменивал"])
+    style = random.choice(WRITING_STYLES)
+    topic = random.choice(TOPIC_HINTS)
+    rating = random.choices([5, 4], weights=[86, 14], k=1)[0]
+    curr_choice = random.choice(["TON", "STARS", "RUB", "UAH"])
+    amt_map = {"TON": [5, 12, 25, 40, 80], "STARS": [250, 500, 1200, 3000], "RUB": [1000, 2500, 4500, 9000], "UAH": [500, 1200, 2500]}
+    amount_val = random.choice(amt_map[curr_choice])
+    cat_code, cat_label = random.choice([("nft_gift", "NFT / Telegram Gift"), ("game_account", "Игровой аккаунт"), ("other", "Другое")])
 
     system_prompt = (
-        "Ты пишешь реалистичные отзывы от лица реальных пользователей Telegram о P2P-гарант боте Hold Gifts.\n"
-        "Правила:\n"
-        f"1. Обязательно упомяни юзернейм бота @{BOT_USERNAME} в тексте отзыва.\n"
-        "2. Пиши НЕ официально! Никаких шаблонных фраз вроде 'Выражаю благодарность сервису' или 'Высокий уровень обслуживания'. "
-        "Пиши так, как реальные люди пишут в Telegram-каналах и чатах: живо, разнообразно, естественно.\n"
-        "3. Длина: от 1 до 3 коротких предложений (60–220 символов).\n"
-        "4. Не ставь кавычки вокруг всего отзыва и не пиши никаких пояснений — выдай только сам текст отзыва.\n"
-        "5. Не используй имена и фамилии — отзыв полностью анонимный."
+        "Ты имитируешь реальный короткий отзыв от живого человека в Telegram-боте.\n"
+        f"1. Обязательно упомяни @{BOT_USERNAME} в тексте.\n"
+        "2. Пиши как обычный юзер: без длинных тире (—), без оценок цифрами типа '5/5', допускается отсутствие точек и запятых.\n"
+        "3. Выдай ТОЛЬКО текст отзыва без кавычек и пояснений."
     )
+    user_prompt = f"Манера: {style}. Суть: {topic} ({amount_val} {curr_choice}). Напиши отзыв с @{BOT_USERNAME}."
 
-    user_prompt = (
-        f"Стиль автора: {persona}.\n"
-        f"Контекст: пользователь {role_hint} {item_hint}, оценка {rating} из 5 звёзд.\n"
-        f"Напиши один живой отзыв с упоминанием @{BOT_USERNAME}."
-    )
-
-    headers = {
-        "Authorization": f"Bearer {AI_API_KEY}",
-        "Content-Type": "application/json"
-    }
+    headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
 
     async with ClientSession() as session:
         models = await fetch_available_models(session)
-        for model_id in models[:12]:
+        for model_id in models[:15]:
             body = {
                 "model": model_id,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                "temperature": 0.92,
-                "max_tokens": 180
+                "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+                "temperature": 1.05,
+                "max_tokens": 130
             }
             try:
-                async with session.post(
-                    f"{AI_BASE_URL}/chat/completions",
-                    headers=headers,
-                    json=body,
-                    timeout=ClientTimeout(total=18)
-                ) as resp:
+                async with session.post(f"{AI_BASE_URL}/chat/completions", headers=headers, json=body, timeout=ClientTimeout(total=18)) as resp:
                     if resp.status != 200:
                         continue
                     data = await resp.json()
                     choices = data.get("choices") or []
                     if not choices:
                         continue
-                    text = (choices[0].get("message", {}).get("content") or "").strip()
-                    text = text.strip('"').strip("«»").strip()
-                    if len(text) < 15:
+                    text = (choices[0].get("message", {}).get("content") or "").strip().strip('"').strip("«»'").strip()
+                    text = text.replace(" — ", " - ").replace("—", "-")
+                    low = text.lower()
+                    if len(text) < 12 or len(text) > 260 or any(bad in low for bad in BANNED_AI_PHRASES):
                         continue
-
-                    # Гарантируем наличие юзернейма бота в отзыве
-                    if f"@{BOT_USERNAME.lower()}" not in text.lower():
-                        text = f"{text} (@{BOT_USERNAME})"
+                    if f"@{BOT_USERNAME.lower()}" not in low:
+                        text = f"{text} @{BOT_USERNAME}"
+                    if is_review_too_similar(text):
+                        continue
 
                     entry = {
                         "id": "rev_" + str(uuid.uuid4())[:8],
                         "author_ru": "Анонимный пользователь",
                         "author_en": "Anonymous user",
                         "rating": rating,
+                        "category": cat_code,
+                        "category_label": cat_label,
+                        "currency": curr_choice,
+                        "amount": amount_val,
                         "text": text,
                         "date": datetime.now().isoformat(),
                         "source": "ai",
                         "model": model_id
                     }
-
                     reviews_data["items"].insert(0, entry)
                     save_json(FILES["reviews"], reviews_data)
-
                     ai_state["last_model"] = model_id
                     ai_state["generated_count"] = ai_state.get("generated_count", 0) + 1
                     save_json(FILES["ai_state"], ai_state)
                     return entry
             except Exception:
                 continue
-
     return None
 
 async def ai_reviews_background_loop():
     while True:
         try:
             if ai_state.get("enabled"):
-                entry = await generate_ai_review_entry()
-                if not entry:
-                    await notify_admins(
-                        "<b>ИИ-отзывы:</b> ни одна модель на codex.sale сейчас не ответила. Повторная попытка через цикл."
-                    )
+                await generate_ai_review_entry()
         except Exception as e:
             print(f"[AI Loop] Ошибка: {e}")
-
-        wait_sec = max(60, int(ai_state.get("interval_sec", AI_REVIEW_INTERVAL_SEC)))
-        await asyncio.sleep(wait_sec)
+        await asyncio.sleep(max(60, int(ai_state.get("interval_sec", AI_REVIEW_INTERVAL_SEC))))
 
 # ============================================================
-# 5. КЛАВИАТУРЫ
+# 6. КЛАВИАТУРЫ
 # ============================================================
 def main_menu_keyboard(user_id: int):
     lang = get_user_language(user_id) or "ru"
@@ -416,9 +565,8 @@ def admin_panel_keyboard():
 
 def back_to_main_keyboard(user_id: int = 0):
     lang = get_user_language(user_id) or "ru"
-    label = "Main Menu" if lang == "en" else "В главное меню"
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=label, callback_data="back_to_main")]
+        [InlineKeyboardButton(text="Main Menu" if lang == "en" else "В главное меню", callback_data="back_to_main")]
     ])
 
 def language_keyboard():
@@ -442,7 +590,7 @@ def currency_keyboard():
     ])
 
 # ============================================================
-# 6. ПРИВЕТСТВИЕ И ВИДЕО-БАННЕР
+# 7. ПРИВЕТСТВИЕ И ОТПРАВКА БАННЕРА (В Т.Ч. ПОСЛЕ ВЫБОРА ЯЗЫКА)
 # ============================================================
 def get_welcome_text(user_id: int) -> str:
     lang = get_user_language(user_id) or "ru"
@@ -475,7 +623,7 @@ async def admin_welcome_media(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         f"<b>Зимний приветственный баннер</b>\n\n"
         f"Текущий файл: {current}\n\n"
-        f"Отправьте <b>видео</b>, <b>GIF</b> или <b>фото</b> — оно будет отправляться при команде /start.",
+        f"Отправьте <b>видео</b>, <b>GIF</b> или <b>фото</b> — оно будет отправляться при команде /start и после выбора языка.",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Удалить баннер", callback_data="admin_clear_media")],
             [InlineKeyboardButton(text="Назад", callback_data="menu_admin")]
@@ -516,40 +664,31 @@ async def admin_clear_media(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer()
 
-async def send_welcome(target_message: types.Message, user_id: int, edit: bool = False):
+async def send_welcome_with_banner(chat_id: int, user_id: int):
+    """Всегда отправляет приветствие с актуальным баннером (видео/GIF/фото)."""
     text = get_welcome_text(user_id)
     markup = main_menu_keyboard(user_id)
     media_type = welcome_media.get("type")
     media_file_id = welcome_media.get("file_id")
 
-    if edit:
-        try:
-            if target_message.caption is not None:
-                await target_message.edit_caption(caption=text, reply_markup=markup)
-            else:
-                await target_message.edit_text(text=text, reply_markup=markup)
-            return
-        except Exception:
-            pass
-
     if media_file_id and media_type:
         try:
             if media_type == "video":
-                await target_message.answer_video(video=media_file_id, caption=text, reply_markup=markup)
+                await bot.send_video(chat_id, video=media_file_id, caption=text, reply_markup=markup)
                 return
             elif media_type == "gif":
-                await target_message.answer_animation(animation=media_file_id, caption=text, reply_markup=markup)
+                await bot.send_animation(chat_id, animation=media_file_id, caption=text, reply_markup=markup)
                 return
             elif media_type == "photo":
-                await target_message.answer_photo(photo=media_file_id, caption=text, reply_markup=markup)
+                await bot.send_photo(chat_id, photo=media_file_id, caption=text, reply_markup=markup)
                 return
         except Exception as e:
-            print(f"Ошибка баннера: {e}")
+            print(f"Ошибка отправки баннера: {e}")
 
-    await target_message.answer(text, reply_markup=markup)
+    await bot.send_message(chat_id, text, reply_markup=markup, disable_web_page_preview=True)
 
 # ============================================================
-# 7. СТАРТ И ВХОД В СДЕЛКУ ПО ССЫЛКЕ
+# 8. СТАРТ, ВЫБОР ЯЗЫКА И ВХОД В СДЕЛКУ
 # ============================================================
 @dp.message(Command("work"))
 async def cmd_work(message: types.Message):
@@ -574,7 +713,38 @@ async def cmd_start(message: types.Message):
         await message.answer("<b>Выберите язык / Choose your language:</b>", reply_markup=language_keyboard())
         return
 
-    await send_welcome(message, message.from_user.id, edit=False)
+    await send_welcome_with_banner(message.chat.id, message.from_user.id)
+
+@dp.callback_query(lambda c: c.data.startswith("set_lang_"))
+async def set_language(callback: types.CallbackQuery):
+    lang = callback.data.split("_")[2]
+    set_user_language(callback.from_user.id, lang)
+    await callback.answer("Language updated" if lang == "en" else "Язык обновлён")
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    # После выбора языка отправляем полноценное приветствие вместе с видео-баннером
+    await send_welcome_with_banner(callback.message.chat.id, callback.from_user.id)
+
+@dp.callback_query(lambda c: c.data == "select_language")
+async def select_language(callback: types.CallbackQuery):
+    text = "<b>Выберите язык / Choose your language:</b>"
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    await bot.send_message(callback.message.chat.id, text, reply_markup=language_keyboard())
+    await callback.answer()
+
+@dp.callback_query(lambda c: c.data == "back_to_main")
+async def back_to_main(callback: types.CallbackQuery):
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    await send_welcome_with_banner(callback.message.chat.id, callback.from_user.id)
+    await callback.answer()
 
 async def handle_deal_link(message: types.Message, deal_id: str):
     uid = message.from_user.id
@@ -646,7 +816,7 @@ async def handle_deal_link(message: types.Message, deal_id: str):
                 pass
 
     both_joined = bool(deal.get("seller_joined") and deal.get("buyer_joined"))
-    nft_line = f"\nNFT: {deal['nft_link']}" if deal.get("nft_link") else ""
+    nft_html = f'\nNFT: <a href="{deal["nft_link"]}">{deal.get("nft_name", "Подарок")} #{deal.get("nft_number", "")}</a>' if deal.get("nft_link") else ""
 
     if lang == "en":
         wait_note = (
@@ -660,7 +830,7 @@ async def handle_deal_link(message: types.Message, deal_id: str):
             f"Amount: <b>{deal['amount']} {deal['currency']}</b>\n"
             f"Seller: @{deal.get('seller_username', '—')} ({'joined' if deal.get('seller_joined') else 'waiting'})\n"
             f"Buyer: @{deal.get('buyer_username', '—')} ({'joined' if deal.get('buyer_joined') else 'waiting'})"
-            f"{nft_line}\n\n"
+            f"{nft_html}\n\n"
             f"{wait_note}"
         )
         btn_label = "Open Deal in App"
@@ -676,7 +846,7 @@ async def handle_deal_link(message: types.Message, deal_id: str):
             f"Сумма: <b>{deal['amount']} {deal['currency']}</b>\n"
             f"Продавец: @{deal.get('seller_username', '—')} ({'в сделке' if deal.get('seller_joined') else 'ожидается'})\n"
             f"Покупатель: @{deal.get('buyer_username', '—')} ({'в сделке' if deal.get('buyer_joined') else 'ожидается'})"
-            f"{nft_line}\n\n"
+            f"{nft_html}\n\n"
             f"{wait_note}"
         )
         btn_label = "Открыть сделку"
@@ -685,33 +855,11 @@ async def handle_deal_link(message: types.Message, deal_id: str):
         [InlineKeyboardButton(text=btn_label, web_app=WebAppInfo(url=build_webapp_url(uid, page="deals", deal_id=deal_id)))],
         [InlineKeyboardButton(text="Main Menu" if lang == "en" else "В главное меню", callback_data="back_to_main")]
     ])
-    await message.answer(text, reply_markup=kb)
+    await message.answer(text, reply_markup=kb, disable_web_page_preview=True)
 
 # ============================================================
-# 8. ОБРАБОТЧИКИ МЕНЮ БОТА
+# 9. КОШЕЛЁК И СДЕЛКИ В БОТЕ
 # ============================================================
-@dp.callback_query(lambda c: c.data.startswith("set_lang_"))
-async def set_language(callback: types.CallbackQuery):
-    lang = callback.data.split("_")[2]
-    set_user_language(callback.from_user.id, lang)
-    await callback.answer("Language updated" if lang == "en" else "Язык обновлён")
-    await send_welcome(callback.message, callback.from_user.id, edit=True)
-
-@dp.callback_query(lambda c: c.data == "select_language")
-async def select_language(callback: types.CallbackQuery):
-    text = "<b>Выберите язык / Choose your language:</b>"
-    if callback.message.caption is not None:
-        await callback.message.delete()
-        await callback.message.answer(text, reply_markup=language_keyboard())
-    else:
-        await callback.message.edit_text(text, reply_markup=language_keyboard())
-    await callback.answer()
-
-@dp.callback_query(lambda c: c.data == "back_to_main")
-async def back_to_main(callback: types.CallbackQuery):
-    await send_welcome(callback.message, callback.from_user.id, edit=True)
-    await callback.answer()
-
 @dp.callback_query(lambda c: c.data == "menu_balance")
 async def menu_balance(callback: types.CallbackQuery):
     uid = callback.from_user.id
@@ -778,17 +926,17 @@ async def menu_deals(callback: types.CallbackQuery):
     await callback.answer()
 
 # ============================================================
-# 9. АДМИН-ПАНЕЛЬ В БОТЕ (ВКЛЮЧАЯ УПРАВЛЕНИЕ ИИ-ОТЗЫВАМИ)
+# 10. АДМИН-ПАНЕЛЬ В БОТЕ
 # ============================================================
 def get_admin_dashboard_text() -> str:
-    state_str = "АКТИВНА (работает в фоне)" if ai_state.get("enabled") else "ОСТАНОВЛЕНА"
-    last_mod = ai_state.get("last_model") or "ещё не запускалась"
+    state_str = "АКТИВНА" if ai_state.get("enabled") else "ОСТАНОВЛЕНА"
+    last_mod = ai_state.get("last_model") or "не запускалась"
     total_rev = len(reviews_data.get("items", []))
     return (
         "<b>Админ-панель Hold Gifts</b>\n\n"
         f"Автогенерация отзывов ИИ: <b>{state_str}</b>\n"
-        f"Последняя рабочая модель: <code>{last_mod}</code>\n"
-        f"Всего отзывов в Mini App: <b>{total_rev}</b>\n\n"
+        f"Последняя модель: <code>{last_mod}</code>\n"
+        f"Всего отзывов: <b>{total_rev}</b>\n\n"
         "Выберите действие:"
     )
 
@@ -817,21 +965,19 @@ async def admin_toggle_ai(callback: types.CallbackQuery):
 async def admin_gen_one_review(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
-    await callback.answer("Подбираю рабочую модель и генерирую отзыв...")
+    await callback.answer("Генерирую отзыв...")
     entry = await generate_ai_review_entry()
     if entry:
         await callback.message.edit_text(
-            f"<b>Новый анонимный отзыв сгенерирован!</b>\n\n"
-            f"Оценка: <b>{entry['rating']} / 5</b>\n"
-            f"Модель: <code>{entry['model']}</code>\n"
+            f"<b>Новый отзыв добавлен</b>\n\n"
+            f"Оценка: <b>{entry['rating']} / 5</b> ({entry['amount']} {entry['currency']})\n"
             f"Текст: {entry['text']}\n\n"
             + get_admin_dashboard_text(),
             reply_markup=admin_panel_keyboard()
         )
     else:
         await callback.message.edit_text(
-            "Не удалось сгенерировать отзыв: проверьте ключ codex.sale или доступность моделей.\n\n"
-            + get_admin_dashboard_text(),
+            "Модели временно недоступны.\n\n" + get_admin_dashboard_text(),
             reply_markup=admin_panel_keyboard()
         )
 
@@ -974,7 +1120,7 @@ async def chat_reply_command(message: types.Message):
     try:
         await bot.send_message(
             int(target_uid),
-            f"<b>Новое сообщение от поддержки:</b>\n\n{reply_text}",
+            f"<b>Ответ поддержки Hold Gifts:</b>\n\n{reply_text}",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="Открыть чат", web_app=WebAppInfo(url=build_webapp_url(int(target_uid), page="support")))]
             ])
@@ -1075,7 +1221,7 @@ async def remove_admin(message: types.Message):
         await message.answer(f"Админ удалён: {args[1]}")
 
 # ============================================================
-# 10. ФОНОВАЯ СТАТИСТИКА
+# 11. ФОНОВАЯ СТАТИСТИКА
 # ============================================================
 async def auto_increment_stats():
     while True:
@@ -1091,7 +1237,7 @@ async def auto_increment_stats():
         await asyncio.sleep(300)
 
 # ============================================================
-# 11. API И РАЗДАЧА MINI APP
+# 12. API И РАЗДАЧА MINI APP
 # ============================================================
 async def handle_web_request(request: web.Request):
     headers = {
@@ -1143,13 +1289,26 @@ async def handle_web_request(request: web.Request):
     elif endpoint == "/api/is_admin":
         return web.json_response({"success": True, "is_admin": is_admin(user_id)}, headers=headers)
 
-    # ОТЗЫВЫ (ПОЛУЧЕНИЕ + ДОБАВЛЕНИЕ ПОСЛЕ 1 ЗАВЕРШЁННОЙ СДЕЛКИ)
+    # ОТЗЫВЫ (ФИЛЬТР ПО ВАЛЮТЕ, ОЦЕНКИ 1-5 ДЛЯ ЛЮДЕЙ, КАТЕГОРИЯ И СУММА)
     elif endpoint == "/api/reviews":
         can_review = user_has_completed_deal(user_id, username) or is_admin(user_id)
-        items = reviews_data.get("items", [])[:60]
+        curr_filter = (data.get("currency") or "ALL").upper()
+        all_items = reviews_data.get("items", [])
+
+        if curr_filter != "ALL":
+            filtered = [r for r in all_items if (r.get("currency") or "").upper() == curr_filter]
+        else:
+            filtered = all_items
+
+        total_count = len(all_items)
+        avg_rating = round(sum(r.get("rating", 5) for r in all_items) / total_count, 1) if total_count else 5.0
+
         return web.json_response({
             "success": True,
-            "reviews": items,
+            "reviews": filtered[:100],
+            "total_count": total_count,
+            "filtered_count": len(filtered),
+            "avg_rating": avg_rating,
             "can_review": can_review
         }, headers=headers)
 
@@ -1165,9 +1324,23 @@ async def handle_web_request(request: web.Request):
 
         text = (data.get("text") or "").strip()
         rating = int(data.get("rating") or 5)
-        rating = max(4, min(5, rating))
+        rating = max(1, min(5, rating))  # Пользователи могут ставить от 1 до 5
 
-        if len(text) < 5:
+        category = data.get("category") or "nft_gift"
+        cat_labels = {
+            "nft_gift": "NFT / Telegram Gift",
+            "game_account": "Игровой аккаунт",
+            "other": "Другое"
+        }
+        currency = (data.get("currency") or "TON").upper()
+        try:
+            amount = float(data.get("amount") or 0)
+        except (TypeError, ValueError):
+            amount = 0
+
+        if amount <= 0:
+            return web.json_response({"success": False, "error": "Укажите сумму сделки"}, headers=headers)
+        if len(text) < 4:
             return web.json_response({"success": False, "error": "Напишите текст отзыва"}, headers=headers)
 
         entry = {
@@ -1175,6 +1348,10 @@ async def handle_web_request(request: web.Request):
             "author_ru": "Анонимный пользователь",
             "author_en": "Anonymous user",
             "rating": rating,
+            "category": category,
+            "category_label": cat_labels.get(category, "NFT / Telegram Gift"),
+            "currency": currency,
+            "amount": int(amount) if amount.is_integer() else round(amount, 2),
             "text": text[:500],
             "date": datetime.now().isoformat(),
             "source": "user"
@@ -1206,7 +1383,7 @@ async def handle_web_request(request: web.Request):
             "reviews": reviews_data.get("items", [])[:60]
         }, headers=headers)
 
-    # СОЗДАНИЕ СДЕЛКИ
+    # СОЗДАНИЕ СДЕЛКИ (АККУРАТНОЕ СООБЩЕНИЕ БЕЗ БОЛЬШОГО ПРЕВЬЮ ПОДАРКА)
     elif endpoint == "/api/create_deal":
         product = (data.get("product") or "").strip()
         currency = (data.get("currency") or "TON").upper()
@@ -1267,41 +1444,53 @@ async def handle_web_request(request: web.Request):
         }
         save_json(FILES["deals"], deals)
 
+        # Отправляем создателю аккуратное, компактное сообщение с вшитыми ссылками и без превью
         try:
-            share_url = f"https://t.me/share/url?url={link}&text=Hold%20Gifts%20Deal%20%23{deal_id}"
+            share_text = (
+                f"Сделка #{deal_id} в Hold Gifts\n"
+                f"Товар: {product} ({amount} {currency})\n"
+                f"Войти в сделку: {link}"
+            )
+            from urllib.parse import quote
+            share_url = f"https://t.me/share/url?url={quote(link)}&text={quote(share_text)}"
+
+            nft_line = (
+                f'NFT: <a href="{nft_url}">{parsed_nft["name"]} #{parsed_nft["number"]}</a>\n'
+                if parsed_nft else ""
+            )
+
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="Переслать ссылку участнику", url=share_url)],
                 [InlineKeyboardButton(text="Открыть сделку", web_app=WebAppInfo(url=build_webapp_url(user_id, page="deals", deal_id=deal_id)))]
             ])
             await bot.send_message(
                 int(user_id),
-                f"<b>Сделка #{deal_id} создана</b>\n\n"
+                f'<b>Сделка <a href="{link}">#{deal_id}</a> создана</b>\n\n'
                 f"Товар: <b>{product}</b>\n"
                 f"Сумма: <b>{amount} {currency}</b>\n"
                 f"Продавец: @{seller_username}\n"
                 f"Покупатель: @{buyer_username}\n"
-                f"{f'NFT: {nft_url}' + chr(10) if nft_url else ''}\n"
-                f"Отправьте эту ссылку второму участнику (оплата откроется после того, как оба зайдут в сделку):\n"
+                f"{nft_line}\n"
+                f'Передайте <a href="{link}">ссылку на сделку</a> второму участнику (оплата откроется после входа обоих):\n'
                 f"<code>{link}</code>",
-                reply_markup=kb
+                reply_markup=kb,
+                disable_web_page_preview=True
             )
         except Exception as e:
             print(f"Ошибка отправки ссылки создателю: {e}")
 
         nft_admin_block = (
-            f"\nNFT подарок: <b>{parsed_nft['name']} #{parsed_nft['number']}</b>\n"
-            f"Ссылка на NFT: {nft_url}"
+            f'\nNFT: <a href="{nft_url}">{parsed_nft["name"]} #{parsed_nft["number"]}</a>'
             if parsed_nft else ""
         )
         await notify_admins(
-            f"<b>Новая сделка #{deal_id}</b>\n\n"
+            f'<b>Новая сделка <a href="{link}">#{deal_id}</a></b>\n\n'
             f"Создатель: @{creator_uname} (ID: <code>{user_id}</code>)\n"
             f"Продавец: @{seller_username}\n"
             f"Покупатель: @{buyer_username}\n"
             f"Товар: <b>{product}</b>\n"
             f"Сумма: <b>{amount} {currency}</b>"
-            f"{nft_admin_block}\n\n"
-            f"Ссылка сделки: {link}"
+            f"{nft_admin_block}"
         )
 
         return web.json_response({"success": True, "deal_id": deal_id, "link": link, "deal": deals[deal_id]}, headers=headers)
@@ -1549,7 +1738,7 @@ async def handle_web_request(request: web.Request):
     return web.json_response({"success": False, "error": "Unknown endpoint"}, headers=headers)
 
 # ============================================================
-# 12. ЗАПУСК
+# 13. ЗАПУСК И КОРРЕКТНОЕ ЗАВЕРШЕНИЕ
 # ============================================================
 async def start_web_server():
     app = web.Application()
@@ -1564,7 +1753,15 @@ async def main():
     asyncio.create_task(auto_increment_stats())
     asyncio.create_task(ai_reviews_background_loop())
     await start_web_server()
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        flush_all_data()
 
 if __name__ == "__main__":
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            signal.signal(sig, lambda *_: flush_all_data())
+        except Exception:
+            pass
     asyncio.run(main())
