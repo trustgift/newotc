@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hold Gifts — Winter New Year Edition</title>
+    <title>Hold Gifts — Winter Edition</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -406,7 +406,7 @@
         .badge.awaiting_confirmation { background: rgba(192, 132, 252, 0.18); color: #d8b4fe; }
         .badge.completed { background: rgba(52, 211, 153, 0.18); color: var(--emerald); }
 
-        /* ОТЗЫВЫ */
+        /* ОТЗЫВЫ И ФИЛЬТРЫ ПО ВАЛЮТАМ */
         .rating-summary {
             display: flex;
             align-items: center;
@@ -415,24 +415,47 @@
             background: rgba(56, 189, 248, 0.1);
             border: 1px solid var(--border-glow);
             border-radius: var(--radius-lg);
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
-        .star-picker { display: flex; gap: 8px; margin-bottom: 10px; }
+        .filter-chips {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            margin-bottom: 12px;
+        }
+        .f-chip {
+            padding: 7px 13px;
+            border-radius: 99px;
+            border: 1px solid var(--border-ice);
+            background: var(--bg-input);
+            color: var(--text-sub);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+        .f-chip.active {
+            background: var(--grad-frost);
+            color: #060b16;
+            border-color: transparent;
+        }
+        .star-picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
         .star-opt {
-            flex: 1;
-            padding: 10px;
+            padding: 9px 4px;
             border-radius: 12px;
             border: 1px solid var(--border-ice);
             background: var(--bg-input);
             color: var(--text-sub);
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             text-align: center;
             cursor: pointer;
         }
         .star-opt.active {
             border-color: var(--gold);
-            background: rgba(252, 211, 77, 0.16);
+            background: rgba(252, 211, 77, 0.18);
             color: var(--gold);
         }
         .review-card {
@@ -448,7 +471,27 @@
             align-items: center;
             margin-bottom: 6px;
         }
-        .review-stars { color: var(--gold); font-size: 12px; letter-spacing: 2px; }
+        .review-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .meta-tag {
+            padding: 3px 9px;
+            border-radius: 8px;
+            background: rgba(125, 211, 252, 0.12);
+            border: 1px solid rgba(125, 211, 252, 0.22);
+            color: var(--ice-bright);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .meta-tag.amt {
+            background: rgba(52, 211, 153, 0.12);
+            border-color: rgba(52, 211, 153, 0.25);
+            color: var(--emerald);
+        }
+        .review-stars { color: var(--gold); font-size: 12px; letter-spacing: 1.5px; }
         .review-text { font-size: 13px; color: var(--text-main); line-height: 1.45; }
 
         /* Чат */
@@ -753,6 +796,15 @@
                         <div style="font-size: 11px; color: var(--text-sub);" id="reviewsCountText">Проверенные сделки • Анонимно</div>
                     </div>
                     <div style="font-size: 11px; color: var(--ice-bright); font-weight: 700;">@holdnftgiftbot</div>
+                </div>
+
+                <!-- Фильтр отзывов по валютам -->
+                <div class="filter-chips" id="reviewFilterChips">
+                    <button class="f-chip active" onclick="filterReviewsByCurr('ALL', this)">Все</button>
+                    <button class="f-chip" onclick="filterReviewsByCurr('TON', this)">TON</button>
+                    <button class="f-chip" onclick="filterReviewsByCurr('STARS', this)">STARS</button>
+                    <button class="f-chip" onclick="filterReviewsByCurr('RUB', this)">RUB</button>
+                    <button class="f-chip" onclick="filterReviewsByCurr('UAH', this)">UAH</button>
                 </div>
 
                 <!-- Форма добавления отзыва (только если есть 1+ завершённая сделка) -->
@@ -1087,6 +1139,12 @@
             } else if (selectId === 'csDealCurr') {
                 document.getElementById('currValue').value = value;
                 document.getElementById('csDealCurrText').innerHTML = `<i class="fas ${iconClass}" style="color:var(--ice); margin-right:6px;"></i>${label}`;
+            } else if (selectId === 'csRevCategory') {
+                document.getElementById('revCatValue').value = value;
+                document.getElementById('csRevCategoryText').innerHTML = `<i class="fas ${iconClass}" style="color:var(--ice); margin-right:8px;"></i>${label}`;
+            } else if (selectId === 'csRevCurr') {
+                document.getElementById('revCurrValue').value = value;
+                document.getElementById('csRevCurrText').innerHTML = `<i class="fas ${iconClass}" style="color:var(--ice); margin-right:6px;"></i>${label}`;
             }
         }
 
@@ -1291,25 +1349,38 @@
         });
 
         // ============================================================
-        // 7. ОТЗЫВЫ (ПРОСМОТР + ДОБАВЛЕНИЕ ПОСЛЕ 1 СДЕЛКИ)
+        // 7. ОТЗЫВЫ (ФИЛЬТРАЦИЯ + ОЦЕНКА 1-5 + КАТЕГОРИЯ И СУММА)
         // ============================================================
         let cachedReviews = [];
         let canUserReview = false;
         let selectedReviewRating = 5;
+        let activeReviewCurrencyFilter = 'ALL';
+        let totalReviewsGlobal = 0;
+        let avgRatingGlobal = 4.9;
 
-        async function loadReviews() {
-            const res = await apiCall('/api/reviews');
+        async function loadReviews(currFilter = activeReviewCurrencyFilter) {
+            activeReviewCurrencyFilter = currFilter;
+            const res = await apiCall('/api/reviews', { currency: currFilter });
             if (res.success) {
                 cachedReviews = res.reviews || [];
                 canUserReview = Boolean(res.can_review);
+                totalReviewsGlobal = res.total_count ?? cachedReviews.length;
+                avgRatingGlobal = res.avg_rating ?? 4.9;
                 renderReviewsUI();
             }
         }
 
+        function filterReviewsByCurr(curr, btnEl) {
+            document.querySelectorAll('#reviewFilterChips .f-chip').forEach(c => c.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            loadReviews(curr);
+        }
+
         function setReviewRating(r) {
             selectedReviewRating = r;
-            document.getElementById('starOpt5')?.classList.toggle('active', r === 5);
-            document.getElementById('starOpt4')?.classList.toggle('active', r === 4);
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('starOpt' + i)?.classList.toggle('active', i === r);
+            }
         }
 
         function renderReviewsUI() {
@@ -1317,13 +1388,10 @@
             const listBox = document.getElementById('reviewsListContainer');
             const quickBox = document.getElementById('quickReviews');
 
-            if (cachedReviews.length > 0) {
-                const avg = (cachedReviews.reduce((acc, r) => acc + (r.rating || 5), 0) / cachedReviews.length).toFixed(1);
-                document.getElementById('avgRatingText').textContent = `${avg} ★`;
-                document.getElementById('reviewsCountText').textContent = currentLang === 'en'
-                    ? `${cachedReviews.length} anonymous verified reviews`
-                    : `Всего отзывов: ${cachedReviews.length} • Анонимно`;
-            }
+            document.getElementById('avgRatingText').textContent = `${avgRatingGlobal} ★`;
+            document.getElementById('reviewsCountText').textContent = currentLang === 'en'
+                ? `${totalReviewsGlobal} anonymous verified reviews`
+                : `Всего отзывов: ${totalReviewsGlobal} • Анонимно`;
 
             if (formBlock) {
                 if (canUserReview) {
@@ -1333,9 +1401,45 @@
                                 ${currentLang === 'en' ? 'Leave an anonymous review' : 'Оставить анонимный отзыв'}
                             </div>
                             <div class="star-picker">
-                                <div class="star-opt active" id="starOpt5" onclick="setReviewRating(5)">★★★★★ (5)</div>
-                                <div class="star-opt" id="starOpt4" onclick="setReviewRating(4)">★★★★☆ (4)</div>
+                                <div class="star-opt" id="starOpt1" onclick="setReviewRating(1)">1 ★</div>
+                                <div class="star-opt" id="starOpt2" onclick="setReviewRating(2)">2 ★</div>
+                                <div class="star-opt" id="starOpt3" onclick="setReviewRating(3)">3 ★</div>
+                                <div class="star-opt" id="starOpt4" onclick="setReviewRating(4)">4 ★</div>
+                                <div class="star-opt active" id="starOpt5" onclick="setReviewRating(5)">5 ★</div>
                             </div>
+
+                            <div class="field" style="margin-bottom: 8px;">
+                                <div class="custom-select" id="csRevCategory">
+                                    <div class="cs-trigger" onclick="toggleCustomSelect('csRevCategory')">
+                                        <span id="csRevCategoryText"><i class="fas fa-gem" style="color:var(--ice); margin-right:8px;"></i>NFT / Telegram Gift</span>
+                                        <i class="fas fa-chevron-down arrow"></i>
+                                    </div>
+                                    <div class="cs-menu">
+                                        <div class="cs-option selected" onclick="selectCustomOption('csRevCategory', 'nft_gift', 'NFT / Telegram Gift', 'fa-gem')"><i class="fas fa-gem"></i> NFT / Telegram Gift</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCategory', 'game_account', 'Игровой аккаунт', 'fa-gamepad')"><i class="fas fa-gamepad"></i> Игровой аккаунт</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCategory', 'other', 'Другое', 'fa-box-open')"><i class="fas fa-box-open"></i> Другое</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="revCatValue" value="nft_gift">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px; margin-bottom: 8px;">
+                                <div class="custom-select" id="csRevCurr">
+                                    <div class="cs-trigger" onclick="toggleCustomSelect('csRevCurr')">
+                                        <span id="csRevCurrText"><i class="fas fa-diamond" style="color:var(--ice); margin-right:6px;"></i>TON</span>
+                                        <i class="fas fa-chevron-down arrow"></i>
+                                    </div>
+                                    <div class="cs-menu">
+                                        <div class="cs-option selected" onclick="selectCustomOption('csRevCurr', 'TON', 'TON', 'fa-diamond')"><i class="fas fa-diamond"></i> TON</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCurr', 'STARS', 'STARS', 'fa-star')"><i class="fas fa-star"></i> STARS</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCurr', 'RUB', 'RUB', 'fa-ruble-sign')"><i class="fas fa-ruble-sign"></i> RUB</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCurr', 'UAH', 'UAH', 'fa-hryvnia-sign')"><i class="fas fa-hryvnia-sign"></i> UAH</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="revCurrValue" value="TON">
+                                <input type="number" id="revAmtInput" placeholder="${currentLang === 'en' ? 'Deal amount' : 'Сумма сделки'}" min="0.01" step="0.01" style="width:100%; padding:12px 14px; border-radius:var(--radius-md); border:1px solid var(--border-ice); background:var(--bg-input); color:var(--text-main); outline:none;">
+                            </div>
+
                             <div class="field" style="margin-bottom: 8px;">
                                 <textarea id="newReviewText" rows="2" placeholder="${currentLang === 'en' ? 'Share your deal experience...' : 'Поделитесь впечатлениями о сделке...'}"></textarea>
                             </div>
@@ -1356,15 +1460,20 @@
             }
 
             const renderItem = (r) => {
-                const stars = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
+                const rating = Math.max(1, Math.min(5, r.rating || 5));
+                const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
                 const author = currentLang === 'en' ? (r.author_en || 'Anonymous user') : (r.author_ru || 'Анонимный пользователь');
-                const dateStr = r.date ? new Date(r.date).toLocaleDateString() : '';
+                const dateStr = r.date ? new Date(r.date).toLocaleDateString('ru-RU') : '';
+                const catTag = r.category_label ? `<span class="meta-tag">${esc(r.category_label)}</span>` : '';
+                const amtTag = (r.amount && r.currency) ? `<span class="meta-tag amt">${esc(String(r.amount))} ${esc(r.currency)}</span>` : '';
+
                 return `
                     <div class="review-card">
                         <div class="review-head">
                             <span style="font-size: 12px; font-weight: 700; color: var(--ice-bright);"><i class="fas fa-user-secret" style="margin-right: 5px;"></i>${esc(author)}</span>
                             <span class="review-stars">${stars}</span>
                         </div>
+                        ${(catTag || amtTag) ? `<div class="review-meta">${catTag}${amtTag}</div>` : ''}
                         <div class="review-text">${esc(r.text)}</div>
                         <div style="font-size: 10px; color: var(--text-muted); margin-top: 6px;">${dateStr}</div>
                     </div>
@@ -1374,7 +1483,7 @@
             if (listBox) {
                 listBox.innerHTML = cachedReviews.length
                     ? cachedReviews.map(renderItem).join('')
-                    : `<div style="text-align:center; padding:20px; color:var(--text-muted);">Отзывов пока нет</div>`;
+                    : `<div style="text-align:center; padding:20px; color:var(--text-muted);">Отзывов по выбранному фильтру нет</div>`;
             }
 
             if (quickBox) {
@@ -1386,14 +1495,30 @@
 
         async function submitUserReview() {
             const text = document.getElementById('newReviewText').value.trim();
+            const category = document.getElementById('revCatValue')?.value || 'nft_gift';
+            const currency = document.getElementById('revCurrValue')?.value || 'TON';
+            const amount = parseFloat(document.getElementById('revAmtInput')?.value || 0);
+
+            if (!amount || amount <= 0) {
+                showToast(currentLang === 'en' ? 'Enter deal amount' : 'Укажите сумму сделки');
+                return;
+            }
             if (!text) {
                 showToast(currentLang === 'en' ? 'Enter review text' : 'Введите текст отзыва');
                 return;
             }
-            const res = await apiCall('/api/add_review', { text, rating: selectedReviewRating });
+
+            const res = await apiCall('/api/add_review', {
+                text,
+                rating: selectedReviewRating,
+                category,
+                currency,
+                amount
+            });
+
             if (res.success) {
                 showToast(currentLang === 'en' ? 'Review published!' : 'Отзыв опубликован!');
-                loadReviews();
+                loadReviews('ALL');
             } else {
                 showToast(res.error || 'Ошибка');
             }
@@ -1740,7 +1865,7 @@
 
                 <div class="admin-pane active" id="adm-ai">
                     <div class="notice-ice">
-                        Статус авто-отзывов ИИ: <b>${aiActive ? 'ЗАПУЩЕНО' : 'ОСТАНОВЛЕНО'}</b><br>
+                        Статус авто-отзывов ИИ: <b>${aiActive ? 'ЗАПУЩЕНО' : 'ОСТАНОВЛЕНА'}</b><br>
                         Последняя модель: <b>${esc(data.last_model || '—')}</b>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
@@ -1754,7 +1879,7 @@
                     ${admReviews.map(r => `
                         <div class="deal-card">
                             <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                                <span style="color:var(--gold); font-size:12px;">${'★'.repeat(r.rating || 5)} (${esc(r.source || 'ai')})</span>
+                                <span style="color:var(--gold); font-size:12px;">${'★'.repeat(r.rating || 5)} (${esc(String(r.amount || ''))} ${esc(r.currency || '')})</span>
                                 <button class="btn btn-danger btn-sm" style="padding:3px 8px; font-size:11px;" onclick="admDeleteReview('${r.id}')">Удалить</button>
                             </div>
                             <div style="font-size:12px; color:var(--text-main);">${esc(r.text)}</div>
@@ -1818,7 +1943,7 @@
         }
 
         async function admAiControl(action) {
-            if (action === 'generate_now') showToast('Генерирую отзыв через codex.sale...');
+            if (action === 'generate_now') showToast('Генерирую отзыв...');
             const res = await apiCall('/api/admin_ai_control', { action });
             if (res.success) {
                 showToast('Готово');
