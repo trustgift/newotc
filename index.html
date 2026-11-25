@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tap Combat</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --card: #171b24;
+      --accent: #f5b041;
+      --accent-glow: rgba(245, 176, 65, 0.35);
+      --text: #ffffff;
+      --muted: #8b94a5;
+      --green: #2ecc71;
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .header {
+      padding: 14px 16px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .user-badge {
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--card);
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+    .profit-badge {
+      font-size: 13px;
+      color: var(--accent);
+      background: var(--card);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .balance-box {
+      text-align: center;
+      margin: 12px 0;
+    }
+    .balance-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .balance-value {
+      font-size: 40px;
+      font-weight: 800;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .content {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      overflow-y: auto;
+    }
+    .tab-pane {
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+    .tab-pane.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Монета */
+    .coin-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .coin-btn {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffd56b, #d68910 70%, #7e5109);
+      box-shadow: 0 0 40px var(--accent-glow), inset 0 0 20px rgba(255,255,255,0.4);
+      border: 8px solid #b9770e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 86px;
+      cursor: pointer;
+      transition: transform 0.06s ease;
+    }
+    .coin-btn:active {
+      transform: scale(0.94);
+    }
+    /* Энергия */
+    .energy-box {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+    .energy-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .energy-bar {
+      width: 100%;
+      height: 12px;
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .energy-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #f39c12, #f1c40f);
+      transition: width 0.2s ease;
+    }
+    /* Карточки прокачки и топа */
+    .list-container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-bottom: 16px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-info h4 {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+    .card-info p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .buy-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .buy-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    /* Нижнее меню */
+    .nav {
+      display: flex;
+      background: var(--card);
+      padding: 8px;
+      gap: 8px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .nav-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 10px 0;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .nav-btn.active {
+      background: rgba(245, 176, 65, 0.15);
+      color: var(--accent);
+    }
+    /* Вылетающие цифры */
+    .floater {
+      position: fixed;
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      pointer-events: none;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+      animation: floatUp 0.8s ease-out forwards;
+      z-index: 999;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-90px) scale(1.2); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="user-badge" id="userName">👤 Игрок</div>
+    <div class="profit-badge" id="profitBadge">⛏ +0 / час</div>
+  </div>
+
+  <div class="balance-box">
+    <div class="balance-label">Твой баланс</div>
+    <div class="balance-value">🪙 <span id="coinsVal">0</span></div>
+  </div>
+
+  <div class="content">
+    <!-- Вкладка 1: Тапалка -->
+    <div class="tab-pane active" id="tab-tap">
+      <div class="coin-wrapper">
+        <div class="coin-btn" id="coinBtn">🐹</div>
+      </div>
+      <div class="energy-box">
+        <div class="energy-top">
+          <span>⚡ Энергия</span>
+          <span id="energyText">1000 / 1000</span>
+        </div>
+        <div class="energy-bar">
+          <div class="energy-fill" id="energyFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка 2: Прокачка -->
+    <div class="tab-pane" id="tab-upgrade">
+      <div class="list-container">
+        <div class="card">
+          <div class="card-info">
+            <h4>⚡ Multitap (ур. <span id="lvlMultitap">1</span>)</h4>
+            <p>+1 монета за каждый тап</p>
+          </div>
+          <button class="buy-btn" id="btnMultitap" onclick="buyUpgrade('multitap')">250 🪙</button>
+        </div>
+
+        <div class="card">
+          <div class="card-info">
+            <h4>🔋 Лимит энергии (<span id="lvlEnergy">1000</span>)</h4>
+            <p>+500 к запасу энергии</p>
+          </div>
+          <button class="buy-btn" id="btnEnergy" onclick="buyUpgrade('energy')">300 🪙</button>
+        </div>
+
+        <div class="card">
+          <div class="card-info">
+            <h4>⛏ Авто-майнинг (+<span id="lvlMining">0</span>/ч)</h4>
+            <p>+500 монет в час даже оффлайн</p>
+          </div>
+          <button class="buy-btn" id="btnMining" onclick="buyUpgrade('mining')">400 🪙</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка 3: Лидерборд -->
+    <div class="tab-pane" id="tab-top">
+      <div class="list-container" id="leadersList">
+        <div style="text-align:center; color: var(--muted); margin-top: 20px;">Загрузка топа...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="switchTab('tap', this)">🐹 Тапать</button>
+    <button class="nav-btn" onclick="switchTab('upgrade', this)">🚀 Прокачка</button>
+    <button class="nav-btn" onclick="switchTab('top', this)">🏆 Топ</button>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    let state = {
+      coins: 0,
+      energy: 1000,
+      max_energy: 1000,
+      multitap: 1,
+      profit_per_hour: 0
+    };
+    let pendingTaps = 0;
+
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      document.getElementById("userName").innerText = "👤 " + tg.initDataUnsafe.user.first_name;
+    }
+
+    // Отправка ошибок фронта в бота
+    window.onerror = function(msg, url, line) {
+      fetch("/api/client-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Init-Data": tg.initData },
+        body: JSON.stringify({ message: `${msg} (строка ${line})` })
+      });
+    };
+
+    function render() {
+      document.getElementById("coinsVal").innerText = Math.floor(state.coins).toLocaleString("ru-RU");
+      document.getElementById("profitBadge").innerText = `⛏ +${state.profit_per_hour.toLocaleString("ru-RU")} / час`;
+      document.getElementById("energyText").innerText = `${state.energy} / ${state.max_energy}`;
+      document.getElementById("energyFill").style.width = `${(state.energy / state.max_energy) * 100}%`;
+
+      // Цены апгрейдов
+      const costMulti = state.multitap * 250;
+      const costEnergy = ((state.max_energy - 1000) / 500 + 1) * 300;
+      const costMining = (state.profit_per_hour / 500 + 1) * 400;
+
+      document.getElementById("lvlMultitap").innerText = state.multitap;
+      document.getElementById("btnMultitap").innerText = `${costMulti} 🪙`;
+      document.getElementById("btnMultitap").disabled = state.coins < costMulti;
+
+      document.getElementById("lvlEnergy").innerText = state.max_energy;
+      document.getElementById("btnEnergy").innerText = `${costEnergy} 🪙`;
+      document.getElementById("btnEnergy").disabled = state.coins < costEnergy;
+
+      document.getElementById("lvlMining").innerText = state.profit_per_hour;
+      document.getElementById("btnMining").innerText = `${costMining} 🪙`;
+      document.getElementById("btnMining").disabled = state.coins < costMining;
+    }
+
+    async function syncServer() {
+      const tapsToSend = pendingTaps;
+      pendingTaps = 0;
+      try {
+        const res = await fetch("/api/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Init-Data": tg.initData },
+          body: JSON.stringify({ taps: tapsToSend })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          state = data.user;
+          render();
+        }
+      } catch (e) {
+        pendingTaps += tapsToSend;
+      }
+    }
+
+    // Обработка нажатий (поддержка мультитача двумя-тремя пальцами)
+    const coinBtn = document.getElementById("coinBtn");
+    coinBtn.addEventListener("pointerdown", (e) => {
+      if (state.energy < state.multitap) return;
+
+      state.coins += state.multitap;
+      state.energy -= state.multitap;
+      pendingTaps += 1;
+
+      if (tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred("light");
+      }
+
+      spawnFloater(e.clientX, e.clientY, `+${state.multitap}`);
+      render();
+    });
+
+    function spawnFloater(x, y, text) {
+      const el = document.createElement("div");
+      el.className = "floater";
+      el.innerText = text;
+      el.style.left = `${x - 15}px`;
+      el.style.top = `${y - 25}px`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 800);
+    }
+
+    async function buyUpgrade(type) {
+      const res = await fetch("/api/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Init-Data": tg.initData },
+        body: JSON.stringify({ type })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        state = data.user;
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+        render();
+      } else {
+        tg.showAlert(data.error || "Ошибка покупки");
+      }
+    }
+
+    async function loadLeaderboard() {
+      const box = document.getElementById("leadersList");
+      const res = await fetch("/api/leaderboard");
+      const data = await res.json();
+      box.innerHTML = data.leaders.map((u, idx) => `
+        <div class="card">
+          <div class="card-info">
+            <h4>#${idx + 1} ${u.name}</h4>
+            <p>Прибыль: +${u.profit_per_hour.toLocaleString("ru-RU")}/ч</p>
+          </div>
+          <div style="font-weight:800; color: var(--accent);">${u.coins.toLocaleString("ru-RU")} 🪙</div>
+        </div>
+      `).join("");
+    }
+
+    function switchTab(tabName, btn) {
+      document.querySelectorAll(".tab-pane").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
+      document.getElementById(`tab-${tabName}`).classList.add("active");
+      btn.classList.add("active");
+      if (tabName === "top") loadLeaderboard();
+    }
+
+    // Регенерация энергии визуально каждую секунду + синхронизация каждые 2.5 сек
+    setInterval(() => {
+      if (state.energy < state.max_energy) {
+        state.energy = Math.min(state.max_energy, state.energy + 2);
+        render();
+      }
+    }, 1000);
+
+    setInterval(() => {
+      if (pendingTaps > 0) syncServer();
+    }, 2500);
+
+    // Первичная загрузка при открытии
+    syncServer();
+  </script>
+</body>
+</html>
