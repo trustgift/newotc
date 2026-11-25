@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import uuid
 import random
 from datetime import datetime
@@ -12,24 +13,37 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web
 
-# ============================================================
-# 1. КОНФИГУРАЦИЯ (BOTHOST.RU + @holdnftgiftbot)
-# ============================================================
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "9118390399:AAEF-AqbDxsl0sRTNZB2yzkHXmW3ksWMAtY")
-DEFAULT_ADMINS = {9130081170, 8986358602}
 
-BOT_USERNAME = "holdnftgiftbot"
-BOT_NAME = "Hold Gifts"
-ESCROW_ACCOUNT = "trustnftgift"
-MINI_APP_URL = "https://bot-1795612426-1404-uhffhbafvbfb.bothost.tech"
+def load_env_file(filepath: str = ".env"):
+    if not os.path.exists(filepath):
+        return
+    with open(filepath, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, val = line.split("=", 1)
+            os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+
+load_env_file()
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN не задан в файле .env")
+
+DEFAULT_ADMINS = {
+    int(x.strip()) for x in os.environ.get("ADMIN_IDS").split(",") if x.strip().isdigit()
+}
+BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
+BOT_NAME = os.environ.get("BOT_NAME", "")
+ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "")
+MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
 PORT = int(os.environ.get("PORT", 3000))
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
 
-# ============================================================
-# 2. ХРАНИЛИЩЕ ДАННЫХ
-# ============================================================
+
 FILES = {
     "deals": "deals.json",
     "admins": "admins.json",
@@ -69,9 +83,20 @@ chat_messages = load_json(FILES["chat_messages"])
 freeze_data = load_json(FILES["freeze"])
 welcome_media = load_json(FILES["welcome_media"])
 
-# ============================================================
-# 3. БАЗОВЫЕ ФУНКЦИИ
-# ============================================================
+
+NFT_LINK_REGEX = re.compile(r"^(?:https?://)?(?:www\.)?t\.me/nft/([A-Za-z0-9_-]+)-(\d+)/?$", re.IGNORECASE)
+
+def parse_nft_link(raw_link: str | None) -> dict | None:
+    if not raw_link:
+        return None
+    cleaned = raw_link.strip()
+    match = NFT_LINK_REGEX.match(cleaned)
+    if not match:
+        return None
+    slug, number = match.group(1), match.group(2)
+    normalized = f"https://t.me/nft/{slug}-{number}"
+    return {"url": normalized, "name": slug, "number": number}
+
 def is_admin(user_id: int | str | None) -> bool:
     if not user_id:
         return False
@@ -112,19 +137,9 @@ def set_user_language(user_id: int | str, lang: str):
 async def notify_admins(text: str, reply_markup=None):
     for admin_id in DEFAULT_ADMINS:
         try:
-            await bot.send_message(admin_id, text, reply_markup=reply_markup)
+            await bot.send_message(admin_id, text, reply_markup=reply_markup, disable_web_page_preview=False)
         except Exception:
             pass
-
-def log_action(action: str, data: dict):
-    log_id = str(uuid.uuid4())[:8]
-    logs[log_id] = {
-        "id": log_id,
-        "time": datetime.now().isoformat(),
-        "action": action,
-        "data": data
-    }
-    save_json(FILES["logs"], logs)
 
 def build_webapp_url(user_id: int, page: str = "", deal_id: str = None, role: str = None) -> str:
     lang = get_user_language(user_id) or "ru"
@@ -137,9 +152,7 @@ def build_webapp_url(user_id: int, page: str = "", deal_id: str = None, role: st
         params.append(f"role={role}")
     return f"{MINI_APP_URL}?{'&'.join(params)}"
 
-# ============================================================
-# 4. КЛАВИАТУРЫ (СТРОГИЕ, БЕЗ ЛИШНИХ ЭМОДЗИ)
-# ============================================================
+
 def main_menu_keyboard(user_id: int):
     lang = get_user_language(user_id) or "ru"
     if lang == "en":
@@ -229,9 +242,7 @@ def currency_keyboard():
         ]
     ])
 
-# ============================================================
-# 5. ТЕКСТЫ ПРИВЕТСТВИЯ (БЕЗ ЭМОДЗИ)
-# ============================================================
+
 def get_welcome_text(user_id: int) -> str:
     lang = get_user_language(user_id) or "ru"
     if lang == "en":
@@ -252,9 +263,6 @@ def get_welcome_text(user_id: int) -> str:
         "Выберите действие ниже:"
     )
 
-# ============================================================
-# 6. УПРАВЛЕНИЕ ПРИВЕТСТВЕННЫМ ВИДЕО-БАННЕРОМ (АДМИН)
-# ============================================================
 class AdminMediaStates(StatesGroup):
     waiting_media = State()
 
@@ -263,12 +271,11 @@ async def admin_welcome_media(callback: types.CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         await callback.answer("Доступ запрещён", show_alert=True)
         return
-
     current = welcome_media.get("media", "Не установлено")
     await callback.message.edit_text(
         f"<b>Зимний приветственный баннер</b>\n\n"
         f"Текущий файл: {current}\n\n"
-        f"Отправьте <b>видео</b>, <b>GIF</b> или <b>фото</b> — оно будет отправляться при команде /start вместе с приветствием.",
+        f"Отправьте <b>видео</b>, <b>GIF</b> или <b>фото</b> — оно будет отправляться при команде /start.",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Удалить баннер", callback_data="admin_clear_media")],
             [InlineKeyboardButton(text="Назад", callback_data="menu_admin")]
@@ -282,8 +289,6 @@ async def admin_save_media(message: types.Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         await state.clear()
         return
-
-    media_data = {}
     if message.video:
         media_data = {"file_id": message.video.file_id, "type": "video", "media": "Видео"}
     elif message.animation:
@@ -297,24 +302,17 @@ async def admin_save_media(message: types.Message, state: FSMContext):
     global welcome_media
     welcome_media.update(media_data)
     save_json(FILES["welcome_media"], welcome_media)
-
-    await message.answer(
-        f"Баннер успешно сохранён ({media_data['media']}).",
-        reply_markup=admin_panel_keyboard()
-    )
+    await message.answer(f"Баннер сохранён ({media_data['media']}).", reply_markup=admin_panel_keyboard())
     await state.clear()
 
 @dp.callback_query(lambda c: c.data == "admin_clear_media")
 async def admin_clear_media(callback: types.CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
-        await callback.answer("Доступ запрещён", show_alert=True)
         return
-
     global welcome_media
     welcome_media = {}
     save_json(FILES["welcome_media"], welcome_media)
-
-    await callback.message.edit_text("Приветственный баннер удалён.", reply_markup=admin_panel_keyboard())
+    await callback.message.edit_text("Баннер удалён.", reply_markup=admin_panel_keyboard())
     await state.clear()
     await callback.answer()
 
@@ -346,13 +344,11 @@ async def send_welcome(target_message: types.Message, user_id: int, edit: bool =
                 await target_message.answer_photo(photo=media_file_id, caption=text, reply_markup=markup)
                 return
         except Exception as e:
-            print(f"Ошибка отправки баннера: {e}")
+            print(f"Ошибка баннера: {e}")
 
     await target_message.answer(text, reply_markup=markup)
 
-# ============================================================
-# 7. СТАРТ И ВХОД В СДЕЛКУ ПО ССЫЛКЕ
-# ============================================================
+
 @dp.message(Command("work"))
 async def cmd_work(message: types.Message):
     for curr in ["ton", "stars", "rub", "uah"]:
@@ -373,16 +369,13 @@ async def cmd_start(message: types.Message):
 
     lang = get_user_language(message.from_user.id)
     if not lang:
-        await message.answer(
-            "<b>Выберите язык / Choose your language:</b>",
-            reply_markup=language_keyboard()
-        )
+        await message.answer("<b>Выберите язык / Choose your language:</b>", reply_markup=language_keyboard())
         return
 
     await send_welcome(message, message.from_user.id, edit=False)
 
 async def handle_deal_link(message: types.Message, deal_id: str):
-    """Обязательный вход в сделку: фиксируем участника, только после этого разрешаем оплату."""
+    """Обязательный вход обоих участников в сделку по ссылке."""
     uid = message.from_user.id
     uname = (message.from_user.username or "").lower()
     lang = get_user_language(uid) or "ru"
@@ -418,7 +411,6 @@ async def handle_deal_link(message: types.Message, deal_id: str):
         await message.answer(text, reply_markup=back_to_main_keyboard(uid))
         return
 
-    # Фиксируем вход участника в сделку
     first_join = False
     if is_target_buyer:
         if not deal.get("buyer_joined"):
@@ -434,13 +426,13 @@ async def handle_deal_link(message: types.Message, deal_id: str):
 
     save_json(FILES["deals"], deals)
 
-    # Уведомляем второго участника о входе в сделку
+
     if first_join:
         if is_target_buyer and deal.get("seller_id") and deal["seller_id"] != uid:
             try:
                 await bot.send_message(
                     deal["seller_id"],
-                    f"Покупатель @{uname or uid} вошёл в сделку <b>#{deal_id}</b>."
+                    f"Покупатель @{uname or uid} зашёл в сделку <b>#{deal_id}</b>."
                 )
             except Exception:
                 pass
@@ -448,33 +440,47 @@ async def handle_deal_link(message: types.Message, deal_id: str):
             try:
                 await bot.send_message(
                     deal["buyer_id"],
-                    f"Продавец @{uname or uid} вошёл в сделку <b>#{deal_id}</b>."
+                    f"Продавец @{uname or uid} зашёл в сделку <b>#{deal_id}</b>. Теперь вы можете оплатить сделку в приложении.",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="Перейти к оплате", web_app=WebAppInfo(url=build_webapp_url(deal["buyer_id"], page="deals", deal_id=deal_id)))]
+                    ])
                 )
             except Exception:
                 pass
 
+    both_joined = bool(deal.get("seller_joined") and deal.get("buyer_joined"))
     nft_line = f"\nNFT: {deal['nft_link']}" if deal.get("nft_link") else ""
 
     if lang == "en":
+        wait_note = (
+            "Both participants have joined. You can now proceed with payment in the Mini App."
+            if both_joined else
+            "Waiting for the second participant to open the deal link. Payment unlocks automatically once both users join."
+        )
         text = (
-            f"<b>You have joined Deal #{deal_id}</b>\n\n"
+            f"<b>Deal #{deal_id}</b>\n\n"
             f"Item: <b>{deal['product']}</b>\n"
             f"Amount: <b>{deal['amount']} {deal['currency']}</b>\n"
-            f"Seller: @{deal.get('seller_username', '—')}\n"
-            f"Buyer: @{deal.get('buyer_username', '—')}"
+            f"Seller: @{deal.get('seller_username', '—')} ({'joined' if deal.get('seller_joined') else 'waiting'})\n"
+            f"Buyer: @{deal.get('buyer_username', '—')} ({'joined' if deal.get('buyer_joined') else 'waiting'})"
             f"{nft_line}\n\n"
-            "Open the Mini App below to proceed with payment or delivery:"
+            f"{wait_note}"
         )
         btn_label = "Open Deal in App"
     else:
+        wait_note = (
+            "Оба участника вошли в сделку. Теперь покупатель может выполнить оплату в приложении."
+            if both_joined else
+            "Ожидаем входа второго участника по ссылке. Оплата станет доступна сразу после того, как оба участника зайдут в сделку."
+        )
         text = (
-            f"<b>Вы вошли в сделку #{deal_id}</b>\n\n"
+            f"<b>Сделка #{deal_id}</b>\n\n"
             f"Товар: <b>{deal['product']}</b>\n"
             f"Сумма: <b>{deal['amount']} {deal['currency']}</b>\n"
-            f"Продавец: @{deal.get('seller_username', '—')}\n"
-            f"Покупатель: @{deal.get('buyer_username', '—')}"
+            f"Продавец: @{deal.get('seller_username', '—')} ({'в сделке' if deal.get('seller_joined') else 'ожидается'})\n"
+            f"Покупатель: @{deal.get('buyer_username', '—')} ({'в сделке' if deal.get('buyer_joined') else 'ожидается'})"
             f"{nft_line}\n\n"
-            "Теперь вы можете перейти к оплате или управлению сделкой в приложении:"
+            f"{wait_note}"
         )
         btn_label = "Открыть сделку"
 
@@ -484,9 +490,7 @@ async def handle_deal_link(message: types.Message, deal_id: str):
     ])
     await message.answer(text, reply_markup=kb)
 
-# ============================================================
-# 8. НАВИГАЦИЯ МЕНЮ БОТА
-# ============================================================
+
 @dp.callback_query(lambda c: c.data.startswith("set_lang_"))
 async def set_language(callback: types.CallbackQuery):
     lang = callback.data.split("_")[2]
@@ -514,32 +518,17 @@ async def menu_balance(callback: types.CallbackQuery):
     uid = callback.from_user.id
     lang = get_user_language(uid) or "ru"
     bal = get_balance(uid)
-
-    if lang == "en":
-        text = (
-            "<b>Your Wallet</b>\n\n"
-            f"TON: <b>{bal.get('ton', 0)}</b>\n"
-            f"STARS: <b>{bal.get('stars', 0)}</b>\n"
-            f"RUB: <b>{bal.get('rub', 0)}</b>\n"
-            f"UAH: <b>{bal.get('uah', 0)}</b>"
-        )
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Open Wallet", web_app=WebAppInfo(url=build_webapp_url(uid, page="balance")))],
-            [InlineKeyboardButton(text="Main Menu", callback_data="back_to_main")]
-        ])
-    else:
-        text = (
-            "<b>Ваш кошелёк</b>\n\n"
-            f"TON: <b>{bal.get('ton', 0)}</b>\n"
-            f"STARS: <b>{bal.get('stars', 0)}</b>\n"
-            f"RUB: <b>{bal.get('rub', 0)}</b>\n"
-            f"UAH: <b>{bal.get('uah', 0)}</b>"
-        )
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Открыть кошелёк", web_app=WebAppInfo(url=build_webapp_url(uid, page="balance")))],
-            [InlineKeyboardButton(text="В главное меню", callback_data="back_to_main")]
-        ])
-
+    text = (
+        f"<b>{'Your Wallet' if lang == 'en' else 'Ваш кошелёк'}</b>\n\n"
+        f"TON: <b>{bal.get('ton', 0)}</b>\n"
+        f"STARS: <b>{bal.get('stars', 0)}</b>\n"
+        f"RUB: <b>{bal.get('rub', 0)}</b>\n"
+        f"UAH: <b>{bal.get('uah', 0)}</b>"
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Open Wallet" if lang == "en" else "Открыть кошелёк", web_app=WebAppInfo(url=build_webapp_url(uid, page="balance")))],
+        [InlineKeyboardButton(text="Main Menu" if lang == "en" else "В главное меню", callback_data="back_to_main")]
+    ])
     if callback.message.caption is not None:
         await callback.message.delete()
         await callback.message.answer(text, reply_markup=kb)
@@ -582,7 +571,6 @@ async def menu_deals(callback: types.CallbackQuery):
         [InlineKeyboardButton(text="Manage in App" if lang == "en" else "Управление в приложении", web_app=WebAppInfo(url=build_webapp_url(uid, page="deals")))],
         [InlineKeyboardButton(text="Main Menu" if lang == "en" else "В главное меню", callback_data="back_to_main")]
     ])
-
     if callback.message.caption is not None:
         await callback.message.delete()
         await callback.message.answer(text[:4000], reply_markup=kb)
@@ -590,13 +578,10 @@ async def menu_deals(callback: types.CallbackQuery):
         await callback.message.edit_text(text[:4000], reply_markup=kb)
     await callback.answer()
 
-# ============================================================
-# 9. АДМИН-ПАНЕЛЬ В БОТЕ
-# ============================================================
+
 @dp.callback_query(lambda c: c.data == "menu_admin")
 async def menu_admin(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
-        await callback.answer("Доступ запрещён", show_alert=True)
         return
     text = "<b>Админ-панель Hold Gifts</b>\n\nВыберите раздел:"
     if callback.message.caption is not None:
@@ -615,12 +600,14 @@ async def admin_all_deals(callback: types.CallbackQuery):
         return
     text = "<b>Последние сделки</b>\n\n"
     for d_id, d in list(deals.items())[-15:]:
+        nft_part = f"\nNFT: {d['nft_link']}" if d.get("nft_link") else ""
         text += (
             f"<b>#{d_id}</b> | {d.get('status')}\n"
-            f"@{d.get('seller_username', '?')} → @{d.get('buyer_username', '?')} | {d.get('amount')} {d.get('currency')}\n"
+            f"@{d.get('seller_username', '?')} → @{d.get('buyer_username', '?')} | {d.get('amount')} {d.get('currency')}"
+            f"{nft_part}\n"
             f"/pay {d_id} | /delete_deal {d_id}\n\n"
         )
-    await callback.message.edit_text(text[:4000], reply_markup=admin_panel_keyboard())
+    await callback.message.edit_text(text[:4000], reply_markup=admin_panel_keyboard(), disable_web_page_preview=True)
     await callback.answer()
 
 @dp.message(Command("pay"))
@@ -671,7 +658,7 @@ async def admin_users(callback: types.CallbackQuery):
         return
     text = f"<b>Пользователи ({len(balance)})</b>\n\n"
     for uid, b in list(balance.items())[-20:]:
-        text += f"<code>{uid}</code>: TON {b.get('ton', 0)} | STARS {b.get('stars', 0)} | RUB {b.get('rub', 0)}\n"
+        text += f"<code>{uid}</code>: TON {b.get('ton', 0)} | STARS {b.get('stars', 0)} | RUB {b.get('rub', 0)} | UAH {b.get('uah', 0)}\n"
     await callback.message.edit_text(text[:4000], reply_markup=admin_panel_keyboard())
     await callback.answer()
 
@@ -757,10 +744,7 @@ async def admin_stats(callback: types.CallbackQuery):
         return
     vol = round(sum(d.get("amount", 0) for d in deals.values() if d.get("currency") == "TON"), 1)
     await callback.message.edit_text(
-        f"<b>Статистика</b>\n\n"
-        f"Пользователей: <b>{len(balance)}</b>\n"
-        f"Всего сделок: <b>{len(deals)}</b>\n"
-        f"Объём TON: <b>{vol}</b>",
+        f"<b>Статистика</b>\n\nПользователей: <b>{len(balance)}</b>\nВсего сделок: <b>{len(deals)}</b>\nОбъём TON: <b>{vol}</b>",
         reply_markup=admin_panel_keyboard()
     )
     await callback.answer()
@@ -842,9 +826,7 @@ async def remove_admin(message: types.Message):
         save_json(FILES["admins"], admins)
         await message.answer(f"Админ удалён: {args[1]}")
 
-# ============================================================
-# 10. ФОНОВАЯ СТАТИСТИКА
-# ============================================================
+
 async def auto_increment_stats():
     while True:
         try:
@@ -858,9 +840,7 @@ async def auto_increment_stats():
             pass
         await asyncio.sleep(300)
 
-# ============================================================
-# 11. API И РАЗДАЧА MINI APP
-# ============================================================
+
 async def handle_web_request(request: web.Request):
     headers = {
         "Access-Control-Allow-Origin": "*",
@@ -911,7 +891,7 @@ async def handle_web_request(request: web.Request):
     elif endpoint == "/api/is_admin":
         return web.json_response({"success": True, "is_admin": is_admin(user_id)}, headers=headers)
 
-    # СОЗДАНИЕ СДЕЛКИ + ОТПРАВКА ССЫЛКИ В БОТА
+
     elif endpoint == "/api/create_deal":
         product = (data.get("product") or "").strip()
         currency = (data.get("currency") or "TON").upper()
@@ -919,10 +899,23 @@ async def handle_web_request(request: web.Request):
         partner = (data.get("partner_username") or "").replace("@", "").strip()
         creator_role = data.get("creator_role", "seller")
         category = data.get("category", "nft_gift")
-        nft_link = (data.get("nft_link") or "").strip() or None
+        raw_nft_link = (data.get("nft_link") or "").strip()
 
         if not all([user_id, product, currency, amount, partner]):
             return web.json_response({"success": False, "error": "Заполните все поля"}, headers=headers)
+
+        parsed_nft = None
+        if category == "nft_gift":
+            parsed_nft = parse_nft_link(raw_nft_link)
+            if not parsed_nft:
+                return web.json_response({
+                    "success": False,
+                    "error": "Неверный формат ссылки NFT. Пример: t.me/nft/PlushPepe-120"
+                }, headers=headers)
+        elif raw_nft_link:
+            parsed_nft = parse_nft_link(raw_nft_link)
+
+        nft_url = parsed_nft["url"] if parsed_nft else None
 
         creator_uname = (username or str(user_id)).lower()
         if creator_role == "buyer":
@@ -950,14 +943,15 @@ async def handle_web_request(request: web.Request):
             "currency": currency,
             "amount": float(amount),
             "category": category,
-            "nft_link": nft_link,
+            "nft_link": nft_url,
+            "nft_name": parsed_nft["name"] if parsed_nft else None,
+            "nft_number": parsed_nft["number"] if parsed_nft else None,
             "status": "waiting_payment",
             "created_at": datetime.now().isoformat(),
             "completed_at": None
         }
         save_json(FILES["deals"], deals)
 
-        # Сразу отправляем ссылку создателю сделки в личные сообщения бота
         try:
             share_url = f"https://t.me/share/url?url={link}&text=Hold%20Gifts%20Deal%20%23{deal_id}"
             kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -970,22 +964,34 @@ async def handle_web_request(request: web.Request):
                 f"Товар: <b>{product}</b>\n"
                 f"Сумма: <b>{amount} {currency}</b>\n"
                 f"Продавец: @{seller_username}\n"
-                f"Покупатель: @{buyer_username}\n\n"
-                f"Ссылка для входа в сделку:\n<code>{link}</code>",
+                f"Покупатель: @{buyer_username}\n"
+                f"{f'NFT: {nft_url}' + chr(10) if nft_url else ''}\n"
+                f"Отправьте эту ссылку второму участнику (оплата откроется после того, как оба зайдут в сделку):\n"
+                f"<code>{link}</code>",
                 reply_markup=kb
             )
         except Exception as e:
-            print(f"Не удалось отправить ссылку в бота: {e}")
+            print(f"Ошибка отправки ссылки создателю: {e}")
 
+   
+        nft_admin_block = (
+            f"\nNFT подарок: <b>{parsed_nft['name']} #{parsed_nft['number']}</b>\n"
+            f"Ссылка на NFT: {nft_url}"
+            if parsed_nft else ""
+        )
         await notify_admins(
-            f"<b>Новая сделка #{deal_id}</b>\n"
-            f"@{seller_username} → @{buyer_username}\n"
-            f"{product} | {amount} {currency}"
+            f"<b>Новая сделка #{deal_id}</b>\n\n"
+            f"Создатель: @{creator_uname} (ID: <code>{user_id}</code>)\n"
+            f"Продавец: @{seller_username}\n"
+            f"Покупатель: @{buyer_username}\n"
+            f"Товар: <b>{product}</b>\n"
+            f"Сумма: <b>{amount} {currency}</b>"
+            f"{nft_admin_block}\n\n"
+            f"Ссылка сделки: {link}"
         )
 
         return web.json_response({"success": True, "deal_id": deal_id, "link": link, "deal": deals[deal_id]}, headers=headers)
 
-    # ПОЛУЧЕНИЕ СДЕЛОК ПОЛЬЗОВАТЕЛЯ
     elif endpoint == "/api/deals":
         if not user_id:
             return web.json_response({"success": False, "error": "user_id required"}, headers=headers)
@@ -1003,17 +1009,17 @@ async def handle_web_request(request: web.Request):
                 res_list.append(d_copy)
         return web.json_response({"success": True, "deals": list(reversed(res_list))}, headers=headers)
 
-    # ОПЛАТА СДЕЛКИ (ТОЛЬКО ПОСЛЕ ВХОДА ПОКУПАТЕЛЯ В СДЕЛКУ)
+  
     elif endpoint == "/api/pay_balance":
         deal_id = data.get("deal_id")
         if deal_id not in deals:
             return web.json_response({"success": False, "error": "Сделка не найдена"}, headers=headers)
         deal = deals[deal_id]
 
-        if not deal.get("buyer_joined"):
+        if not (deal.get("buyer_joined") and deal.get("seller_joined")):
             return web.json_response({
                 "success": False,
-                "error": "Сначала перейдите по ссылке сделки в боте, чтобы присоединиться к ней"
+                "error": "Оплата заблокирована: оба участника должны сначала зайти в сделку по ссылке"
             }, headers=headers)
 
         if deal["status"] != "waiting_payment":
@@ -1102,8 +1108,8 @@ async def handle_web_request(request: web.Request):
         if deal_id not in deals:
             return web.json_response({"success": False, "error": "Сделка не найдена"}, headers=headers)
         deal = deals[deal_id]
-        if not deal.get("buyer_joined"):
-            return web.json_response({"success": False, "error": "Сначала перейдите по ссылке сделки в боте"}, headers=headers)
+        if not (deal.get("buyer_joined") and deal.get("seller_joined")):
+            return web.json_response({"success": False, "error": "Оба участника должны сначала зайти в сделку по ссылке"}, headers=headers)
         details = rekvisits.get(deal["currency"].lower(), f"Для получения реквизитов оплаты ({deal['amount']} {deal['currency']}) напишите @{ESCROW_ACCOUNT} и укажите номер сделки #{deal_id}.")
         return web.json_response({"success": True, "details": details}, headers=headers)
 
@@ -1113,11 +1119,10 @@ async def handle_web_request(request: web.Request):
             await notify_admins(f"Заявка на оплату по реквизитам: сделка #{deal_id}\nПодтвердить: /pay {deal_id}")
         return web.json_response({"success": True}, headers=headers)
 
-    # ЧАТ ПОДДЕРЖКИ (ДВУСТОРОННЯЯ ПЕРЕПИСКА)
+
     elif endpoint == "/api/chat_history":
         uid_str = str(data.get("target_user_id") or user_id)
         msgs = chat_messages.get(uid_str, [])
-        # Если открывает админ, помечаем сообщения пользователя как прочитанные
         if is_admin(user_id) and data.get("target_user_id"):
             changed = False
             for m in msgs:
@@ -1150,7 +1155,7 @@ async def handle_web_request(request: web.Request):
                 f"<b>Сообщение в чат поддержки</b>\n"
                 f"От: @{username or uid_str} (ID: <code>{uid_str}</code>)\n"
                 f"Текст: {text}\n\n"
-                f"Ответить в боте: <code>/chat_reply {uid_str} ваш ответ</code>"
+                f"Ответить: <code>/chat_reply {uid_str} ваш ответ</code>"
             )
         else:
             try:
@@ -1166,12 +1171,6 @@ async def handle_web_request(request: web.Request):
 
         return web.json_response({"success": True}, headers=headers)
 
-    elif endpoint == "/api/chat_get_all":
-        if not is_admin(user_id):
-            return web.json_response({"success": False, "error": "Admin required"}, headers=headers)
-        return web.json_response({"success": True, "chats": chat_messages}, headers=headers)
-
-    # АДМИН-ПАНЕЛЬ
     elif endpoint == "/api/admin_panel_data":
         if not is_admin(user_id):
             return web.json_response({"success": False, "error": "Admin required"}, headers=headers)
@@ -1234,9 +1233,7 @@ async def handle_web_request(request: web.Request):
 
     return web.json_response({"success": False, "error": "Unknown endpoint"}, headers=headers)
 
-# ============================================================
-# 12. ЗАПУСК
-# ============================================================
+
 async def start_web_server():
     app = web.Application()
     app.router.add_route("*", "/{path:.*}", handle_web_request)
