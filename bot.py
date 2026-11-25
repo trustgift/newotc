@@ -21,8 +21,8 @@ load_dotenv()
 # === НАСТРОЙКИ ===
 BOT_TOKEN = os.getenv("BOT_TOKEN", "9118390399:AAEF-AqbDxsl0sRTNZB2yzkHXmW3ksWMAtY")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "9130081170"))  # Твой Telegram ID для логов
-WEBAPP_URL = os.getenv("WEBAPP_URL", "")
-PORT = int(os.getenv("PORT", "8000"))
+WEBAPP_URL = os.getenv("WEBAPP_URL", "bot-1795612426-1404-uhffhbafvbfb.bothost.tech")
+PORT = int(os.getenv("PORT", "3000"))
 DB_PATH = "tapper.db"
 
 bot = Bot(token=BOT_TOKEN)
