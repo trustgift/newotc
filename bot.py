@@ -11,9 +11,11 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.client.default import DefaultBotProperties
-from aiohttp import web
+from aiohttp import web, ClientSession, ClientTimeout
 
-
+# ============================================================
+# 1. ЗАГРУЗКА КОНФИГУРАЦИИ ИЗ .ENV
+# ============================================================
 def load_env_file(filepath: str = ".env"):
     if not os.path.exists(filepath):
         return
@@ -32,18 +34,24 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN не задан в файле .env")
 
 DEFAULT_ADMINS = {
-    int(x.strip()) for x in os.environ.get("ADMIN_IDS").split(",") if x.strip().isdigit()
+    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "").split(",") if x.strip().isdigit()
 }
 BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
-BOT_NAME = os.environ.get("BOT_NAME", "")
+BOT_NAME = os.environ.get("BOT_NAME", " ")
 ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "")
 MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
 PORT = int(os.environ.get("PORT", 3000))
 
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "").rstrip("/")
+AI_API_KEY = os.environ.get("AI_API_KEY", "")
+AI_REVIEW_INTERVAL_SEC = int(os.environ.get("AI_REVIEW_INTERVAL_SEC", 1800))
+
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
 
-
+# ============================================================
+# 2. ХРАНИЛИЩЕ ДАННЫХ
+# ============================================================
 FILES = {
     "deals": "deals.json",
     "admins": "admins.json",
@@ -55,35 +63,50 @@ FILES = {
     "rekvisits": "rekvisits.json",
     "chat_messages": "chat_messages.json",
     "freeze": "freeze.json",
-    "welcome_media": "welcome_media.json"
+    "welcome_media": "welcome_media.json",
+    "reviews": "reviews.json",
+    "ai_state": "ai_state.json"
 }
 
-def load_json(file):
+def load_json(file, default=None):
     if os.path.exists(file):
         try:
             with open(file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
-            return {}
-    return {}
+            return default if default is not None else {}
+    return default if default is not None else {}
 
 def save_json(file, data):
     with open(file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-deals = load_json(FILES["deals"])
-admins = load_json(FILES["admins"])
-balance = load_json(FILES["balance"])
-withdraw_requests = load_json(FILES["withdraw"])
-logs = load_json(FILES["logs"])
-user_language = load_json(FILES["user_language"])
-stats = load_json(FILES["stats"])
-rekvisits = load_json(FILES["rekvisits"])
-chat_messages = load_json(FILES["chat_messages"])
-freeze_data = load_json(FILES["freeze"])
-welcome_media = load_json(FILES["welcome_media"])
+deals = load_json(FILES["deals"], {})
+admins = load_json(FILES["admins"], {})
+balance = load_json(FILES["balance"], {})
+withdraw_requests = load_json(FILES["withdraw"], {})
+logs = load_json(FILES["logs"], {})
+user_language = load_json(FILES["user_language"], {})
+stats = load_json(FILES["stats"], {})
+rekvisits = load_json(FILES["rekvisits"], {})
+chat_messages = load_json(FILES["chat_messages"], {})
+freeze_data = load_json(FILES["freeze"], {})
+welcome_media = load_json(FILES["welcome_media"], {})
+reviews_data = load_json(FILES["reviews"], {"items": []})
+ai_state = load_json(FILES["ai_state"], {
+    "enabled": False,
+    "interval_sec": AI_REVIEW_INTERVAL_SEC,
+    "last_model": None,
+    "generated_count": 0
+})
 
+if "items" not in reviews_data or not isinstance(reviews_data["items"], list):
+    reviews_data = {"items": []}
+    save_json(FILES["reviews"], reviews_data)
 
+# ============================================================
+# 3. БАЗОВЫЕ ФУНКЦИИ И ПРОВЕРКА NFT-ССЫЛОК
+# ============================================================
 NFT_LINK_REGEX = re.compile(r"^(?:https?://)?(?:www\.)?t\.me/nft/([A-Za-z0-9_-]+)-(\d+)/?$", re.IGNORECASE)
 
 def parse_nft_link(raw_link: str | None) -> dict | None:
@@ -134,6 +157,25 @@ def set_user_language(user_id: int | str, lang: str):
     user_language[str(user_id)] = lang
     save_json(FILES["user_language"], user_language)
 
+def user_has_completed_deal(user_id: int | str, username: str = "") -> bool:
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        uid = None
+    uname_low = (username or "").replace("@", "").strip().lower()
+
+    for d in deals.values():
+        if d.get("status") != "completed":
+            continue
+        if uid and (d.get("seller_id") == uid or d.get("buyer_id") == uid):
+            return True
+        if uname_low and (
+            (d.get("seller_username") or "").lower() == uname_low
+            or (d.get("buyer_username") or "").lower() == uname_low
+        ):
+            return True
+    return False
+
 async def notify_admins(text: str, reply_markup=None):
     for admin_id in DEFAULT_ADMINS:
         try:
@@ -152,7 +194,157 @@ def build_webapp_url(user_id: int, page: str = "", deal_id: str = None, role: st
         params.append(f"role={role}")
     return f"{MINI_APP_URL}?{'&'.join(params)}"
 
+# ============================================================
+# 4. ИИ-ГЕНЕРАТОР ОТЗЫВОВ (CODEX.SALE/V1 С АВТОПРОВЕРКОЙ МОДЕЛЕЙ)
+# ============================================================
+REVIEW_PERSONAS = [
+    "обычный парень, который впервые продавал NFT-подарок через гаранта, пишет просто и по-дружески, без канцелярита",
+    "активный трейдер Telegram-подарками, пишет коротко, по делу, с лёгким сленгом (гифт, гарант, залетело, четко)",
+    "покупатель, который переживал перед сделкой, но всё прошло гладко и быстро, делится живыми эмоциями",
+    "молодой пользователь Telegram, пишет разговорным стилем, с парой мелких сокращений, без заглавных букв в начале или с живой подачей",
+    "коллекционер редких гифтов, хвалит удобный интерфейс и скорость вывода, пишет уверенно и естественно"
+]
 
+SAMPLE_ITEMS = [
+    "Plush Pepe", "Durov's Cap", "Precious Peach", "Astral Shard",
+    "Star Gift", "Vintage Cigar", "Magic Potion", "NFT подарок", "Telegram Gift"
+]
+
+async def fetch_available_models(session: ClientSession) -> list[str]:
+    headers = {"Authorization": f"Bearer {AI_API_KEY}"}
+    try:
+        async with session.get(f"{AI_BASE_URL}/models", headers=headers, timeout=ClientTimeout(total=12)) as resp:
+            if resp.status == 200:
+                payload = await resp.json()
+                raw_list = payload.get("data", []) if isinstance(payload, dict) else []
+                models = [m.get("id") for m in raw_list if isinstance(m, dict) and m.get("id")]
+                # Отфильтровываем аудио/эмбеддинг модели, оставляем текстовые
+                chat_models = [
+                    m for m in models
+                    if not any(bad in m.lower() for bad in ("embed", "whisper", "tts", "dall-e", "audio", "moderation"))
+                ]
+                random.shuffle(chat_models)
+                return chat_models
+    except Exception as e:
+        print(f"[AI] Ошибка получения списка моделей: {e}")
+
+    # Резервный список, если /models временно недоступен
+    fallback = [
+        "deepseek-v4.1-flash-ablilerated",
+        "deepseek-chat",
+        "gpt-4o-mini",
+        "claude-3-5-haiku",
+        "gemini-2.5-flash"
+    ]
+    random.shuffle(fallback)
+    return fallback
+
+async def generate_ai_review_entry() -> dict | None:
+    if not AI_API_KEY:
+        return None
+
+    persona = random.choice(REVIEW_PERSONAS)
+    item_hint = random.choice(SAMPLE_ITEMS)
+    rating = random.choices([5, 4], weights=[82, 18], k=1)[0]
+    role_hint = random.choice(["продавал", "покупал", "обменивал"])
+
+    system_prompt = (
+        "Ты пишешь реалистичные отзывы от лица реальных пользователей Telegram о P2P-гарант боте Hold Gifts.\n"
+        "Правила:\n"
+        f"1. Обязательно упомяни юзернейм бота @{BOT_USERNAME} в тексте отзыва.\n"
+        "2. Пиши НЕ официально! Никаких шаблонных фраз вроде 'Выражаю благодарность сервису' или 'Высокий уровень обслуживания'. "
+        "Пиши так, как реальные люди пишут в Telegram-каналах и чатах: живо, разнообразно, естественно.\n"
+        "3. Длина: от 1 до 3 коротких предложений (60–220 символов).\n"
+        "4. Не ставь кавычки вокруг всего отзыва и не пиши никаких пояснений — выдай только сам текст отзыва.\n"
+        "5. Не используй имена и фамилии — отзыв полностью анонимный."
+    )
+
+    user_prompt = (
+        f"Стиль автора: {persona}.\n"
+        f"Контекст: пользователь {role_hint} {item_hint}, оценка {rating} из 5 звёзд.\n"
+        f"Напиши один живой отзыв с упоминанием @{BOT_USERNAME}."
+    )
+
+    headers = {
+        "Authorization": f"Bearer {AI_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    async with ClientSession() as session:
+        models = await fetch_available_models(session)
+        for model_id in models[:12]:
+            body = {
+                "model": model_id,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.92,
+                "max_tokens": 180
+            }
+            try:
+                async with session.post(
+                    f"{AI_BASE_URL}/chat/completions",
+                    headers=headers,
+                    json=body,
+                    timeout=ClientTimeout(total=18)
+                ) as resp:
+                    if resp.status != 200:
+                        continue
+                    data = await resp.json()
+                    choices = data.get("choices") or []
+                    if not choices:
+                        continue
+                    text = (choices[0].get("message", {}).get("content") or "").strip()
+                    text = text.strip('"').strip("«»").strip()
+                    if len(text) < 15:
+                        continue
+
+                    # Гарантируем наличие юзернейма бота в отзыве
+                    if f"@{BOT_USERNAME.lower()}" not in text.lower():
+                        text = f"{text} (@{BOT_USERNAME})"
+
+                    entry = {
+                        "id": "rev_" + str(uuid.uuid4())[:8],
+                        "author_ru": "Анонимный пользователь",
+                        "author_en": "Anonymous user",
+                        "rating": rating,
+                        "text": text,
+                        "date": datetime.now().isoformat(),
+                        "source": "ai",
+                        "model": model_id
+                    }
+
+                    reviews_data["items"].insert(0, entry)
+                    save_json(FILES["reviews"], reviews_data)
+
+                    ai_state["last_model"] = model_id
+                    ai_state["generated_count"] = ai_state.get("generated_count", 0) + 1
+                    save_json(FILES["ai_state"], ai_state)
+                    return entry
+            except Exception:
+                continue
+
+    return None
+
+async def ai_reviews_background_loop():
+    while True:
+        try:
+            if ai_state.get("enabled"):
+                entry = await generate_ai_review_entry()
+                if not entry:
+                    await notify_admins(
+                        "<b>ИИ-отзывы:</b> ни одна модель на codex.sale сейчас не ответила. Повторная попытка через цикл."
+                    )
+        except Exception as e:
+            print(f"[AI Loop] Ошибка: {e}")
+
+        wait_sec = max(60, int(ai_state.get("interval_sec", AI_REVIEW_INTERVAL_SEC)))
+        await asyncio.sleep(wait_sec)
+
+# ============================================================
+# 5. КЛАВИАТУРЫ
+# ============================================================
 def main_menu_keyboard(user_id: int):
     lang = get_user_language(user_id) or "ru"
     if lang == "en":
@@ -167,9 +359,10 @@ def main_menu_keyboard(user_id: int):
                 InlineKeyboardButton(text="Wallet", callback_data="menu_balance")
             ],
             [
-                InlineKeyboardButton(text="Support", url=f"https://t.me/{ESCROW_ACCOUNT}"),
-                InlineKeyboardButton(text="Language", callback_data="select_language")
-            ]
+                InlineKeyboardButton(text="Reviews", web_app=WebAppInfo(url=build_webapp_url(user_id, page="reviews"))),
+                InlineKeyboardButton(text="Support", url=f"https://t.me/{ESCROW_ACCOUNT}")
+            ],
+            [InlineKeyboardButton(text="Language", callback_data="select_language")]
         ]
         if is_admin(user_id):
             rows.append([InlineKeyboardButton(text="Admin Panel", callback_data="menu_admin")])
@@ -185,9 +378,10 @@ def main_menu_keyboard(user_id: int):
                 InlineKeyboardButton(text="Кошелёк", callback_data="menu_balance")
             ],
             [
-                InlineKeyboardButton(text="Поддержка", url=f"https://t.me/{ESCROW_ACCOUNT}"),
-                InlineKeyboardButton(text="Язык / Language", callback_data="select_language")
-            ]
+                InlineKeyboardButton(text="Отзывы", web_app=WebAppInfo(url=build_webapp_url(user_id, page="reviews"))),
+                InlineKeyboardButton(text="Поддержка", url=f"https://t.me/{ESCROW_ACCOUNT}")
+            ],
+            [InlineKeyboardButton(text="Язык / Language", callback_data="select_language")]
         ]
         if is_admin(user_id):
             rows.append([InlineKeyboardButton(text="Админ-панель", callback_data="menu_admin")])
@@ -195,7 +389,12 @@ def main_menu_keyboard(user_id: int):
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def admin_panel_keyboard():
+    ai_status = "Остановить ИИ-отзывы" if ai_state.get("enabled") else "Запустить ИИ-отзывы"
     return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text=ai_status, callback_data="admin_toggle_ai"),
+            InlineKeyboardButton(text="Создать 1 отзыв ИИ", callback_data="admin_gen_one_review")
+        ],
         [
             InlineKeyboardButton(text="Начислить баланс", callback_data="admin_add_balance"),
             InlineKeyboardButton(text="Статистика", callback_data="admin_stats")
@@ -242,7 +441,9 @@ def currency_keyboard():
         ]
     ])
 
-
+# ============================================================
+# 6. ПРИВЕТСТВИЕ И ВИДЕО-БАННЕР
+# ============================================================
 def get_welcome_text(user_id: int) -> str:
     lang = get_user_language(user_id) or "ru"
     if lang == "en":
@@ -269,7 +470,6 @@ class AdminMediaStates(StatesGroup):
 @dp.callback_query(lambda c: c.data == "admin_welcome_media")
 async def admin_welcome_media(callback: types.CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
-        await callback.answer("Доступ запрещён", show_alert=True)
         return
     current = welcome_media.get("media", "Не установлено")
     await callback.message.edit_text(
@@ -348,7 +548,9 @@ async def send_welcome(target_message: types.Message, user_id: int, edit: bool =
 
     await target_message.answer(text, reply_markup=markup)
 
-
+# ============================================================
+# 7. СТАРТ И ВХОД В СДЕЛКУ ПО ССЫЛКЕ
+# ============================================================
 @dp.message(Command("work"))
 async def cmd_work(message: types.Message):
     for curr in ["ton", "stars", "rub", "uah"]:
@@ -375,13 +577,12 @@ async def cmd_start(message: types.Message):
     await send_welcome(message, message.from_user.id, edit=False)
 
 async def handle_deal_link(message: types.Message, deal_id: str):
-    """Обязательный вход обоих участников в сделку по ссылке."""
     uid = message.from_user.id
     uname = (message.from_user.username or "").lower()
     lang = get_user_language(uid) or "ru"
 
     global deals
-    deals = load_json(FILES["deals"])
+    deals = load_json(FILES["deals"], {})
 
     if deal_id not in deals:
         text = (
@@ -426,14 +627,10 @@ async def handle_deal_link(message: types.Message, deal_id: str):
 
     save_json(FILES["deals"], deals)
 
-
     if first_join:
         if is_target_buyer and deal.get("seller_id") and deal["seller_id"] != uid:
             try:
-                await bot.send_message(
-                    deal["seller_id"],
-                    f"Покупатель @{uname or uid} зашёл в сделку <b>#{deal_id}</b>."
-                )
+                await bot.send_message(deal["seller_id"], f"Покупатель @{uname or uid} зашёл в сделку <b>#{deal_id}</b>.")
             except Exception:
                 pass
         elif is_target_seller and deal.get("buyer_id") and deal["buyer_id"] != uid:
@@ -490,7 +687,9 @@ async def handle_deal_link(message: types.Message, deal_id: str):
     ])
     await message.answer(text, reply_markup=kb)
 
-
+# ============================================================
+# 8. ОБРАБОТЧИКИ МЕНЮ БОТА
+# ============================================================
 @dp.callback_query(lambda c: c.data.startswith("set_lang_"))
 async def set_language(callback: types.CallbackQuery):
     lang = callback.data.split("_")[2]
@@ -578,18 +777,63 @@ async def menu_deals(callback: types.CallbackQuery):
         await callback.message.edit_text(text[:4000], reply_markup=kb)
     await callback.answer()
 
+# ============================================================
+# 9. АДМИН-ПАНЕЛЬ В БОТЕ (ВКЛЮЧАЯ УПРАВЛЕНИЕ ИИ-ОТЗЫВАМИ)
+# ============================================================
+def get_admin_dashboard_text() -> str:
+    state_str = "АКТИВНА (работает в фоне)" if ai_state.get("enabled") else "ОСТАНОВЛЕНА"
+    last_mod = ai_state.get("last_model") or "ещё не запускалась"
+    total_rev = len(reviews_data.get("items", []))
+    return (
+        "<b>Админ-панель Hold Gifts</b>\n\n"
+        f"Автогенерация отзывов ИИ: <b>{state_str}</b>\n"
+        f"Последняя рабочая модель: <code>{last_mod}</code>\n"
+        f"Всего отзывов в Mini App: <b>{total_rev}</b>\n\n"
+        "Выберите действие:"
+    )
 
 @dp.callback_query(lambda c: c.data == "menu_admin")
 async def menu_admin(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
-    text = "<b>Админ-панель Hold Gifts</b>\n\nВыберите раздел:"
+    text = get_admin_dashboard_text()
     if callback.message.caption is not None:
         await callback.message.delete()
         await callback.message.answer(text, reply_markup=admin_panel_keyboard())
     else:
         await callback.message.edit_text(text, reply_markup=admin_panel_keyboard())
     await callback.answer()
+
+@dp.callback_query(lambda c: c.data == "admin_toggle_ai")
+async def admin_toggle_ai(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    ai_state["enabled"] = not bool(ai_state.get("enabled"))
+    save_json(FILES["ai_state"], ai_state)
+    await callback.answer("Автопостинг ИИ запущен" if ai_state["enabled"] else "Автопостинг ИИ остановлен")
+    await callback.message.edit_text(get_admin_dashboard_text(), reply_markup=admin_panel_keyboard())
+
+@dp.callback_query(lambda c: c.data == "admin_gen_one_review")
+async def admin_gen_one_review(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    await callback.answer("Подбираю рабочую модель и генерирую отзыв...")
+    entry = await generate_ai_review_entry()
+    if entry:
+        await callback.message.edit_text(
+            f"<b>Новый анонимный отзыв сгенерирован!</b>\n\n"
+            f"Оценка: <b>{entry['rating']} / 5</b>\n"
+            f"Модель: <code>{entry['model']}</code>\n"
+            f"Текст: {entry['text']}\n\n"
+            + get_admin_dashboard_text(),
+            reply_markup=admin_panel_keyboard()
+        )
+    else:
+        await callback.message.edit_text(
+            "Не удалось сгенерировать отзыв: проверьте ключ codex.sale или доступность моделей.\n\n"
+            + get_admin_dashboard_text(),
+            reply_markup=admin_panel_keyboard()
+        )
 
 @dp.callback_query(lambda c: c.data == "admin_all_deals")
 async def admin_all_deals(callback: types.CallbackQuery):
@@ -744,7 +988,11 @@ async def admin_stats(callback: types.CallbackQuery):
         return
     vol = round(sum(d.get("amount", 0) for d in deals.values() if d.get("currency") == "TON"), 1)
     await callback.message.edit_text(
-        f"<b>Статистика</b>\n\nПользователей: <b>{len(balance)}</b>\nВсего сделок: <b>{len(deals)}</b>\nОбъём TON: <b>{vol}</b>",
+        f"<b>Статистика</b>\n\n"
+        f"Пользователей: <b>{len(balance)}</b>\n"
+        f"Всего сделок: <b>{len(deals)}</b>\n"
+        f"Объём TON: <b>{vol}</b>\n"
+        f"Отзывов: <b>{len(reviews_data.get('items', []))}</b>",
         reply_markup=admin_panel_keyboard()
     )
     await callback.answer()
@@ -826,11 +1074,13 @@ async def remove_admin(message: types.Message):
         save_json(FILES["admins"], admins)
         await message.answer(f"Админ удалён: {args[1]}")
 
-
+# ============================================================
+# 10. ФОНОВАЯ СТАТИСТИКА
+# ============================================================
 async def auto_increment_stats():
     while True:
         try:
-            s = load_json(FILES["stats"]) or {}
+            s = load_json(FILES["stats"], {})
             s["users"] = max(21481, s.get("users", 21481)) + random.randint(1, 3)
             s["deals_today"] = max(1287, s.get("deals_today", 1287)) + random.randint(0, 2)
             vol = s.get("volume", 627.4) * (1 + random.uniform(-0.3, 0.4) * 0.02)
@@ -840,7 +1090,9 @@ async def auto_increment_stats():
             pass
         await asyncio.sleep(300)
 
-
+# ============================================================
+# 11. API И РАЗДАЧА MINI APP
+# ============================================================
 async def handle_web_request(request: web.Request):
     headers = {
         "Access-Control-Allow-Origin": "*",
@@ -891,7 +1143,70 @@ async def handle_web_request(request: web.Request):
     elif endpoint == "/api/is_admin":
         return web.json_response({"success": True, "is_admin": is_admin(user_id)}, headers=headers)
 
+    # ОТЗЫВЫ (ПОЛУЧЕНИЕ + ДОБАВЛЕНИЕ ПОСЛЕ 1 ЗАВЕРШЁННОЙ СДЕЛКИ)
+    elif endpoint == "/api/reviews":
+        can_review = user_has_completed_deal(user_id, username) or is_admin(user_id)
+        items = reviews_data.get("items", [])[:60]
+        return web.json_response({
+            "success": True,
+            "reviews": items,
+            "can_review": can_review
+        }, headers=headers)
 
+    elif endpoint == "/api/add_review":
+        if not user_id:
+            return web.json_response({"success": False, "error": "Требуется авторизация"}, headers=headers)
+
+        if not (user_has_completed_deal(user_id, username) or is_admin(user_id)):
+            return web.json_response({
+                "success": False,
+                "error": "Оставить отзыв можно только после завершения хотя бы 1 сделки"
+            }, headers=headers)
+
+        text = (data.get("text") or "").strip()
+        rating = int(data.get("rating") or 5)
+        rating = max(4, min(5, rating))
+
+        if len(text) < 5:
+            return web.json_response({"success": False, "error": "Напишите текст отзыва"}, headers=headers)
+
+        entry = {
+            "id": "rev_" + str(uuid.uuid4())[:8],
+            "author_ru": "Анонимный пользователь",
+            "author_en": "Anonymous user",
+            "rating": rating,
+            "text": text[:500],
+            "date": datetime.now().isoformat(),
+            "source": "user"
+        }
+        reviews_data["items"].insert(0, entry)
+        save_json(FILES["reviews"], reviews_data)
+        return web.json_response({"success": True, "review": entry}, headers=headers)
+
+    elif endpoint == "/api/admin_ai_control":
+        if not is_admin(user_id):
+            return web.json_response({"success": False, "error": "Admin required"}, headers=headers)
+        action = data.get("action")
+        if action == "toggle":
+            ai_state["enabled"] = not bool(ai_state.get("enabled"))
+            save_json(FILES["ai_state"], ai_state)
+        elif action == "generate_now":
+            entry = await generate_ai_review_entry()
+            if not entry:
+                return web.json_response({"success": False, "error": "Не удалось сгенерировать отзыв"}, headers=headers)
+        elif action == "delete_review":
+            rid = data.get("review_id")
+            reviews_data["items"] = [r for r in reviews_data.get("items", []) if r.get("id") != rid]
+            save_json(FILES["reviews"], reviews_data)
+
+        return web.json_response({
+            "success": True,
+            "ai_enabled": bool(ai_state.get("enabled")),
+            "last_model": ai_state.get("last_model"),
+            "reviews": reviews_data.get("items", [])[:60]
+        }, headers=headers)
+
+    # СОЗДАНИЕ СДЕЛКИ
     elif endpoint == "/api/create_deal":
         product = (data.get("product") or "").strip()
         currency = (data.get("currency") or "TON").upper()
@@ -973,7 +1288,6 @@ async def handle_web_request(request: web.Request):
         except Exception as e:
             print(f"Ошибка отправки ссылки создателю: {e}")
 
-   
         nft_admin_block = (
             f"\nNFT подарок: <b>{parsed_nft['name']} #{parsed_nft['number']}</b>\n"
             f"Ссылка на NFT: {nft_url}"
@@ -1009,7 +1323,6 @@ async def handle_web_request(request: web.Request):
                 res_list.append(d_copy)
         return web.json_response({"success": True, "deals": list(reversed(res_list))}, headers=headers)
 
-  
     elif endpoint == "/api/pay_balance":
         deal_id = data.get("deal_id")
         if deal_id not in deals:
@@ -1119,7 +1432,6 @@ async def handle_web_request(request: web.Request):
             await notify_admins(f"Заявка на оплату по реквизитам: сделка #{deal_id}\nПодтвердить: /pay {deal_id}")
         return web.json_response({"success": True}, headers=headers)
 
-
     elif endpoint == "/api/chat_history":
         uid_str = str(data.get("target_user_id") or user_id)
         msgs = chat_messages.get(uid_str, [])
@@ -1177,7 +1489,10 @@ async def handle_web_request(request: web.Request):
         return web.json_response({
             "success": True,
             "deals": list(reversed(list(deals.values())))[:50],
-            "chats": chat_messages
+            "chats": chat_messages,
+            "ai_enabled": bool(ai_state.get("enabled")),
+            "last_model": ai_state.get("last_model"),
+            "reviews": reviews_data.get("items", [])[:60]
         }, headers=headers)
 
     elif endpoint == "/api/admin_delete_deal":
@@ -1233,7 +1548,9 @@ async def handle_web_request(request: web.Request):
 
     return web.json_response({"success": False, "error": "Unknown endpoint"}, headers=headers)
 
-
+# ============================================================
+# 12. ЗАПУСК
+# ============================================================
 async def start_web_server():
     app = web.Application()
     app.router.add_route("*", "/{path:.*}", handle_web_request)
@@ -1245,6 +1562,7 @@ async def start_web_server():
 
 async def main():
     asyncio.create_task(auto_increment_stats())
+    asyncio.create_task(ai_reviews_background_loop())
     await start_web_server()
     await dp.start_polling(bot)
 
