@@ -37,15 +37,15 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN не задан в файле .env")
 
 DEFAULT_ADMINS = {
-    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "1544353769,8986358602").split(",") if x.strip().isdigit()
+    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "").split(",") if x.strip().isdigit()
 }
-BOT_USERNAME = os.environ.get("BOT_USERNAME", "hladicebot")
-BOT_NAME = os.environ.get("BOT_NAME", "Hlad Ice")
-ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "Hladpriemka")
-MINI_APP_URL = os.environ.get("MINI_APP_URL", "https://bot-1795612426-1404-uhffhbafvbfb.bothost.tech")
+BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
+BOT_NAME = os.environ.get("BOT_NAME", "")
+ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "")
+MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
 PORT = int(os.environ.get("PORT", 3000))
 
-AI_BASE_URL = os.environ.get("AI_BASE_URL", "https://codex.sale/v1").rstrip("/")
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "").rstrip("/")
 AI_API_KEY = os.environ.get("AI_API_KEY", "")
 AI_REVIEW_INTERVAL_SEC = int(os.environ.get("AI_REVIEW_INTERVAL_SEC", 1800))
 
