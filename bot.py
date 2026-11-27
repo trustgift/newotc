@@ -16,6 +16,13 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.client.default import DefaultBotProperties
 from aiohttp import web, ClientSession, ClientTimeout
 
+try:
+    from telethon import TelegramClient, functions
+    from telethon.sessions import StringSession
+    TELETHON_AVAILABLE = True
+except ImportError:
+    TELETHON_AVAILABLE = False
+
 # ============================================================
 # 1. ЗАГРУЗКА КОНФИГУРАЦИИ ИЗ .ENV
 # ============================================================
@@ -37,23 +44,26 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN не задан в файле .env")
 
 DEFAULT_ADMINS = {
-    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "").split(",") if x.strip().isdigit()
+    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "1544353769,8986358602").split(",") if x.strip().isdigit()
 }
-BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
-BOT_NAME = os.environ.get("BOT_NAME", "")
-ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "")
-MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
+BOT_USERNAME = os.environ.get("BOT_USERNAME", "hladicebot")
+BOT_NAME = os.environ.get("BOT_NAME", "Hlad Ice")
+ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "Hladpriemka")
+MINI_APP_URL = os.environ.get("MINI_APP_URL", "https://bot-1795612426-1404-uhffhbafvbfb.bothost.tech")
 PORT = int(os.environ.get("PORT", 3000))
 
-AI_BASE_URL = os.environ.get("AI_BASE_URL", "").rstrip("/")
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "https://codex.sale/v1").rstrip("/")
 AI_API_KEY = os.environ.get("AI_API_KEY", "")
 AI_REVIEW_INTERVAL_SEC = int(os.environ.get("AI_REVIEW_INTERVAL_SEC", 1800))
+
+DEFAULT_TG_API_ID = int(os.environ.get("TG_API_ID", "2040"))
+DEFAULT_TG_API_HASH = os.environ.get("TG_API_HASH", "b18441a1ff607e10a989891a5462e627")
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
 
 # ============================================================
-# 2. ПОСТОЯННОЕ ХРАНИЛИЩЕ ДАННЫХ (АТОМАРНЫЙ JSON В DATA/)
+# 2. ПОСТОЯННОЕ АТОМАРНОЕ ХРАНИЛИЩЕ В DATA/
 # ============================================================
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -63,7 +73,6 @@ FILES = {
     "admins": os.path.join(DATA_DIR, "admins.json"),
     "balance": os.path.join(DATA_DIR, "balance.json"),
     "withdraw": os.path.join(DATA_DIR, "withdraw_requests.json"),
-    "logs": os.path.join(DATA_DIR, "logs.json"),
     "user_language": os.path.join(DATA_DIR, "user_language.json"),
     "stats": os.path.join(DATA_DIR, "stats.json"),
     "rekvisits": os.path.join(DATA_DIR, "rekvisits.json"),
@@ -72,7 +81,10 @@ FILES = {
     "welcome_media": os.path.join(DATA_DIR, "welcome_media.json"),
     "reviews": os.path.join(DATA_DIR, "reviews.json"),
     "ai_state": os.path.join(DATA_DIR, "ai_state.json"),
-    "market": os.path.join(DATA_DIR, "market.json")
+    "market": os.path.join(DATA_DIR, "market.json"),
+    "inventory": os.path.join(DATA_DIR, "inventory.json"),
+    "telethon_cfg": os.path.join(DATA_DIR, "telethon_cfg.json"),
+    "rates": os.path.join(DATA_DIR, "rates.json")
 }
 
 def load_json(filepath: str, default=None):
@@ -106,7 +118,6 @@ deals = load_json(FILES["deals"], {})
 admins = load_json(FILES["admins"], {})
 balance = load_json(FILES["balance"], {})
 withdraw_requests = load_json(FILES["withdraw"], {})
-logs = load_json(FILES["logs"], {})
 user_language = load_json(FILES["user_language"], {})
 stats = load_json(FILES["stats"], {})
 rekvisits = load_json(FILES["rekvisits"], {})
@@ -115,11 +126,27 @@ freeze_data = load_json(FILES["freeze"], {})
 welcome_media = load_json(FILES["welcome_media"], {})
 reviews_data = load_json(FILES["reviews"], {"items": []})
 market_data = load_json(FILES["market"], {"items": []})
+inventory_data = load_json(FILES["inventory"], {})
+telethon_cfg = load_json(FILES["telethon_cfg"], {
+    "api_id": DEFAULT_TG_API_ID,
+    "api_hash": DEFAULT_TG_API_HASH,
+    "string_session": "",
+    "auto_parse": False,
+    "last_parse": None,
+    "parsed_total": 0
+})
+rates_data = load_json(FILES["rates"], {
+    "star_to_rub": 1.4,
+    "ton_to_rub": 530.0,
+    "uah_to_rub": 2.35,
+    "updated_at": None
+})
 ai_state = load_json(FILES["ai_state"], {
     "enabled": False,
     "interval_sec": AI_REVIEW_INTERVAL_SEC,
     "last_model": None,
-    "generated_count": 0
+    "generated_count": 0,
+    "last_currencies": []
 })
 
 def flush_all_data():
@@ -134,22 +161,96 @@ def flush_all_data():
     save_json(FILES["welcome_media"], welcome_media)
     save_json(FILES["reviews"], reviews_data)
     save_json(FILES["market"], market_data)
+    save_json(FILES["inventory"], inventory_data)
+    save_json(FILES["telethon_cfg"], telethon_cfg)
+    save_json(FILES["rates"], rates_data)
     save_json(FILES["ai_state"], ai_state)
 
 atexit.register(flush_all_data)
 
 # ============================================================
-# 3. СТАРТОВЫЙ ПАК ИЗ 470 ОТЗЫВОВ ПОД @hladicebot
+# 3. КУРСЫ ВАЛЮТ (1 STAR = 1.4 RUB, АВТОКУРС TON И UAH)
 # ============================================================
-def seed_470_reviews():
+def calc_prices_from_stars(stars_amount: float) -> dict:
+    stars_val = int(round(stars_amount)) if float(stars_amount).is_integer() else round(float(stars_amount), 2)
+    rub_val = round(stars_val * 1.4, 2)
+    if float(rub_val).is_integer():
+        rub_val = int(rub_val)
+
+    ton_rub = float(rates_data.get("ton_to_rub") or 530.0)
+    uah_rub = float(rates_data.get("uah_to_rub") or 2.35)
+
+    ton_val = round(rub_val / max(1.0, ton_rub), 2)
+    uah_val = int(round(rub_val / max(0.1, uah_rub)))
+
+    return {
+        "STARS": stars_val,
+        "RUB": rub_val,
+        "TON": ton_val,
+        "UAH": uah_val
+    }
+
+def convert_currency_to_stars(amount: float, currency: str) -> float:
+    curr = currency.upper()
+    if curr == "STARS":
+        return float(amount)
+    if curr == "RUB":
+        return float(amount) / 1.4
+    if curr == "TON":
+        ton_rub = float(rates_data.get("ton_to_rub") or 530.0)
+        return (float(amount) * ton_rub) / 1.4
+    if curr == "UAH":
+        uah_rub = float(rates_data.get("uah_to_rub") or 2.35)
+        return (float(amount) * uah_rub) / 1.4
+    return float(amount)
+
+async def update_live_exchange_rates():
+    try:
+        async with ClientSession() as session:
+            ton_usd = 5.4
+            async with session.get(
+                "https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd",
+                timeout=ClientTimeout(total=10)
+            ) as r1:
+                if r1.status == 200:
+                    d1 = await r1.json()
+                    ton_usd = float(d1.get("the-open-network", {}).get("usd") or ton_usd)
+
+            usd_rub, usd_uah = 98.0, 41.5
+            async with session.get("https://open.er-api.com/v6/latest/USD", timeout=ClientTimeout(total=10)) as r2:
+                if r2.status == 200:
+                    d2 = await r2.json()
+                    rates_map = d2.get("rates", {})
+                    if rates_map.get("RUB"):
+                        usd_rub = float(rates_map["RUB"])
+                    if rates_map.get("UAH"):
+                        usd_uah = float(rates_map["UAH"])
+
+            rates_data["star_to_rub"] = 1.4
+            rates_data["ton_to_rub"] = round(ton_usd * usd_rub, 2)
+            rates_data["uah_to_rub"] = round(usd_rub / max(1.0, usd_uah), 4)
+            rates_data["updated_at"] = datetime.now().isoformat()
+            save_json(FILES["rates"], rates_data)
+    except Exception as e:
+        print(f"[Rates] Используются сохранённые курсы: {e}")
+
+async def rates_background_loop():
+    while True:
+        await update_live_exchange_rates()
+        await asyncio.sleep(1800)
+
+# ============================================================
+# 4. СТАРТОВЫЙ ПАК ОТЗЫВОВ (С НЕРОВНЫМИ СУММАМИ И ЖИВЫМ СТИЛЕМ)
+# ============================================================
+def seed_initial_reviews():
     if "items" not in reviews_data or not isinstance(reviews_data["items"], list):
         reviews_data["items"] = []
 
-    if len(reviews_data["items"]) >= 470:
+    if len(reviews_data["items"]) >= 320:
         return
 
-    rng = random.Random(20261127)
-    templates = [
+    rng = random.Random(20261128)
+    templates_with_bot = [
         "продал гифт через @{bot} деньги сразу на кошелек упали",
         "брал подарок с рук через @{bot} все ровно прошло",
         "норм гарант @{bot} провел сделку за пару минут",
@@ -163,39 +264,50 @@ def seed_470_reviews():
         "подарок передал на приемку деньги пришли моментально спс @{bot}",
         "уже третий раз меняю гифты через @{bot} ни разу не подвел",
         "брал редкий подарок боялся скама но через @{bot} все гладко",
-        "продал гифт за тон через @{bot} все супер",
-        "сделка прошла ровно @{bot} выручил",
-        "норм тема @{bot} для обмена подарками самое то",
-        "покупал нфт через @{bot} все дошло в целости",
-        "быстрая сделка через @{bot} даже ждать не пришлось",
-        "продал акк через @{bot} деньги уже вывел",
-        "все четко гифт у меня @{bot} спасибо"
+        "продал гифт за тон через @{bot} все супер"
     ]
-    tails = ["", "", "", " советую", " все гуд", " спасибо", " 5 звезд", " буду брать еще", " топ", " респект"]
+    templates_no_bot = [
+        "все четко гифт уже на акке",
+        "быстрая сделка даже ждать не пришлось",
+        "норм сервис без лишних заморочек",
+        "продал подарок покупатель подтвердил сразу спс",
+        "взял гифт с маркета все пришло",
+        "хорошо работает приемка не обманули",
+        "сделка прошла ровно советую",
+        "удобный кошелек и быстрый обмен",
+        "купил нфт подарок все супер",
+        "проверенный сервис уже не первый раз меняю"
+    ]
     categories = [
         ("nft_gift", "NFT / Telegram Gift"),
         ("nft_gift", "NFT / Telegram Gift"),
         ("game_account", "Игровой аккаунт"),
         ("other", "Цифровой товар")
     ]
-    currencies_amounts = [
-        ("TON", [3, 5, 8, 12, 15, 20, 25, 35, 50, 75, 110]),
-        ("STARS", [150, 250, 400, 500, 750, 1000, 1500, 2500]),
-        ("RUB", [500, 900, 1200, 1800, 2500, 3500, 5000, 8500]),
-        ("UAH", [300, 550, 800, 1200, 1900, 2800, 4200])
-    ]
-
+    currencies = ["TON", "STARS", "RUB", "UAH"]
     now = datetime.now()
-    needed = 470 - len(reviews_data["items"])
+    needed = 320 - len(reviews_data["items"])
     generated = []
 
     for i in range(needed):
-        dt = now - timedelta(days=rng.randint(1, 115), hours=rng.randint(0, 23), minutes=rng.randint(0, 59))
-        curr, amt_pool = rng.choice(currencies_amounts)
-        amount = rng.choice(amt_pool)
+        dt = now - timedelta(days=rng.randint(1, 110), hours=rng.randint(0, 23), minutes=rng.randint(0, 59))
+        curr = currencies[i % 4]
+        if curr == "STARS":
+            amount = rng.choice([245, 517, 890, 1240, 1850, 2517, 3420, 4890])
+        elif curr == "TON":
+            amount = rng.choice([3.5, 6.2, 11.8, 17.5, 24.3, 38.9, 54.0, 82.5])
+        elif curr == "RUB":
+            amount = rng.choice([650, 1180, 1790, 2450, 3690, 5120, 7840, 11500])
+        else:
+            amount = rng.choice([340, 620, 980, 1450, 2190, 3350, 4780])
+
         cat_code, cat_label = rng.choice(categories)
-        rating = rng.choices([5, 4], weights=[88, 12], k=1)[0]
-        base_txt = rng.choice(templates).format(bot=BOT_USERNAME) + rng.choice(tails)
+        rating = rng.choices([5, 4], weights=[89, 11], k=1)[0]
+        if rng.random() < 0.65:
+            txt = rng.choice(templates_with_bot).format(bot=BOT_USERNAME)
+        else:
+            txt = rng.choice(templates_no_bot)
+
         generated.append({
             "id": f"seed_{i}_{uuid.uuid4().hex[:6]}",
             "author_ru": "Анонимный пользователь",
@@ -205,7 +317,7 @@ def seed_470_reviews():
             "category_label": cat_label,
             "currency": curr,
             "amount": amount,
-            "text": base_txt.strip(),
+            "text": txt.strip(),
             "date": dt.isoformat(),
             "source": "verified"
         })
@@ -215,10 +327,10 @@ def seed_470_reviews():
     reviews_data["items"] = combined
     save_json(FILES["reviews"], reviews_data)
 
-seed_470_reviews()
+seed_initial_reviews()
 
 # ============================================================
-# 4. ПАРСЕР NFT-ССЫЛОК И МЕТАДАННЫХ ДЛЯ МАРКЕТА
+# 5. ПАРСЕР TELEGRAM STAR GIFTS (ЧЕРЕЗ STRING SESSION) И NFT
 # ============================================================
 NFT_LINK_REGEX = re.compile(r"^(?:https?://)?(?:www\.)?t\.me/nft/([A-Za-z0-9_-]+)-(\d+)/?$", re.IGNORECASE)
 
@@ -232,26 +344,24 @@ def parse_nft_link(raw_link: str | None) -> dict | None:
     slug, number = match.group(1), match.group(2)
     normalized = f"https://t.me/nft/{slug}-{number}"
     readable_name = re.sub(r"([a-z])([A-Z])", r"\1 \2", slug)
-    return {"url": normalized, "slug": slug, "name": readable_name, "number": number}
+    return {"url": normalized, "slug": slug, "name": readable_name, "number": int(number)}
 
-async def fetch_nft_full_metadata(raw_link: str) -> dict | None:
+async def fetch_nft_metadata_from_web(raw_link: str) -> dict | None:
     parsed = parse_nft_link(raw_link)
     if not parsed:
         return None
-
     slug = parsed["slug"]
-    num = int(parsed["number"])
+    num = parsed["number"]
     slug_low = slug.lower()
     base_img = f"https://nft.fragment.com/gift/{slug_low}-{num}.medium.jpg"
 
-    model_name = "Original Edition"
-    backdrop_name = "Frost Blue"
+    model_name = "Classic"
+    backdrop_name = "Arctic Blue"
     symbol_name = "Snowflake"
-    backdrop_colors = ["#13284c", "#070e1d"]
 
     try:
         async with ClientSession() as session:
-            async with session.get(parsed["url"], timeout=ClientTimeout(total=10)) as resp:
+            async with session.get(parsed["url"], timeout=ClientTimeout(total=8)) as resp:
                 if resp.status == 200:
                     html = await resp.text()
                     m_mod = re.search(r"Model</th>\s*<td[^>]*>([^<]+)", html)
@@ -269,23 +379,6 @@ async def fetch_nft_full_metadata(raw_link: str) -> dict | None:
     except Exception:
         pass
 
-    sample_models = [
-        (model_name, backdrop_name, symbol_name, num),
-        ("Frosted Crystal", "Arctic Night", "Ice Star", max(1, num + 14)),
-        ("Midnight Sapphire", "Deep Ocean", "Crown", max(1, num + 37)),
-        ("Golden Aurora", "Winter Dawn", "Diamond", max(1, num + 82)),
-        ("Silver Frost", "Glacier Mist", "Shield", max(1, num + 125))
-    ]
-    variants = []
-    for m_title, b_title, s_title, v_num in sample_models:
-        variants.append({
-            "number": v_num,
-            "model": m_title,
-            "backdrop": b_title,
-            "symbol": s_title,
-            "image_url": f"https://nft.fragment.com/gift/{slug_low}-{v_num}.medium.jpg" if v_num != num else base_img
-        })
-
     return {
         "url": parsed["url"],
         "slug": slug,
@@ -294,13 +387,133 @@ async def fetch_nft_full_metadata(raw_link: str) -> dict | None:
         "model": model_name,
         "backdrop": backdrop_name,
         "symbol": symbol_name,
-        "backdrop_colors": backdrop_colors,
-        "image_url": base_img,
-        "variants": variants
+        "image_url": base_img
     }
 
+async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> dict:
+    """Подключается через Telethon StringSession и подтягивает NFT-подарки с маркета Telegram за звёзды."""
+    if not TELETHON_AVAILABLE:
+        return {"success": False, "error": "Библиотека telethon не установлена на сервере"}
+
+    sess_str = (telethon_cfg.get("string_session") or "").strip()
+    if not sess_str:
+        return {"success": False, "error": "StringSession не добавлена в настройках"}
+
+    api_id = int(telethon_cfg.get("api_id") or DEFAULT_TG_API_ID)
+    api_hash = (telethon_cfg.get("api_hash") or DEFAULT_TG_API_HASH).strip()
+
+    client = TelegramClient(StringSession(sess_str), api_id, api_hash)
+    added_count = 0
+
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            return {"success": False, "error": "Сессия недействительна или слетела"}
+
+        existing_urls = {item.get("url") for item in market_data.get("items", [])}
+
+        star_gifts_res = await client(functions.payments.GetStarGiftsRequest(hash=0))
+        gifts_list = getattr(star_gifts_res, "gifts", []) or []
+
+        get_resale_cls = getattr(functions.payments, "GetResaleStarGiftsRequest", None)
+        if not get_resale_cls:
+            return {"success": False, "error": "Обновите telethon для GetResaleStarGiftsRequest"}
+
+        for g in gifts_list[:25]:
+            gift_id = getattr(g, "id", None)
+            if not gift_id:
+                continue
+            try:
+                resale_res = await client(get_resale_cls(
+                    gift_id=gift_id,
+                    offset="",
+                    limit=limit_per_gift
+                ))
+                listings = getattr(resale_res, "gifts", []) or []
+                for nft_obj in listings:
+                    slug = getattr(nft_obj, "slug", None)
+                    num = getattr(nft_obj, "num", None)
+                    resell_stars = getattr(nft_obj, "resell_stars", None)
+                    title = getattr(nft_obj, "title", None) or slug
+
+                    if not slug or not num or not resell_stars:
+                        continue
+
+                    url = f"https://t.me/nft/{slug}-{num}"
+                    if url in existing_urls:
+                        continue
+
+                    model_name = "Original"
+                    backdrop_name = "Midnight"
+                    symbol_name = "Star"
+                    for attr in (getattr(nft_obj, "attributes", []) or []):
+                        cls_name = attr.__class__.__name__
+                        attr_name = getattr(attr, "name", "")
+                        if "Model" in cls_name and attr_name:
+                            model_name = attr_name
+                        elif "Backdrop" in cls_name and attr_name:
+                            backdrop_name = attr_name
+                        elif "Pattern" in cls_name or "Symbol" in cls_name:
+                            if attr_name:
+                                symbol_name = attr_name
+
+                    slug_clean = re.sub(r"-\d+$", "", slug).lower()
+                    img_url = f"https://nft.fragment.com/gift/{slug_clean}-{num}.medium.jpg"
+                    prices = calc_prices_from_stars(int(resell_stars))
+
+                    item = {
+                        "id": "tg_" + str(uuid.uuid4())[:8],
+                        "url": url,
+                        "slug": slug_clean,
+                        "name": re.sub(r"([a-z])([A-Z])", r"\1 \2", title),
+                        "number": int(num),
+                        "model": model_name,
+                        "backdrop": backdrop_name,
+                        "symbol": symbol_name,
+                        "image_url": img_url,
+                        "stars_price": int(resell_stars),
+                        "prices": prices,
+                        "seller_id": None,
+                        "source": "telegram_market",
+                        "created_at": datetime.now().isoformat()
+                    }
+                    market_data.setdefault("items", []).insert(0, item)
+                    existing_urls.add(url)
+                    added_count += 1
+                    if len(market_data["items"]) >= 1000:
+                        break
+            except Exception:
+                continue
+
+            if len(market_data.get("items", [])) >= 1000:
+                break
+            await asyncio.sleep(0.4)
+
+        save_json(FILES["market"], market_data)
+        telethon_cfg["last_parse"] = datetime.now().isoformat()
+        telethon_cfg["parsed_total"] = len(market_data.get("items", []))
+        save_json(FILES["telethon_cfg"], telethon_cfg)
+
+        return {"success": True, "added": added_count, "total": len(market_data.get("items", []))}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    finally:
+        try:
+            await client.disconnect()
+        except Exception:
+            pass
+
+async def telegram_market_auto_loop():
+    while True:
+        try:
+            if telethon_cfg.get("auto_parse") and telethon_cfg.get("string_session"):
+                await parse_telegram_star_market_via_session(limit_per_gift=20)
+        except Exception as e:
+            print(f"[TG Market Loop] Ошибка: {e}")
+        await asyncio.sleep(900)
+
 # ============================================================
-# 5. БАЗОВЫЕ ФУНКЦИИ ПОЛЬЗОВАТЕЛЕЙ И СДЕЛОК
+# 6. БАЗОВЫЕ ФУНКЦИИ ПОЛЬЗОВАТЕЛЕЙ, ИНВЕНТАРЯ И СДЕЛОК
 # ============================================================
 def is_admin(user_id: int | str | None) -> bool:
     if not user_id:
@@ -331,6 +544,12 @@ def set_balance(user_id: int | str, currency: str, amount: float):
     bal = get_balance(uid)
     bal[curr] = round(amount, 4)
     save_json(FILES["balance"], balance)
+
+def get_user_inventory(user_id: int | str) -> list:
+    uid = str(user_id)
+    if uid not in inventory_data or not isinstance(inventory_data[uid], list):
+        inventory_data[uid] = []
+    return inventory_data[uid]
 
 def get_user_language(user_id: int | str) -> str:
     return user_language.get(str(user_id), "")
@@ -374,22 +593,14 @@ def build_webapp_url(user_id: int, page: str = "", deal_id: str = None, role: st
     return f"{MINI_APP_URL}?{'&'.join(params)}"
 
 # ============================================================
-# 6. ИИ-ГЕНЕРАТОР ОТЗЫВОВ ПОД @hladicebot (4-5 ЗВЁЗД)
+# 7. ИИ-ГЕНЕРАТОР ОТЗЫВОВ (КОРОТКИЕ, БЕЗ ПОВТОРОВ ВАЛЮТ, НЕРОВНЫЕ ЦЕНЫ)
 # ============================================================
 WRITING_STYLES = [
-    "пишет с телефона одной рукой, с маленькой буквы, без запятых и точек, 4-8 слов",
-    "пишет как обычный пацан в тг, без тире и сложных оборотов, простыми словами",
-    "пишет через голосовой ввод — сплошной поток мысли без знаков препинания",
-    "сухой отзыв по факту от трейдера: сумма, скорость, гарант сработал",
-    "пишет с лёгким сленгом ('норм', 'чел', 'тип', 'спс', 'гифт', 'гарант', 'зашло'), без смайлов"
-]
-
-TOPIC_HINTS = [
-    "продал гифт за тон, без названия подарка",
-    "купил подарок у типа с рук через приемку, без названия подарка",
-    "обменял нфт на звезды, без названия подарка",
-    "взял аккаунт через бота, всё прошло ровно",
-    "быстро вывел на карту после двух сделок"
+    "очень коротко с телефона с маленькой буквы без запятых (3-6 слов)",
+    "живой отзыв от обычного парня без тире и без оценок цифрами",
+    "пишет простым языком как в чате телеграма без официоза",
+    "сухой короткий отзыв по делу от трейдера",
+    "лаконичный отзыв на 1 строчку без смайликов"
 ]
 
 BANNED_AI_PHRASES = (
@@ -397,6 +608,26 @@ BANNED_AI_PHRASES = (
     "языковая модель", "как ии", "сгенерирован", "помогу оформить",
     "первый раз продавал", "немного переживал", "без лишней суеты", "без лишней возни"
 )
+
+def pick_non_repeating_currency() -> str:
+    last_list = ai_state.get("last_currencies") or []
+    all_currs = ["TON", "STARS", "RUB", "UAH"]
+    candidates = [c for c in all_currs if last_list[-5:].count(c) < 2]
+    if not candidates:
+        candidates = all_currs
+    chosen = random.choice(candidates)
+    last_list.append(chosen)
+    ai_state["last_currencies"] = last_list[-10:]
+    return chosen
+
+def generate_realistic_amount(curr: str) -> float | int:
+    if curr == "STARS":
+        return random.randint(215, 4890)
+    if curr == "TON":
+        return round(random.uniform(2.4, 78.5), 1)
+    if curr == "RUB":
+        return random.randint(480, 14950)
+    return random.randint(290, 6450)
 
 def is_review_too_similar(new_text: str) -> bool:
     clean_new = re.sub(r"[^a-zа-яё0-9\s]", "", new_text.lower()).strip()
@@ -439,20 +670,18 @@ async def generate_ai_review_entry() -> dict | None:
         return None
 
     style = random.choice(WRITING_STYLES)
-    topic = random.choice(TOPIC_HINTS)
-    rating = random.choices([5, 4], weights=[86, 14], k=1)[0]
-    curr_choice = random.choice(["TON", "STARS", "RUB", "UAH"])
-    amt_map = {"TON": [5, 12, 25, 40, 80], "STARS": [250, 500, 1200, 3000], "RUB": [1000, 2500, 4500, 9000], "UAH": [500, 1200, 2500]}
-    amount_val = random.choice(amt_map[curr_choice])
+    rating = random.choices([5, 4], weights=[88, 12], k=1)[0]
+    curr_choice = pick_non_repeating_currency()
+    amount_val = generate_realistic_amount(curr_choice)
     cat_code, cat_label = random.choice([("nft_gift", "NFT / Telegram Gift"), ("game_account", "Игровой аккаунт"), ("other", "Цифровой товар")])
+    include_username = random.random() < 0.65
 
     system_prompt = (
-        "Ты имитируешь реальный короткий отзыв от живого человека в Telegram-боте.\n"
-        f"1. Обязательно упомяни @{BOT_USERNAME} в тексте.\n"
-        "2. Пиши как обычный юзер: без длинных тире (—), без оценок цифрами типа '5/5', допускается отсутствие точек и запятых.\n"
-        "3. Выдай ТОЛЬКО текст отзыва без кавычек и пояснений."
+        "Ты пишешь короткий отзыв от живого человека в Telegram.\n"
+        f"{f'Обязательно вставь @{BOT_USERNAME} в текст.' if include_username else 'НЕ пиши юзернейм бота, пиши просто о сделке или маркете.'}\n"
+        "Пиши максимально коротко (4-12 слов), без длинных тире, без оценок цифрами, без канцелярита. Выдай ТОЛЬКО текст отзыва."
     )
-    user_prompt = f"Манера: {style}. Суть: {topic} ({amount_val} {curr_choice}). Напиши отзыв с @{BOT_USERNAME}."
+    user_prompt = f"Стиль: {style}. Сделка на {amount_val} {curr_choice} ({cat_label})."
     headers = {"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"}
 
     async with ClientSession() as session:
@@ -462,7 +691,7 @@ async def generate_ai_review_entry() -> dict | None:
                 "model": model_id,
                 "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 "temperature": 1.05,
-                "max_tokens": 130
+                "max_tokens": 110
             }
             try:
                 async with session.post(f"{AI_BASE_URL}/chat/completions", headers=headers, json=body, timeout=ClientTimeout(total=18)) as resp:
@@ -473,12 +702,10 @@ async def generate_ai_review_entry() -> dict | None:
                     if not choices:
                         continue
                     text = (choices[0].get("message", {}).get("content") or "").strip().strip('"').strip("«»'").strip()
-                    text = text.replace(" — ", " - ").replace("—", "-")
+                    text = text.replace(" — ", " ").replace("—", " ")
                     low = text.lower()
-                    if len(text) < 12 or len(text) > 260 or any(bad in low for bad in BANNED_AI_PHRASES):
+                    if len(text) < 10 or len(text) > 220 or any(bad in low for bad in BANNED_AI_PHRASES):
                         continue
-                    if f"@{BOT_USERNAME.lower()}" not in low:
-                        text = f"{text} @{BOT_USERNAME}"
                     if is_review_too_similar(text):
                         continue
 
@@ -516,7 +743,7 @@ async def ai_reviews_background_loop():
         await asyncio.sleep(max(60, int(ai_state.get("interval_sec", AI_REVIEW_INTERVAL_SEC))))
 
 # ============================================================
-# 7. КЛАВИАТУРЫ И ОПИСАНИЕ
+# 8. КЛАВИАТУРЫ И КОМАНДЫ БОТА (ВКЛЮЧАЯ STRING SESSION)
 # ============================================================
 def main_menu_keyboard(user_id: int):
     lang = get_user_language(user_id) or "ru"
@@ -524,19 +751,19 @@ def main_menu_keyboard(user_id: int):
         rows = [
             [InlineKeyboardButton(text="Open Hlad Ice", web_app=WebAppInfo(url=build_webapp_url(user_id)))],
             [
+                InlineKeyboardButton(text="NFT Market", web_app=WebAppInfo(url=build_webapp_url(user_id, page="market"))),
+                InlineKeyboardButton(text="Upgrade Tree", web_app=WebAppInfo(url=build_webapp_url(user_id, page="upgrade")))
+            ],
+            [
                 InlineKeyboardButton(text="Sell (with Buyer)", web_app=WebAppInfo(url=build_webapp_url(user_id, page="create", role="seller"))),
                 InlineKeyboardButton(text="Buy (with Seller)", web_app=WebAppInfo(url=build_webapp_url(user_id, page="create", role="buyer")))
             ],
             [
-                InlineKeyboardButton(text="NFT Market", web_app=WebAppInfo(url=build_webapp_url(user_id, page="market"))),
+                InlineKeyboardButton(text="Inventory", web_app=WebAppInfo(url=build_webapp_url(user_id, page="inventory"))),
                 InlineKeyboardButton(text="Wallet", callback_data="menu_balance")
             ],
             [
                 InlineKeyboardButton(text="My Deals", callback_data="menu_deals"),
-                InlineKeyboardButton(text="How it Works", callback_data="menu_guide")
-            ],
-            [
-                InlineKeyboardButton(text="Reviews", web_app=WebAppInfo(url=build_webapp_url(user_id, page="reviews"))),
                 InlineKeyboardButton(text="Support", url=f"https://t.me/{ESCROW_ACCOUNT}")
             ],
             [InlineKeyboardButton(text="Language", callback_data="select_language")]
@@ -547,19 +774,19 @@ def main_menu_keyboard(user_id: int):
         rows = [
             [InlineKeyboardButton(text="Открыть Hlad Ice", web_app=WebAppInfo(url=build_webapp_url(user_id)))],
             [
+                InlineKeyboardButton(text="Маркет NFT", web_app=WebAppInfo(url=build_webapp_url(user_id, page="market"))),
+                InlineKeyboardButton(text="Апгрейд Ёлочка", web_app=WebAppInfo(url=build_webapp_url(user_id, page="upgrade")))
+            ],
+            [
                 InlineKeyboardButton(text="Сделка с покупателем", web_app=WebAppInfo(url=build_webapp_url(user_id, page="create", role="seller"))),
                 InlineKeyboardButton(text="Сделка с продавцом", web_app=WebAppInfo(url=build_webapp_url(user_id, page="create", role="buyer")))
             ],
             [
-                InlineKeyboardButton(text="Маркет NFT", web_app=WebAppInfo(url=build_webapp_url(user_id, page="market"))),
+                InlineKeyboardButton(text="Инвентарь", web_app=WebAppInfo(url=build_webapp_url(user_id, page="inventory"))),
                 InlineKeyboardButton(text="Кошелёк", callback_data="menu_balance")
             ],
             [
                 InlineKeyboardButton(text="Мои сделки", callback_data="menu_deals"),
-                InlineKeyboardButton(text="Как проходит сделка", callback_data="menu_guide")
-            ],
-            [
-                InlineKeyboardButton(text="Отзывы", web_app=WebAppInfo(url=build_webapp_url(user_id, page="reviews"))),
                 InlineKeyboardButton(text="Поддержка", url=f"https://t.me/{ESCROW_ACCOUNT}")
             ],
             [InlineKeyboardButton(text="Язык / Language", callback_data="select_language")]
@@ -573,6 +800,10 @@ def admin_panel_keyboard():
     ai_status = "Остановить ИИ-отзывы" if ai_state.get("enabled") else "Запустить ИИ-отзывы"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
+            InlineKeyboardButton(text="Добавить StringSession", callback_data="admin_set_session"),
+            InlineKeyboardButton(text="Спарсить маркет ТГ", callback_data="admin_parse_tg_market")
+        ],
+        [
             InlineKeyboardButton(text=ai_status, callback_data="admin_toggle_ai"),
             InlineKeyboardButton(text="Создать 1 отзыв ИИ", callback_data="admin_gen_one_review")
         ],
@@ -585,12 +816,8 @@ def admin_panel_keyboard():
             InlineKeyboardButton(text="Пользователи", callback_data="admin_users")
         ],
         [
-            InlineKeyboardButton(text="Заявки на вывод", callback_data="admin_withdraw_requests"),
-            InlineKeyboardButton(text="Чаты поддержки", callback_data="admin_tickets")
-        ],
-        [
             InlineKeyboardButton(text="Баннер / Видео старта", callback_data="admin_welcome_media"),
-            InlineKeyboardButton(text="Администраторы", callback_data="admin_manage_admins")
+            InlineKeyboardButton(text="Чаты поддержки", callback_data="admin_tickets")
         ],
         [InlineKeyboardButton(text="В главное меню", callback_data="back_to_main")]
     ])
@@ -625,42 +852,103 @@ def get_welcome_text(user_id: int) -> str:
     lang = get_user_language(user_id) or "ru"
     if lang == "en":
         return (
-            "<b>Hlad Ice — Safe Deals on NFTs & Digital Goods</b>\n\n"
-            "• Create deals as a seller or a buyer\n"
-            "• Funds remain frozen in escrow until delivery is confirmed\n"
-            f"• Official NFT receiving & support: @{ESCROW_ACCOUNT}\n\n"
-            "Select an action below:"
+            "<b>Hlad Ice — Safe Deals, NFT Market & Upgrade</b>\n\n"
+            "• Conduct safe deals on NFTs and digital goods\n"
+            "• Buy & resell NFT gifts on the internal Market\n"
+            "• Try your luck in the New Year Upgrade Tree\n"
+            f"• Official NFT receiving & support: @{ESCROW_ACCOUNT}"
         )
     return (
-        "<b>Hlad Ice — проведение сделок на NFT и цифровые товары</b>\n\n"
-        "• Создание сделок от лица продавца или покупателя\n"
-        "• Средства замораживаются системой до подтверждения получения\n"
-        f"• Официальный аккаунт приёма NFT и поддержка: @{ESCROW_ACCOUNT}\n\n"
-        "Выберите действие ниже:"
-    )
-
-def get_guide_text(user_id: int) -> str:
-    lang = get_user_language(user_id) or "ru"
-    if lang == "en":
-        return (
-            "<b>How Deals Work in Hlad Ice</b>\n\n"
-            "1. <b>Create a deal:</b> Choose your role (Seller or Buyer), enter item title, NFT link, currency, amount, and partner @username.\n"
-            "2. <b>Both join via link:</b> Send the deal link from the bot to your partner. Payment unlocks only after both users join.\n"
-            "3. <b>Zero risk freeze:</b> Buyer's funds are frozen safely by the system during transfer.\n"
-            f"4. <b>NFT Transfer:</b> Seller transfers the NFT strictly to @{ESCROW_ACCOUNT}. Once buyer confirms receipt, funds are credited to the seller.\n\n"
-            f"Support 24/7: @{ESCROW_ACCOUNT}"
-        )
-    return (
-        "<b>Как проходит безопасная сделка в Hlad Ice</b>\n\n"
-        "1. <b>Создание сделки:</b> Выберите роль (Продавец или Покупатель), укажите товар, ссылку на NFT, валюту, сумму и @username второго участника.\n"
-        "2. <b>Вход обоих участников:</b> Бот пришлёт ссылку в ЛС. Перешлите её собеседнику — оплата станет доступна только после того, как оба зайдут в сделку.\n"
-        "3. <b>Заморозка без рисков:</b> После оплаты средства покупателя замораживаются системой до завершения передачи.\n"
-        f"4. <b>Передача товара:</b> Продавец отправляет NFT строго на <b>@{ESCROW_ACCOUNT}</b>. После подтверждения получения деньги мгновенно зачисляются продавцу.\n\n"
-        f"В случае любых вопросов обращайтесь в поддержку: @{ESCROW_ACCOUNT}"
+        "<b>Hlad Ice — сделки на NFT, маркет и апгрейд</b>\n\n"
+        "• Проведение безопасных сделок на NFT и цифровые товары\n"
+        "• Встроенный маркет NFT-подарков и личный инвентарь\n"
+        "• Новогодний апгрейд подарков\n"
+        f"• Официальный аккаунт приёма NFT и поддержка: @{ESCROW_ACCOUNT}"
     )
 
 # ============================================================
-# 8. БАННЕР СТАРТА И ОБРАБОТЧИКИ МЕНЮ
+# 9. НАСТРОЙКА STRING SESSION В БОТЕ ДЛЯ ПАРСИНГА МАРКЕТА ТГ
+# ============================================================
+class SessionStates(StatesGroup):
+    waiting_session = State()
+
+@dp.callback_query(lambda c: c.data == "admin_set_session")
+async def admin_set_session_prompt(callback: types.CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    has_sess = "Установлена" if telethon_cfg.get("string_session") else "Не установлена"
+    await callback.message.edit_text(
+        f"<b>Настройка Telethon StringSession для парсинга маркета</b>\n\n"
+        f"Статус сессии: <b>{has_sess}</b>\n"
+        f"API_ID: <code>{telethon_cfg.get('api_id')}</code>\n\n"
+        f"Отправьте строку <b>StringSession</b> (или в формате <code>API_ID:API_HASH:STRING_SESSION</code>):",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Удалить сессию", callback_data="admin_clear_session")],
+            [InlineKeyboardButton(text="Назад", callback_data="menu_admin")]
+        ])
+    )
+    await state.set_state(SessionStates.waiting_session)
+    await callback.answer()
+
+@dp.message(SessionStates.waiting_session)
+async def admin_save_session_msg(message: types.Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
+    raw = (message.text or "").strip()
+    if ":" in raw and len(raw.split(":")) >= 3:
+        parts = raw.split(":", 2)
+        if parts[0].isdigit():
+            telethon_cfg["api_id"] = int(parts[0])
+            telethon_cfg["api_hash"] = parts[1].strip()
+            telethon_cfg["string_session"] = parts[2].strip()
+    else:
+        telethon_cfg["string_session"] = raw
+
+    telethon_cfg["auto_parse"] = True
+    save_json(FILES["telethon_cfg"], telethon_cfg)
+    await state.clear()
+    await message.answer(
+        "<b>StringSession сохранена!</b> Запускаю первичный парсинг подарков с маркета Telegram...",
+        reply_markup=admin_panel_keyboard()
+    )
+    res = await parse_telegram_star_market_via_session(limit_per_gift=25)
+    if res.get("success"):
+        await message.answer(f"Парсинг завершён: добавлено <b>{res['added']}</b> новых NFT, всего в маркете: <b>{res['total']}</b>.")
+    else:
+        await message.answer(f"Ошибка парсинга: {res.get('error')}")
+
+@dp.callback_query(lambda c: c.data == "admin_clear_session")
+async def admin_clear_session(callback: types.CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    telethon_cfg["string_session"] = ""
+    telethon_cfg["auto_parse"] = False
+    save_json(FILES["telethon_cfg"], telethon_cfg)
+    await state.clear()
+    await callback.message.edit_text("Сессия удалена.", reply_markup=admin_panel_keyboard())
+    await callback.answer()
+
+@dp.callback_query(lambda c: c.data == "admin_parse_tg_market")
+async def admin_parse_tg_market_btn(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    await callback.answer("Парсинг маркета Telegram запущен...")
+    res = await parse_telegram_star_market_via_session(limit_per_gift=25)
+    if res.get("success"):
+        await callback.message.edit_text(
+            f"<b>Маркет Telegram успешно спарсен!</b>\nДобавлено новых: <b>{res['added']}</b>\nВсего лотов в маркете: <b>{res['total']}</b>\n\n"
+            + get_admin_dashboard_text(),
+            reply_markup=admin_panel_keyboard()
+        )
+    else:
+        await callback.message.edit_text(
+            f"<b>Ошибка парсинга:</b> {res.get('error')}\n\n" + get_admin_dashboard_text(),
+            reply_markup=admin_panel_keyboard()
+        )
+
+# ============================================================
+# 10. БАННЕР СТАРТА И ОБРАБОТЧИКИ МЕНЮ БОТА
 # ============================================================
 class AdminMediaStates(StatesGroup):
     waiting_media = State()
@@ -671,7 +959,7 @@ async def admin_welcome_media(callback: types.CallbackQuery, state: FSMContext):
         return
     current = welcome_media.get("media", "Не установлено")
     await callback.message.edit_text(
-        f"<b>Зимний приветственный баннер</b>\n\nТекущий файл: {current}\n\nОтправьте <b>видео</b>, <b>GIF</b> или <b>фото</b>:",
+        f"<b>Приветственный баннер</b>\n\nТекущий файл: {current}\n\nОтправьте <b>видео</b>, <b>GIF</b> или <b>фото</b>:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Удалить баннер", callback_data="admin_clear_media")],
             [InlineKeyboardButton(text="Назад", callback_data="menu_admin")]
@@ -784,17 +1072,6 @@ async def back_to_main(callback: types.CallbackQuery):
     except Exception:
         pass
     await send_welcome_with_banner(callback.message.chat.id, callback.from_user.id)
-    await callback.answer()
-
-@dp.callback_query(lambda c: c.data == "menu_guide")
-async def menu_guide(callback: types.CallbackQuery):
-    text = get_guide_text(callback.from_user.id)
-    kb = back_to_main_keyboard(callback.from_user.id)
-    if callback.message.caption is not None:
-        await callback.message.delete()
-        await callback.message.answer(text, reply_markup=kb, disable_web_page_preview=True)
-    else:
-        await callback.message.edit_text(text, reply_markup=kb, disable_web_page_preview=True)
     await callback.answer()
 
 async def handle_deal_link(message: types.Message, deal_id: str):
@@ -953,19 +1230,19 @@ async def menu_deals(callback: types.CallbackQuery):
     await callback.answer()
 
 # ============================================================
-# 9. АДМИН-ПАНЕЛЬ В БОТЕ
+# 11. АДМИН-ПАНЕЛЬ В БОТЕ
 # ============================================================
 def get_admin_dashboard_text() -> str:
     state_str = "АКТИВНА" if ai_state.get("enabled") else "ОСТАНОВЛЕНА"
-    last_mod = ai_state.get("last_model") or "не запускалась"
+    sess_str = "Подключена" if telethon_cfg.get("string_session") else "Не задана"
     total_rev = len(reviews_data.get("items", []))
     total_mkt = len(market_data.get("items", []))
     return (
         f"<b>Админ-панель {BOT_NAME}</b>\n\n"
-        f"Автогенерация отзывов ИИ: <b>{state_str}</b>\n"
-        f"Последняя модель: <code>{last_mod}</code>\n"
-        f"Всего отзывов: <b>{total_rev}</b> | Лотов в маркете: <b>{total_mkt}</b>\n\n"
-        "Выберите действие:"
+        f"StringSession парсера: <b>{sess_str}</b>\n"
+        f"Лотов в маркете: <b>{total_mkt}</b>\n"
+        f"Автогенерация отзывов ИИ: <b>{state_str}</b> (всего: <b>{total_rev}</b>)\n"
+        f"Курс: 1 STAR = 1.4 RUB | 1 TON = {rates_data.get('ton_to_rub')} RUB"
     )
 
 @dp.callback_query(lambda c: c.data == "menu_admin")
@@ -999,15 +1276,11 @@ async def admin_gen_one_review(callback: types.CallbackQuery):
         await callback.message.edit_text(
             f"<b>Новый отзыв добавлен</b>\n\n"
             f"Оценка: <b>{entry['rating']} / 5</b> ({entry['amount']} {entry['currency']})\n"
-            f"Текст: {entry['text']}\n\n"
-            + get_admin_dashboard_text(),
+            f"Текст: {entry['text']}\n\n" + get_admin_dashboard_text(),
             reply_markup=admin_panel_keyboard()
         )
     else:
-        await callback.message.edit_text(
-            "Модели временно недоступны.\n\n" + get_admin_dashboard_text(),
-            reply_markup=admin_panel_keyboard()
-        )
+        await callback.message.edit_text("Модели временно недоступны.\n\n" + get_admin_dashboard_text(), reply_markup=admin_panel_keyboard())
 
 @dp.callback_query(lambda c: c.data == "admin_all_deals")
 async def admin_all_deals(callback: types.CallbackQuery):
@@ -1022,8 +1295,7 @@ async def admin_all_deals(callback: types.CallbackQuery):
         text += (
             f"<b>#{d_id}</b> | {d.get('status')}\n"
             f"@{d.get('seller_username', '?')} → @{d.get('buyer_username', '?')} | {d.get('amount')} {d.get('currency')}"
-            f"{nft_part}\n"
-            f"/pay {d_id} | /delete_deal {d_id}\n\n"
+            f"{nft_part}\n/pay {d_id} | /delete_deal {d_id}\n\n"
         )
     await callback.message.edit_text(text[:4000], reply_markup=admin_panel_keyboard(), disable_web_page_preview=True)
     await callback.answer()
@@ -1050,8 +1322,7 @@ async def admin_pay_deal(message: types.Message):
             await bot.send_message(
                 deal["seller_id"],
                 f"<b>Сделка #{deal_id} оплачена</b>\n\n"
-                f"Товар: {deal['product']}\n"
-                f"Сумма: {deal['amount']} {deal['currency']}\n"
+                f"Товар: {deal['product']}\nСумма: {deal['amount']} {deal['currency']}\n"
                 f"Передайте подарок на @{ESCROW_ACCOUNT} и подтвердите передачу в приложении.",
                 reply_markup=kb
             )
@@ -1218,39 +1489,8 @@ async def admin_get_amount(message: types.Message, state: FSMContext):
     except Exception:
         await message.answer("Введите положительное число.")
 
-@dp.callback_query(lambda c: c.data == "admin_manage_admins")
-async def admin_manage_admins(callback: types.CallbackQuery):
-    if not is_admin(callback.from_user.id):
-        return
-    all_adm = sorted(list(DEFAULT_ADMINS.union({int(k) for k in admins.keys()})))
-    await callback.message.edit_text(
-        "<b>Администраторы</b>\n\n" + "\n".join(f"• <code>{a}</code>" for a in all_adm) + "\n\n/add_admin [ID] | /remove_admin [ID]",
-        reply_markup=admin_panel_keyboard()
-    )
-    await callback.answer()
-
-@dp.message(Command("add_admin"))
-async def add_admin(message: types.Message):
-    if not is_admin(message.from_user.id):
-        return
-    args = message.text.split()
-    if len(args) == 2 and args[1].isdigit():
-        admins[args[1]] = True
-        save_json(FILES["admins"], admins)
-        await message.answer(f"Админ добавлен: {args[1]}")
-
-@dp.message(Command("remove_admin"))
-async def remove_admin(message: types.Message):
-    if not is_admin(message.from_user.id):
-        return
-    args = message.text.split()
-    if len(args) == 2 and args[1].isdigit() and int(args[1]) not in DEFAULT_ADMINS:
-        admins.pop(args[1], None)
-        save_json(FILES["admins"], admins)
-        await message.answer(f"Админ удалён: {args[1]}")
-
 # ============================================================
-# 10. ФОНОВАЯ СТАТИСТИКА
+# 12. ФОНОВАЯ СТАТИСТИКА
 # ============================================================
 async def auto_increment_stats():
     while True:
@@ -1266,7 +1506,7 @@ async def auto_increment_stats():
         await asyncio.sleep(300)
 
 # ============================================================
-# 11. API И РАЗДАЧА MINI APP (ВКЛЮЧАЯ NFT МАРКЕТ И ВЫВОД ОТ 2 СДЕЛОК)
+# 13. API MINI APP (МАРКЕТ, ИНВЕНТАРЬ, АПГРЕЙД, СЕССИЯ, ОТЗЫВЫ)
 # ============================================================
 async def handle_web_request(request: web.Request):
     headers = {
@@ -1309,7 +1549,8 @@ async def handle_web_request(request: web.Request):
         return web.json_response({
             "success": True,
             "balance": get_balance(user_id),
-            "completed_deals": completed_cnt
+            "completed_deals": completed_cnt,
+            "rates": rates_data
         }, headers=headers)
 
     elif endpoint == "/api/stats":
@@ -1323,33 +1564,316 @@ async def handle_web_request(request: web.Request):
     elif endpoint == "/api/is_admin":
         return web.json_response({"success": True, "is_admin": is_admin(user_id)}, headers=headers)
 
+    # ------------------------------------------------------------
+    # МАРКЕТ NFT (ФИЛЬТР МОДЕЛЕЙ, СОРТИРОВКА, АВТО-ПЕРЕСЧЁТ ЦЕН)
+    # ------------------------------------------------------------
     elif endpoint == "/api/market":
+        selected_models = data.get("models") or []
+        sort_by = data.get("sort") or "newest"
+        search_q = (data.get("search") or "").strip().lower()
+
+        all_items = market_data.get("items", [])
+
+        models_count = {}
+        for it in all_items:
+            m = it.get("model") or "Original"
+            models_count[m] = models_count.get(m, 0) + 1
+
+        filtered = all_items
+        if selected_models:
+            sel_set = set(selected_models)
+            filtered = [x for x in filtered if (x.get("model") or "Original") in sel_set]
+
+        if search_q:
+            filtered = [
+                x for x in filtered
+                if search_q in (x.get("name") or "").lower()
+                or search_q in str(x.get("number") or "")
+                or search_q in (x.get("model") or "").lower()
+            ]
+
+        if sort_by == "price_asc":
+            filtered = sorted(filtered, key=lambda x: float(x.get("stars_price") or x.get("prices", {}).get("STARS", 0)))
+        elif sort_by == "price_desc":
+            filtered = sorted(filtered, key=lambda x: float(x.get("stars_price") or x.get("prices", {}).get("STARS", 0)), reverse=True)
+
+        out_items = []
+        for x in filtered[:120]:
+            xc = x.copy()
+            st = float(xc.get("stars_price") or xc.get("prices", {}).get("STARS") or 100)
+            xc["prices"] = calc_prices_from_stars(st)
+            out_items.append(xc)
+
         return web.json_response({
             "success": True,
-            "items": market_data.get("items", [])
+            "items": out_items,
+            "total_market": len(all_items),
+            "filtered_count": len(filtered),
+            "models": [{"name": k, "count": v} for k, v in sorted(models_count.items(), key=lambda kv: kv[1], reverse=True)],
+            "rates": rates_data
         }, headers=headers)
 
+    elif endpoint == "/api/market_buy":
+        if not user_id:
+            return web.json_response({"success": False, "error": "Требуется авторизация"}, headers=headers)
+
+        completed_cnt = count_user_completed_deals(user_id, username)
+        if completed_cnt < 2 and not is_admin(user_id):
+            return web.json_response({
+                "success": False,
+                "error": "Покупка подарков на маркете доступна только от 2 завершённых сделок"
+            }, headers=headers)
+
+        item_id = data.get("item_id")
+        currency = (data.get("currency") or "STARS").upper()
+
+        all_items = market_data.get("items", [])
+        idx = next((i for i, x in enumerate(all_items) if x.get("id") == item_id), None)
+        if idx is None:
+            return web.json_response({"success": False, "error": "Этот подарок уже купили"}, headers=headers)
+
+        target_item = all_items[idx]
+        st_price = float(target_item.get("stars_price") or target_item.get("prices", {}).get("STARS") or 100)
+        actual_prices = calc_prices_from_stars(st_price)
+        price = actual_prices.get(currency)
+
+        if not price:
+            return web.json_response({"success": False, "error": "Неверная валюта"}, headers=headers)
+
+        bal = get_balance(user_id)
+        curr_low = currency.lower()
+        if bal.get(curr_low, 0) < price:
+            return web.json_response({"success": False, "error": f"Недостаточно {currency} на балансе"}, headers=headers)
+
+        bal[curr_low] = round(bal[curr_low] - price, 4)
+        save_json(FILES["balance"], balance)
+
+        seller_uid = target_item.get("seller_id")
+        if seller_uid and str(seller_uid) != str(user_id):
+            payout = round(price * 0.95, 4)
+            add_balance(seller_uid, currency, payout)
+            try:
+                await bot.send_message(
+                    int(seller_uid),
+                    f"<b>Ваш NFT продан на маркете {BOT_NAME}!</b>\n\n"
+                    f"Подарок: <b>{target_item['name']} #{target_item['number']}</b>\n"
+                    f"Зачислено (с учётом комиссии 5%): <b>{payout} {currency}</b>"
+                )
+            except Exception:
+                pass
+
+        all_items.pop(idx)
+        save_json(FILES["market"], market_data)
+
+        inv_entry = {
+            "inv_id": "inv_" + str(uuid.uuid4())[:8],
+            "url": target_item["url"],
+            "slug": target_item["slug"],
+            "name": target_item["name"],
+            "number": target_item["number"],
+            "model": target_item.get("model", "Original"),
+            "backdrop": target_item.get("backdrop", "Arctic"),
+            "symbol": target_item.get("symbol", "Star"),
+            "image_url": target_item["image_url"],
+            "stars_price": int(round(st_price)),
+            "bought_at": datetime.now().isoformat()
+        }
+        get_user_inventory(user_id).insert(0, inv_entry)
+        save_json(FILES["inventory"], inventory_data)
+
+        await notify_admins(
+            f"<b>Покупка на маркете</b>\n"
+            f"Покупатель: @{username or user_id} (ID: <code>{user_id}</code>)\n"
+            f"NFT: <b>{target_item['name']} #{target_item['number']}</b> ({target_item.get('model')})\n"
+            f"Оплачено: <b>{price} {currency}</b>"
+        )
+
+        return web.json_response({"success": True, "item": inv_entry}, headers=headers)
+
+    # ------------------------------------------------------------
+    # ИНВЕНТАРЬ (ПРОСМОТР, ВЫВОД НА АККАУНТ, ПРОДАЖА НА МАРКЕТЕ -5%)
+    # ------------------------------------------------------------
+    elif endpoint == "/api/inventory":
+        if not user_id:
+            return web.json_response({"success": False, "error": "user_id required"}, headers=headers)
+        items = get_user_inventory(user_id)
+        enriched = []
+        for it in items:
+            itc = it.copy()
+            itc["prices"] = calc_prices_from_stars(itc.get("stars_price", 100))
+            enriched.append(itc)
+        return web.json_response({"success": True, "items": enriched}, headers=headers)
+
+    elif endpoint == "/api/inventory_withdraw":
+        if not user_id:
+            return web.json_response({"success": False}, headers=headers)
+        inv_id = data.get("inv_id")
+        inv_list = get_user_inventory(user_id)
+        idx = next((i for i, x in enumerate(inv_list) if x.get("inv_id") == inv_id), None)
+        if idx is None:
+            return web.json_response({"success": False, "error": "Предмет не найден"}, headers=headers)
+
+        item = inv_list.pop(idx)
+        save_json(FILES["inventory"], inventory_data)
+
+        await notify_admins(
+            f"<b>Заявка на вывод NFT из инвентаря</b>\n\n"
+            f"Пользователь: @{username or user_id} (ID: <code>{user_id}</code>)\n"
+            f"NFT: <b>{item['name']} #{item['number']}</b> ({item.get('model')})\n"
+            f"Ссылка: {item['url']}"
+        )
+
+        return web.json_response({
+            "success": True,
+            "message": "Ожидайте получение NFT"
+        }, headers=headers)
+
+    elif endpoint == "/api/inventory_sell":
+        if not user_id:
+            return web.json_response({"success": False}, headers=headers)
+        inv_id = data.get("inv_id")
+        stars_price = float(data.get("stars_price") or 0)
+        if stars_price < 10:
+            return web.json_response({"success": False, "error": "Минимальная цена — 10 STARS"}, headers=headers)
+
+        inv_list = get_user_inventory(user_id)
+        idx = next((i for i, x in enumerate(inv_list) if x.get("inv_id") == inv_id), None)
+        if idx is None:
+            return web.json_response({"success": False, "error": "Предмет не найден"}, headers=headers)
+
+        item = inv_list.pop(idx)
+        save_json(FILES["inventory"], inventory_data)
+
+        prices = calc_prices_from_stars(stars_price)
+        mkt_item = {
+            "id": "usr_" + str(uuid.uuid4())[:8],
+            "url": item["url"],
+            "slug": item["slug"],
+            "name": item["name"],
+            "number": item["number"],
+            "model": item.get("model", "Original"),
+            "backdrop": item.get("backdrop", "Arctic"),
+            "symbol": item.get("symbol", "Star"),
+            "image_url": item["image_url"],
+            "stars_price": int(round(stars_price)),
+            "prices": prices,
+            "seller_id": user_id,
+            "source": "user_listing",
+            "created_at": datetime.now().isoformat()
+        }
+        market_data.setdefault("items", []).insert(0, mkt_item)
+        save_json(FILES["market"], market_data)
+
+        return web.json_response({"success": True, "item": mkt_item}, headers=headers)
+
+    # ------------------------------------------------------------
+    # АПГРЕЙД (НОВОГОДНЯЯ ЁЛОЧКА, ШАНС ОТ 5% ДО 75%)
+    # ------------------------------------------------------------
+    elif endpoint == "/api/upgrade_spin":
+        if not user_id:
+            return web.json_response({"success": False, "error": "Требуется авторизация"}, headers=headers)
+
+        stake_type = data.get("stake_type")
+        target_id = data.get("target_id")
+
+        all_mkt = market_data.get("items", [])
+        target_idx = next((i for i, x in enumerate(all_mkt) if x.get("id") == target_id), None)
+        if target_idx is None:
+            return web.json_response({"success": False, "error": "Выбранный целевой NFT уже недоступен"}, headers=headers)
+
+        target_item = all_mkt[target_idx]
+        target_stars = float(target_item.get("stars_price") or target_item.get("prices", {}).get("STARS") or 100)
+
+        stake_stars = 0.0
+        staked_inv_item = None
+
+        if stake_type == "inventory":
+            inv_id = data.get("inv_id")
+            inv_list = get_user_inventory(user_id)
+            inv_idx = next((i for i, x in enumerate(inv_list) if x.get("inv_id") == inv_id), None)
+            if inv_idx is None:
+                return web.json_response({"success": False, "error": "Выбранный NFT не найден в инвентаре"}, headers=headers)
+            staked_inv_item = inv_list[inv_idx]
+            stake_stars = float(staked_inv_item.get("stars_price") or 100)
+        elif stake_type == "balance":
+            curr = (data.get("currency") or "STARS").upper()
+            amt = float(data.get("amount") or 0)
+            if amt <= 0:
+                return web.json_response({"success": False, "error": "Укажите сумму ставки"}, headers=headers)
+            bal = get_balance(user_id)
+            if bal.get(curr.lower(), 0) < amt:
+                return web.json_response({"success": False, "error": f"Недостаточно {curr} на балансе"}, headers=headers)
+            stake_stars = convert_currency_to_stars(amt, curr)
+        else:
+            return web.json_response({"success": False, "error": "Неверный тип ставки"}, headers=headers)
+
+        chance = round((stake_stars / max(1.0, target_stars)) * 100.0, 2)
+        if chance < 5.0 or chance > 75.0:
+            return web.json_response({
+                "success": False,
+                "error": f"Шанс апгрейда ({chance}%) должен быть в пределах от 5% до 75%"
+            }, headers=headers)
+
+        if stake_type == "inventory":
+            inv_list = get_user_inventory(user_id)
+            inv_list.remove(staked_inv_item)
+            save_json(FILES["inventory"], inventory_data)
+        else:
+            curr = (data.get("currency") or "STARS").upper()
+            amt = float(data.get("amount") or 0)
+            bal = get_balance(user_id)
+            bal[curr.lower()] = round(bal[curr.lower()] - amt, 4)
+            save_json(FILES["balance"], balance)
+
+        roll = round(random.uniform(0.0, 100.0), 2)
+        won = roll < chance
+
+        won_inv_item = None
+        if won:
+            all_mkt.pop(target_idx)
+            save_json(FILES["market"], market_data)
+
+            won_inv_item = {
+                "inv_id": "inv_" + str(uuid.uuid4())[:8],
+                "url": target_item["url"],
+                "slug": target_item["slug"],
+                "name": target_item["name"],
+                "number": target_item["number"],
+                "model": target_item.get("model", "Original"),
+                "backdrop": target_item.get("backdrop", "Arctic"),
+                "symbol": target_item.get("symbol", "Star"),
+                "image_url": target_item["image_url"],
+                "stars_price": int(round(target_stars)),
+                "bought_at": datetime.now().isoformat()
+            }
+            get_user_inventory(user_id).insert(0, won_inv_item)
+            save_json(FILES["inventory"], inventory_data)
+
+        return web.json_response({
+            "success": True,
+            "won": won,
+            "chance": chance,
+            "roll": roll,
+            "won_item": won_inv_item
+        }, headers=headers)
+
+    # ------------------------------------------------------------
+    # АДМИН-УПРАВЛЕНИЕ МАРКЕТОМ И STRING SESSION ИЗ MINI APP
+    # ------------------------------------------------------------
     elif endpoint == "/api/admin_market_add":
         if not is_admin(user_id):
             return web.json_response({"success": False, "error": "Admin required"}, headers=headers)
         nft_link = (data.get("nft_link") or "").strip()
-        prices = data.get("prices") or {}
-        clean_prices = {}
-        for k, v in prices.items():
-            try:
-                num = float(v)
-                if num > 0:
-                    clean_prices[k.upper()] = int(num) if num.is_integer() else round(num, 2)
-            except (TypeError, ValueError):
-                continue
+        stars_price = float(data.get("stars_price") or 0)
 
-        if not nft_link or not clean_prices:
-            return web.json_response({"success": False, "error": "Укажите ссылку на NFT и хотя бы одну цену"}, headers=headers)
+        if not nft_link or stars_price <= 0:
+            return web.json_response({"success": False, "error": "Укажите ссылку на NFT и цену в STARS"}, headers=headers)
 
-        meta = await fetch_nft_full_metadata(nft_link)
+        meta = await fetch_nft_metadata_from_web(nft_link)
         if not meta:
             return web.json_response({"success": False, "error": "Неверный формат ссылки. Пример: t.me/nft/PlushPepe-120"}, headers=headers)
 
+        prices = calc_prices_from_stars(stars_price)
         item = {
             "id": "mkt_" + str(uuid.uuid4())[:8],
             "url": meta["url"],
@@ -1359,10 +1883,11 @@ async def handle_web_request(request: web.Request):
             "model": meta["model"],
             "backdrop": meta["backdrop"],
             "symbol": meta["symbol"],
-            "backdrop_colors": meta["backdrop_colors"],
             "image_url": meta["image_url"],
-            "variants": meta["variants"],
-            "prices": clean_prices,
+            "stars_price": int(round(stars_price)),
+            "prices": prices,
+            "seller_id": None,
+            "source": "admin",
             "created_at": datetime.now().isoformat()
         }
         market_data.setdefault("items", []).insert(0, item)
@@ -1377,54 +1902,30 @@ async def handle_web_request(request: web.Request):
         save_json(FILES["market"], market_data)
         return web.json_response({"success": True}, headers=headers)
 
-    elif endpoint == "/api/market_buy":
-        if not user_id:
-            return web.json_response({"success": False, "error": "Требуется авторизация"}, headers=headers)
-        item_id = data.get("item_id")
-        currency = (data.get("currency") or "").upper()
-        selected_variant = data.get("variant") or {}
+    elif endpoint == "/api/admin_session_control":
+        if not is_admin(user_id):
+            return web.json_response({"success": False, "error": "Admin required"}, headers=headers)
+        action = data.get("action")
+        if action == "save":
+            sess = (data.get("string_session") or "").strip()
+            api_id = data.get("api_id")
+            api_hash = (data.get("api_hash") or "").strip()
+            if api_id and str(api_id).isdigit():
+                telethon_cfg["api_id"] = int(api_id)
+            if api_hash:
+                telethon_cfg["api_hash"] = api_hash
+            if sess:
+                telethon_cfg["string_session"] = sess
+                telethon_cfg["auto_parse"] = True
+            save_json(FILES["telethon_cfg"], telethon_cfg)
+            return web.json_response({"success": True}, headers=headers)
+        elif action == "parse_now":
+            res = await parse_telegram_star_market_via_session(limit_per_gift=25)
+            return web.json_response(res, headers=headers)
 
-        target_item = next((x for x in market_data.get("items", []) if x.get("id") == item_id), None)
-        if not target_item:
-            return web.json_response({"success": False, "error": "Товар не найден"}, headers=headers)
-
-        price = target_item.get("prices", {}).get(currency)
-        if not price:
-            return web.json_response({"success": False, "error": "Оплата в этой валюте недоступна"}, headers=headers)
-
-        bal = get_balance(user_id)
-        curr_low = currency.lower()
-        if bal.get(curr_low, 0) < price:
-            return web.json_response({"success": False, "error": f"Недостаточно {currency} на кошельке"}, headers=headers)
-
-        bal[curr_low] = round(bal[curr_low] - price, 4)
-        save_json(FILES["balance"], balance)
-
-        v_model = selected_variant.get("model") or target_item.get("model")
-        v_num = selected_variant.get("number") or target_item.get("number")
-
-        await notify_admins(
-            f"<b>Покупка из NFT-маркета</b>\n\n"
-            f"Покупатель: @{username or user_id} (ID: <code>{user_id}</code>)\n"
-            f"Подарок: <b>{target_item['name']} #{v_num}</b> (Модель: {v_model})\n"
-            f"Оплачено: <b>{price} {currency}</b>\n"
-            f"Ссылка: {target_item['url']}"
-        )
-
-        try:
-            await bot.send_message(
-                int(user_id),
-                f"<b>Покупка в маркете {BOT_NAME} оформлена</b>\n\n"
-                f"Подарок: <b>{target_item['name']} #{v_num}</b>\n"
-                f"Модель: {v_model}\n"
-                f"Списано: <b>{price} {currency}</b>\n\n"
-                f"Для получения подарка напишите нашему менеджеру @{ESCROW_ACCOUNT}."
-            )
-        except Exception:
-            pass
-
-        return web.json_response({"success": True}, headers=headers)
-
+    # ------------------------------------------------------------
+    # ОТЗЫВЫ
+    # ------------------------------------------------------------
     elif endpoint == "/api/reviews":
         can_review = count_user_completed_deals(user_id, username) >= 1 or is_admin(user_id)
         curr_filter = (data.get("currency") or "ALL").upper()
@@ -1516,6 +2017,9 @@ async def handle_web_request(request: web.Request):
             "reviews": reviews_data.get("items", [])[:60]
         }, headers=headers)
 
+    # ------------------------------------------------------------
+    # СДЕЛКИ (КОМИССИЯ 0%)
+    # ------------------------------------------------------------
     elif endpoint == "/api/create_deal":
         product = (data.get("product") or "").strip()
         currency = (data.get("currency") or "TON").upper()
@@ -1724,7 +2228,7 @@ async def handle_web_request(request: web.Request):
             try:
                 await bot.send_message(
                     deal["seller_id"],
-                    f"<b>Сделка #{deal_id} завершена</b>\nЗачислено: {deal['amount']} {deal['currency']}."
+                    f"<b>Сделка #{deal_id} завершена</b>\nЗачислено: {deal['amount']} {deal['currency']} (комиссия 0%)."
                 )
             except Exception:
                 pass
@@ -1811,7 +2315,11 @@ async def handle_web_request(request: web.Request):
             "ai_enabled": bool(ai_state.get("enabled")),
             "last_model": ai_state.get("last_model"),
             "reviews": reviews_data.get("items", [])[:60],
-            "market": market_data.get("items", [])
+            "market": market_data.get("items", [])[:80],
+            "market_total": len(market_data.get("items", [])),
+            "session_connected": bool(telethon_cfg.get("string_session")),
+            "api_id": telethon_cfg.get("api_id", DEFAULT_TG_API_ID),
+            "api_hash": telethon_cfg.get("api_hash", DEFAULT_TG_API_HASH)
         }, headers=headers)
 
     elif endpoint == "/api/admin_delete_deal":
@@ -1868,7 +2376,7 @@ async def handle_web_request(request: web.Request):
     return web.json_response({"success": False, "error": "Unknown endpoint"}, headers=headers)
 
 # ============================================================
-# 12. ЗАПУСК И КОРРЕКТНОЕ ЗАВЕРШЕНИЕ
+# 14. ЗАПУСК И КОРРЕКТНОЕ ЗАВЕРШЕНИЕ
 # ============================================================
 async def start_web_server():
     app = web.Application()
@@ -1880,8 +2388,10 @@ async def start_web_server():
     print(f"Сервер {BOT_NAME} запущен на порту {PORT}")
 
 async def main():
+    asyncio.create_task(rates_background_loop())
     asyncio.create_task(auto_increment_stats())
     asyncio.create_task(ai_reviews_background_loop())
+    asyncio.create_task(telegram_market_auto_loop())
     await start_web_server()
     try:
         await dp.start_polling(bot)
