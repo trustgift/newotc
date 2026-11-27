@@ -879,9 +879,8 @@ async def admin_set_session_prompt(callback: types.CallbackQuery, state: FSMCont
     has_sess = "Установлена" if telethon_cfg.get("string_session") else "Не установлена"
     await callback.message.edit_text(
         f"<b>Настройка Telethon StringSession для парсинга маркета</b>\n\n"
-        f"Статус сессии: <b>{has_sess}</b>\n"
-        f"API_ID: <code>{telethon_cfg.get('api_id')}</code>\n\n"
-        f"Отправьте строку <b>StringSession</b> (или в формате <code>API_ID:API_HASH:STRING_SESSION</code>):",
+        f"Статус сессии: <b>{has_sess}</b>\n\n"
+        f"Просто отправьте готовую строку <b>StringSession</b>:",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Удалить сессию", callback_data="admin_clear_session")],
             [InlineKeyboardButton(text="Назад", callback_data="menu_admin")]
@@ -1908,12 +1907,6 @@ async def handle_web_request(request: web.Request):
         action = data.get("action")
         if action == "save":
             sess = (data.get("string_session") or "").strip()
-            api_id = data.get("api_id")
-            api_hash = (data.get("api_hash") or "").strip()
-            if api_id and str(api_id).isdigit():
-                telethon_cfg["api_id"] = int(api_id)
-            if api_hash:
-                telethon_cfg["api_hash"] = api_hash
             if sess:
                 telethon_cfg["string_session"] = sess
                 telethon_cfg["auto_parse"] = True
