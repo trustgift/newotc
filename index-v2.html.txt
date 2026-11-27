@@ -1,0 +1,3096 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hlad Ice — Arctic Escrow & NFT Market</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+
+        :root {
+            --bg-deep: #030812;
+            --bg-surface: rgba(10, 20, 38, 0.76);
+            --bg-surface-strong: rgba(13, 25, 48, 0.92);
+            --bg-field: rgba(6, 13, 26, 0.85);
+            --border-crystal: rgba(165, 224, 255, 0.22);
+            --border-highlight: rgba(125, 211, 252, 0.55);
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #7185a3;
+            --arctic-cyan: #38bdf8;
+            --arctic-ice: #bae6fd;
+            --aurora-teal: #2dd4bf;
+            --aurora-violet: #818cf8;
+            --gold-star: #fbbf24;
+            --emerald: #34d399;
+            --danger: #fb7185;
+            --grad-arctic: linear-gradient(135deg, #e0f2fe 0%, #7dd3fc 45%, #38bdf8 100%);
+            --grad-aurora: linear-gradient(135deg, #2dd4bf 0%, #38bdf8 50%, #818cf8 100%);
+            --radius-2xl: 26px;
+            --radius-xl: 20px;
+            --radius-lg: 16px;
+            --radius-md: 13px;
+        }
+
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 36px 14px 106px;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+
+        /* ============================================================
+           СЕВЕРНОЕ СИЯНИЕ (AURORA BOREALIS) + СНЕГ
+           ============================================================ */
+        .aurora-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            background: radial-gradient(ellipse at 50% -10%, #0f294a 0%, #050c1a 55%, #02050b 100%);
+        }
+        .aurora-wave {
+            position: absolute;
+            width: 160%;
+            height: 360px;
+            top: -110px;
+            left: -30%;
+            background: radial-gradient(ellipse at center, rgba(45, 212, 191, 0.22) 0%, rgba(56, 189, 248, 0.16) 40%, rgba(129, 140, 248, 0.08) 65%, transparent 75%);
+            filter: blur(42px);
+            animation: auroraDrift 14s ease-in-out infinite alternate;
+        }
+        .aurora-wave.second {
+            top: 25%;
+            left: -20%;
+            height: 300px;
+            background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.14) 0%, rgba(167, 139, 250, 0.1) 50%, transparent 75%);
+            animation: auroraDrift 18s ease-in-out infinite alternate-reverse;
+        }
+        @keyframes auroraDrift {
+            0% { transform: translateX(-6%) rotate(-3deg) scaleY(1); }
+            50% { transform: translateX(4%) rotate(2deg) scaleY(1.15); }
+            100% { transform: translateX(8%) rotate(-2deg) scaleY(0.95); }
+        }
+
+
+        #snowCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+
+        /* НОВОГОДНЯЯ ГИРЛЯНДА С МЯГКИМ СВЕЧЕНИЕМ */
+        .garland-strip {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            z-index: 70;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 12px;
+            background: linear-gradient(180deg, rgba(3, 8, 18, 0.95) 0%, transparent 100%);
+        }
+        .garland-cord {
+            position: absolute;
+            top: 4px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(186, 230, 253, 0.4), transparent);
+        }
+        .led-lamp {
+            width: 8px;
+            height: 12px;
+            border-radius: 4px 4px 8px 8px;
+            margin-top: 6px;
+            position: relative;
+            animation: ledPulse 2s infinite alternate;
+        }
+        .led-lamp::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 1.5px;
+            width: 5px;
+            height: 3px;
+            background: #64748b;
+            border-radius: 1px;
+        }
+        .led-lamp:nth-child(4n+1) { background: #38bdf8; box-shadow: 0 2px 14px #38bdf8; animation-delay: 0s; }
+        .led-lamp:nth-child(4n+2) { background: #2dd4bf; box-shadow: 0 2px 14px #2dd4bf; animation-delay: 0.5s; }
+        .led-lamp:nth-child(4n+3) { background: #fbbf24; box-shadow: 0 2px 14px #fbbf24; animation-delay: 1s; }
+        .led-lamp:nth-child(4n+4) { background: #f472b6; box-shadow: 0 2px 14px #f472b6; animation-delay: 1.5s; }
+
+
+        @keyframes ledPulse {
+            0% { opacity: 0.4; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 540px;
+            margin: 0 auto;
+        }
+
+
+        /* ============================================================
+           ЛЕДЯНЫЕ КАРТОЧКИ С ИНЕЕМ И СОСУЛЬКАМИ
+           ============================================================ */
+        .ice-panel {
+            position: relative;
+            background: var(--bg-surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-2xl);
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        }
+        .icicle-crown {
+            position: absolute;
+            top: -1px;
+            left: 14px;
+            right: 14px;
+            width: calc(100% - 28px);
+            height: 15px;
+            pointer-events: none;
+            filter: drop-shadow(0 3px 6px rgba(56, 189, 248, 0.4));
+        }
+
+
+        /* ШАПКА ПРИЛОЖЕНИЯ */
+        .header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--bg-surface-strong);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-2xl);
+            margin-bottom: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+        .logo-group { display: flex; align-items: center; gap: 11px; }
+        .logo-crystal {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: var(--grad-aurora);
+            color: #030812;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 24px rgba(56, 189, 248, 0.45);
+        }
+        .logo-title {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            background: linear-gradient(90deg, #ffffff, #bae6fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo-meta {
+            font-size: 11px;
+            color: var(--arctic-ice);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 2px;
+        }
+        .pulse-online {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--emerald);
+            box-shadow: 0 0 10px var(--emerald);
+        }
+
+
+        .chip-btn {
+            height: 36px;
+            padding: 0 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-crystal);
+            background: var(--bg-field);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .chip-btn:active { transform: scale(0.95); }
+
+
+        /* БЕНТО-СТАТИСТИКА */
+        .bento-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .bento-stat {
+            background: linear-gradient(160deg, rgba(16, 30, 58, 0.85), rgba(7, 15, 30, 0.9));
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-lg);
+            padding: 12px 8px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .bento-stat::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20%;
+            right: 20%;
+            height: 2px;
+            background: var(--grad-aurora);
+            border-radius: 99px;
+        }
+        .bento-stat b {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 15px;
+            color: #ffffff;
+            display: block;
+        }
+        .bento-stat span {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 3px;
+            display: block;
+        }
+
+
+        /* HERO БЛОК */
+        .hero-arctic {
+            background: linear-gradient(145deg, rgba(45, 212, 191, 0.14) 0%, rgba(56, 189, 248, 0.18) 45%, rgba(10, 20, 38, 0.94) 100%);
+            border-color: var(--border-highlight);
+        }
+        .hero-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 99px;
+            background: rgba(56, 189, 248, 0.18);
+            border: 1px solid rgba(125, 211, 252, 0.35);
+            color: var(--arctic-ice);
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .hero-heading {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1.28;
+            margin-bottom: 8px;
+        }
+        .hero-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+
+        .action-bento {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .action-tile {
+            padding: 15px 14px;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-crystal);
+            background: var(--bg-field);
+            color: var(--text-primary);
+            text-align: left;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .action-tile:active { transform: scale(0.96); }
+        .action-tile.primary {
+            background: var(--grad-arctic);
+            color: #030812;
+            border: none;
+            box-shadow: 0 10px 26px rgba(56, 189, 248, 0.35);
+        }
+        .action-tile .tile-ico {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: rgba(3, 8, 18, 0.14);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .action-tile:not(.primary) .tile-ico {
+            background: rgba(56, 189, 248, 0.14);
+            color: var(--arctic-cyan);
+        }
+        .action-tile b { font-size: 13.5px; font-weight: 800; display: block; }
+        .action-tile span { font-size: 11px; opacity: 0.82; display: block; margin-top: 3px; }
+
+
+        /* БЫСТРЫЙ ДОСТУП К МАРКЕТУ И ОТЗЫВАМ */
+        .quick-links-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .mini-banner-btn {
+            padding: 11px 12px;
+            border-radius: var(--radius-lg);
+            background: rgba(14, 28, 54, 0.85);
+            border: 1px solid var(--border-crystal);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .mini-banner-btn i { color: var(--aurora-teal); font-size: 16px; }
+
+
+        /* КАРТОЧКИ ГАРАНТИЙ И FAQ */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .feature-box {
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-lg);
+            padding: 13px;
+        }
+        .feature-box .f-ico {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            background: rgba(56, 189, 248, 0.14);
+            color: var(--arctic-cyan);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .feature-box b { font-size: 12.5px; display: block; margin-bottom: 4px; }
+        .feature-box span { font-size: 11px; color: var(--text-secondary); line-height: 1.4; display: block; }
+
+
+        /* ТАЙМЛАЙН ГАЙДА */
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            border-radius: var(--radius-lg);
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            margin-bottom: 8px;
+            align-items: flex-start;
+        }
+        .timeline-badge {
+            min-width: 26px;
+            height: 26px;
+            border-radius: 9px;
+            background: var(--grad-aurora);
+            color: #030812;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+        /* АККОРДЕОН ЧАСТЫХ ВОПРОСОВ */
+        .faq-item {
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-md);
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .faq-q {
+            padding: 12px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .faq-q i { color: var(--arctic-cyan); transition: transform 0.25s; }
+        .faq-item.open .faq-q i { transform: rotate(180deg); }
+        .faq-a {
+            display: none;
+            padding: 0 14px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            border-top: 1px solid rgba(148, 210, 255, 0.1);
+            padding-top: 8px;
+        }
+        .faq-item.open .faq-a { display: block; }
+
+
+        /* КНОПКИ */
+        .btn {
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-ice { background: var(--grad-arctic); color: #030812; box-shadow: 0 6px 22px rgba(56, 189, 248, 0.3); }
+        .btn-glass { background: var(--bg-field); color: var(--text-primary); border: 1px solid var(--border-crystal); }
+        .btn-emerald { background: rgba(52, 211, 153, 0.16); color: var(--emerald); border: 1px solid rgba(52, 211, 153, 0.35); }
+        .btn-danger { background: rgba(251, 113, 133, 0.15); color: var(--danger); border: 1px solid rgba(251, 113, 133, 0.3); }
+        .btn-sm { padding: 8px 12px; font-size: 12px; width: auto; }
+
+
+        /* КАСТОМНЫЙ СЕЛЕКТ */
+        .custom-select { position: relative; width: 100%; }
+        .cs-trigger {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-crystal);
+            background: linear-gradient(145deg, rgba(14, 27, 52, 0.92), rgba(6, 13, 26, 0.96));
+            color: var(--text-primary);
+            font-size: 13.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+        .custom-select.open .cs-trigger { border-color: var(--arctic-cyan); box-shadow: 0 0 18px rgba(56, 189, 248, 0.28); }
+        .cs-trigger i.arrow { color: var(--arctic-cyan); transition: transform 0.25s ease; }
+        .custom-select.open .cs-trigger i.arrow { transform: rotate(180deg); }
+        .cs-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: rgba(9, 18, 36, 0.98);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-highlight);
+            border-radius: var(--radius-md);
+            padding: 6px;
+            z-index: 95;
+            display: none;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8);
+        }
+        .custom-select.open .cs-menu { display: block; }
+        .cs-option {
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+        .cs-option:hover, .cs-option.selected { background: rgba(56, 189, 248, 0.2); color: var(--arctic-ice); }
+        .cs-option i { color: var(--arctic-cyan); width: 16px; text-align: center; }
+
+
+        /* ============================================================
+           ПРЕМИАЛЬНАЯ 3D-КАРТА КОШЕЛЬКА
+           ============================================================ */
+        .card-3d-stage { perspective: 1200px; margin-bottom: 16px; }
+        .wallet-3d-card {
+            position: relative;
+            width: 100%;
+            border-radius: 26px;
+            padding: 22px 20px 18px;
+            border: 1px solid rgba(186, 230, 253, 0.5);
+            transform-style: preserve-3d;
+            animation: cardLevitate 6.5s ease-in-out infinite;
+            transition: background 0.45s ease, border-color 0.45s ease, box-shadow 0.45s ease;
+            overflow: hidden;
+        }
+        .wallet-3d-card.theme-ton {
+            background: linear-gradient(135deg, #071426 0%, #0e3a6e 50%, #0284c7 100%);
+            border-color: rgba(125, 211, 252, 0.6);
+            box-shadow: 0 24px 50px rgba(2, 132, 199, 0.38), inset 0 1px 0 rgba(255,255,255,0.35);
+        }
+        .wallet-3d-card.theme-stars {
+            background: linear-gradient(135deg, #241604 0%, #633e09 50%, #f59e0b 100%);
+            border-color: rgba(253, 224, 71, 0.65);
+            box-shadow: 0 24px 50px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255,255,255,0.35);
+        }
+        .wallet-3d-card.theme-rub {
+            background: linear-gradient(135deg, #110e29 0%, #2e246b 50%, #6366f1 100%);
+            border-color: rgba(165, 180, 252, 0.6);
+            box-shadow: 0 24px 50px rgba(99, 102, 241, 0.38), inset 0 1px 0 rgba(255,255,255,0.35);
+        }
+        .wallet-3d-card.theme-uah {
+            background: linear-gradient(135deg, #05211d 0%, #0c5249 50%, #10b981 100%);
+            border-color: rgba(110, 231, 183, 0.6);
+            box-shadow: 0 24px 50px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(255,255,255,0.35);
+        }
+
+
+        @keyframes cardLevitate {
+            0%, 100% { transform: rotateY(-4deg) rotateX(2.5deg) translateY(0px); }
+            50% { transform: rotateY(4deg) rotateX(-2.5deg) translateY(-5px); }
+        }
+        .wallet-3d-card::before {
+            content: '';
+            position: absolute;
+            width: 210px;
+            height: 210px;
+            right: -50px;
+            top: -60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.22), transparent 70%);
+            pointer-events: none;
+        }
+        .wallet-3d-card::after {
+            content: '';
+            position: absolute;
+            top: -60%;
+            left: -60%;
+            width: 220%;
+            height: 220%;
+            background: linear-gradient(115deg, transparent 38%, rgba(255, 255, 255, 0.16) 49%, rgba(255, 255, 255, 0.28) 51%, transparent 62%);
+            animation: cardShine 4.5s infinite linear;
+            pointer-events: none;
+        }
+        @keyframes cardShine {
+            0% { transform: translateX(-40%) translateY(-20%) rotate(12deg); }
+            100% { transform: translateX(40%) translateY(20%) rotate(12deg); }
+        }
+        .cc-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; position: relative; z-index: 2; }
+        .cc-chip-box { display: flex; align-items: center; gap: 10px; }
+        .cc-emv {
+            width: 42px;
+            height: 29px;
+            border-radius: 7px;
+            background: linear-gradient(135deg, #fef08a 0%, #eab308 100%);
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25);
+        }
+        .cc-net-pill {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1.2px;
+            padding: 5px 11px;
+            border-radius: 99px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: #fff;
+        }
+        .cc-label-title {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.85);
+            position: relative;
+            z-index: 2;
+        }
+        .cc-amount-display {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 28px;
+            font-weight: 800;
+            color: #fff;
+            margin: 6px 0 8px;
+            letter-spacing: -0.5px;
+            position: relative;
+            z-index: 2;
+        }
+        .cc-card-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: rgba(255,255,255,0.7);
+            font-family: monospace;
+            margin-bottom: 14px;
+            position: relative;
+            z-index: 2;
+        }
+        .cc-currency-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; position: relative; z-index: 2; }
+        .cc-curr-btn {
+            background: rgba(3, 8, 18, 0.52);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 13px;
+            padding: 8px 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .cc-curr-btn.active {
+            background: rgba(255, 255, 255, 0.28);
+            border-color: #fff;
+            transform: translateY(-2px);
+        }
+        .cc-curr-btn small { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.92); display: block; }
+        .cc-curr-btn b { font-size: 12px; color: #fff; display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+
+
+        /* NFT МАРКЕТ */
+        .market-lot {
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-2xl);
+            overflow: hidden;
+            margin-bottom: 14px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+        .lot-stage {
+            position: relative;
+            padding: 20px 16px 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-bottom: 1px solid var(--border-crystal);
+        }
+        .lot-pattern {
+            position: absolute;
+            inset: 0;
+            opacity: 0.16;
+            background-image: radial-gradient(var(--arctic-cyan) 1px, transparent 1px);
+            background-size: 15px 15px;
+            pointer-events: none;
+        }
+        .lot-img {
+            width: 140px;
+            height: 140px;
+            object-fit: contain;
+            border-radius: 20px;
+            position: relative;
+            z-index: 2;
+            filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.6));
+        }
+        .lot-carousel-ctrl {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 12px;
+            position: relative;
+            z-index: 2;
+        }
+        .arrow-sq {
+            width: 34px;
+            height: 34px;
+            border-radius: 11px;
+            border: 1px solid var(--border-crystal);
+            background: rgba(13, 25, 48, 0.9);
+            color: var(--arctic-ice);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .lot-specs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            padding: 12px 14px 0;
+        }
+        .spec-chip {
+            background: rgba(13, 25, 48, 0.75);
+            border: 1px solid var(--border-crystal);
+            border-radius: 11px;
+            padding: 7px 8px;
+            text-align: center;
+        }
+        .spec-chip small { font-size: 9px; color: var(--text-muted); text-transform: uppercase; display: block; }
+        .spec-chip b { font-size: 11px; color: var(--arctic-ice); display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lot-content { padding: 14px; }
+        .price-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+        .price-tag {
+            padding: 5px 12px;
+            border-radius: 10px;
+            background: rgba(52, 211, 153, 0.14);
+            border: 1px solid rgba(52, 211, 153, 0.32);
+            color: var(--emerald);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+
+        /* ФОРМЫ И СДЕЛКИ */
+        .seg-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding: 5px;
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-md);
+            margin-bottom: 12px;
+        }
+        .seg-btn { padding: 10px; border-radius: 10px; border: none; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .seg-btn.active { background: var(--grad-arctic); color: #030812; }
+
+
+        .field { margin-bottom: 12px; }
+        .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+        .field input, .field textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-crystal);
+            background: linear-gradient(145deg, rgba(14, 27, 52, 0.9), rgba(6, 13, 26, 0.96));
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+        }
+        .field input:focus, .field textarea:focus { border-color: var(--arctic-cyan); }
+
+
+        .nft-check-msg { margin-top: 6px; padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; display: none; }
+        .nft-check-msg.valid { display: block; background: rgba(52, 211, 153, 0.14); border: 1px solid rgba(52, 211, 153, 0.35); color: var(--emerald); }
+        .nft-check-msg.invalid { display: block; background: rgba(251, 113, 133, 0.14); border: 1px solid rgba(251, 113, 133, 0.35); color: var(--danger); }
+
+
+        .info-callout {
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--border-highlight);
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.48;
+            margin-bottom: 12px;
+        }
+
+
+        .deal-box {
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .status-pill { padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+        .status-pill.waiting_payment { background: rgba(251, 191, 36, 0.16); color: var(--gold-star); }
+        .status-pill.paid { background: rgba(56, 189, 248, 0.18); color: var(--arctic-ice); }
+        .status-pill.awaiting_confirmation { background: rgba(167, 139, 250, 0.18); color: #ddd6fe; }
+        .status-pill.completed { background: rgba(52, 211, 153, 0.18); color: var(--emerald); }
+
+
+        /* ОТЗЫВЫ */
+        .rating-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.14), rgba(45, 212, 191, 0.1));
+            border: 1px solid var(--border-highlight);
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+        }
+        .filter-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+        .filter-pill {
+            padding: 7px 13px;
+            border-radius: 99px;
+            border: 1px solid var(--border-crystal);
+            background: var(--bg-field);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .filter-pill.active { background: var(--grad-arctic); color: #030812; border-color: transparent; }
+        .star-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 10px; }
+        .star-cell {
+            padding: 9px 4px;
+            border-radius: 12px;
+            border: 1px solid var(--border-crystal);
+            background: var(--bg-field);
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 12px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .star-cell.active { border-color: var(--gold-star); background: rgba(251, 191, 36, 0.18); color: var(--gold-star); }
+        .rev-box {
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-lg);
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .rev-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .rev-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .r-tag {
+            padding: 3px 9px;
+            border-radius: 8px;
+            background: rgba(125, 211, 252, 0.12);
+            border: 1px solid rgba(125, 211, 252, 0.24);
+            color: var(--arctic-ice);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .r-tag.money { background: rgba(52, 211, 153, 0.12); border-color: rgba(52, 211, 153, 0.28); color: var(--emerald); }
+
+
+        /* ЧАТ */
+        .chat-stream {
+            height: 330px;
+            overflow-y: auto;
+            padding: 12px;
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .chat-msg { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 13px; line-height: 1.42; word-break: break-word; }
+        .chat-msg.user { align-self: flex-end; background: var(--grad-arctic); color: #030812; font-weight: 600; border-bottom-right-radius: 4px; }
+        .chat-msg.admin { align-self: flex-start; background: rgba(24, 40, 72, 0.94); border: 1px solid var(--border-crystal); color: var(--text-primary); border-bottom-left-radius: 4px; }
+        .chat-ts { display: block; font-size: 10px; opacity: 0.65; margin-top: 4px; text-align: right; }
+
+
+        /* ФУТЕР */
+        .footer-bar {
+            text-align: center;
+            padding: 14px 10px 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .privacy-btn { color: var(--arctic-cyan); text-decoration: underline; cursor: pointer; font-weight: 700; }
+
+
+        /* НИЖНЯЯ НАВИГАЦИЯ */
+        .dock-nav {
+            position: fixed;
+            bottom: 10px;
+            left: 8px;
+            right: 8px;
+            max-width: 540px;
+            margin: 0 auto;
+            background: rgba(7, 15, 30, 0.96);
+            backdrop-filter: blur(26px);
+            border: 1px solid var(--border-crystal);
+            border-radius: 22px;
+            padding: 6px 3px;
+            display: flex;
+            z-index: 60;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.8);
+        }
+        .dock-item {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            padding: 7px 1px;
+            border-radius: 13px;
+            font-family: inherit;
+            font-size: 9px;
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .dock-item i { font-size: 14px; }
+        .dock-item.active { background: rgba(56, 189, 248, 0.2); color: var(--arctic-ice); }
+
+
+        .page { display: none; }
+        .page.active { display: block; animation: fadeInPage 0.25s ease; }
+        @keyframes fadeInPage {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 14, 0.88);
+            backdrop-filter: blur(14px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 200;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-window {
+            width: 100%;
+            max-width: 440px;
+            background: #0b162c;
+            border: 1px solid var(--border-highlight);
+            border-radius: var(--radius-2xl);
+            padding: 20px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .toast-alert {
+            position: fixed;
+            top: 36px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0b162c;
+            border: 1px solid var(--arctic-cyan);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 500;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+        }
+
+
+        .head-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .head-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .head-title i { color: var(--arctic-cyan); }
+
+
+        .adm-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
+        .adm-tab {
+            padding: 7px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-crystal);
+            background: var(--bg-field);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .adm-tab.active { background: var(--grad-arctic); color: #030812; border: none; }
+        .adm-pane { display: none; }
+        .adm-pane.active { display: block; }
+    </style>
+</head>
+<body>
+    <!-- СЕВЕРНОЕ СИЯНИЕ -->
+    <div class="aurora-bg">
+        <div class="aurora-wave"></div>
+        <div class="aurora-wave second"></div>
+    </div>
+
+
+    <!-- НОВОГОДНЯЯ ГИРЛЯНДА -->
+    <div class="garland-strip">
+        <div class="garland-cord"></div>
+        <span class="led-lamp"></span><span class="led-lamp"></span><span class="led-lamp"></span><span class="led-lamp"></span>
+        <span class="led-lamp"></span><span class="led-lamp"></span><span class="led-lamp"></span><span class="led-lamp"></span>
+        <span class="led-lamp"></span><span class="led-lamp"></span><span class="led-lamp"></span><span class="led-lamp"></span>
+    </div>
+
+
+    <canvas id="snowCanvas"></canvas>
+
+
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header-bar">
+            <div class="logo-group">
+                <div class="logo-crystal"><i class="fas fa-snowflake"></i></div>
+                <div>
+                    <div class="logo-title">HLAD ICE</div>
+                    <div class="logo-meta"><span class="pulse-online"></span> <span id="onlineCount">6534</span> <span data-i18n="online">онлайн</span></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="chip-btn" onclick="toggleLang()" id="langBtn">RU</button>
+                <div class="chip-btn" style="color: var(--arctic-ice); border-color: var(--border-highlight);" onclick="showPage('balance')" id="topBalance">0 TON</div>
+            </div>
+        </header>
+
+
+        <!-- BENTO STATS -->
+        <div class="bento-stats">
+            <div class="bento-stat"><b id="statDeals">1287</b><span data-i18n="st_deals">Сделок сегодня</span></div>
+            <div class="bento-stat"><b id="statUsers">21481</b><span data-i18n="st_users">Участников</span></div>
+            <div class="bento-stat"><b id="statVol">627.4</b><span data-i18n="st_vol">Объём TON</span></div>
+        </div>
+
+
+        <!-- PAGE: MAIN -->
+        <div class="page active" id="page-main">
+            <div class="ice-panel hero-arctic">
+                <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
+                    <path d="M0,0 L400,0 L400,2 Q390,14 382,2 Q370,10 360,2 Q348,15 336,2 Q320,9 308,2 Q294,14 280,2 Q265,9 252,2 Q238,15 224,2 Q208,10 194,2 Q178,14 164,2 Q148,9 134,2 Q118,15 104,2 Q88,10 74,2 Q58,14 44,2 Q26,9 14,2 Q6,12 0,2 Z" fill="rgba(186,230,253,0.45)"/>
+                </svg>
+                <div class="hero-pill"><i class="fas fa-shield-halved"></i> <span data-i18n="winter_badge">ЗАЩИЩЁННЫЕ СДЕЛКИ • WINTER 2026</span></div>
+                <div class="hero-heading" data-i18n="hero_title">Сделки на NFT и цифровые товары</div>
+                <div class="hero-sub" data-i18n="hero_desc">Средства покупателя замораживаются системой до полного подтверждения передачи. Создавайте сделку как продавец или покупатель.</div>
+
+
+                <div class="action-bento">
+                    <button class="action-tile primary" onclick="openCreateRole('seller')">
+                        <div class="tile-ico"><i class="fas fa-tag"></i></div>
+                        <b data-i18n="sell_btn">Я продавец</b>
+                        <span data-i18n="sell_sub">Сделка с покупателем</span>
+                    </button>
+                    <button class="action-tile" onclick="openCreateRole('buyer')">
+                        <div class="tile-ico"><i class="fas fa-shopping-bag"></i></div>
+                        <b data-i18n="buy_btn">Я покупатель</b>
+                        <span data-i18n="buy_sub">Сделка с продавцом</span>
+                    </button>
+                </div>
+
+
+                <div class="quick-links-row">
+                    <button class="mini-banner-btn" onclick="showPage('market')">
+                        <i class="fas fa-store"></i>
+                        <span data-i18n="go_market">Маркет NFT подарков</span>
+                    </button>
+                    <button class="mini-banner-btn" onclick="showPage('reviews')">
+                        <i class="fas fa-star"></i>
+                        <span data-i18n="go_reviews">470+ живых отзывов</span>
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- ГАРАНТИИ БЕЗОПАСНОСТИ -->
+            <div class="ice-panel">
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-lock"></i> <span data-i18n="safety_title">Почему сделки в Hlad Ice безопасны</span></div>
+                </div>
+                <div class="feature-grid">
+                    <div class="feature-box">
+                        <div class="f-ico"><i class="fas fa-snowflake"></i></div>
+                        <b data-i18n="t1_h">Заморозка оплаты</b>
+                        <span data-i18n="t1_p">Деньги резервируются на время передачи и не уходят до вашего подтверждения.</span>
+                    </div>
+                    <div class="feature-box">
+                        <div class="f-ico"><i class="fas fa-user-check"></i></div>
+                        <b data-i18n="t2_h">Двойное подтверждение</b>
+                        <span data-i18n="t2_p">Оплата открывается только после входа обоих участников по ссылке в боте.</span>
+                    </div>
+                    <div class="feature-box">
+                        <div class="f-ico"><i class="fas fa-shield"></i></div>
+                        <b data-i18n="t3_h">Официальный приём</b>
+                        <span data-i18n="t3_p">Передача NFT проходит строго через аккаунт @Hladpriemka.</span>
+                    </div>
+                    <div class="feature-box" style="cursor:pointer;" onclick="openTg('Hladpriemka')">
+                        <div class="f-ico"><i class="fas fa-headset"></i></div>
+                        <b data-i18n="t4_h">Поддержка 24/7</b>
+                        <span data-i18n="t4_p">Оперативная помощь по любой сделке: @Hladpriemka.</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ПОШАГОВЫЙ ГАЙД -->
+            <div class="ice-panel">
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-compass"></i> <span data-i18n="guide_title">Пошаговый гайд по сделке</span></div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-badge">1</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.45;" data-i18n="g1">Выберите роль (Продавец или Покупатель), укажите товар, ссылку на NFT, валюту, сумму и @username собеседника.</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-badge">2</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.45;" data-i18n="g2">Бот автоматически пришлёт ссылку в ЛС. Перешлите её второму участнику — когда оба зайдут, откроется оплата.</div>
+                </div>
+                <div class="timeline-item" style="margin-bottom:0;">
+                    <div class="timeline-badge">3</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.45;" data-i18n="g3">Продавец передаёт NFT на <b>@Hladpriemka</b>, покупатель подтверждает получение — средства зачисляются продавцу.</div>
+                </div>
+            </div>
+
+
+            <!-- ЧАСТЫЕ ВОПРОСЫ (ИНТЕРАКТИВНЫЙ АККОРДЕОН) -->
+            <div class="ice-panel">
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-circle-question"></i> <span data-i18n="faq_title">Частые вопросы</span></div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q"><span data-i18n="fq1">Куда передавать NFT после оплаты?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-a" data-i18n="fa1">Передача NFT и Telegram-подарков выполняется строго через кнопку «Передать подарок на @Hladpriemka». Никогда не отправляйте подарок напрямую покупателю в обход аккаунта приёма.</div>
+                </div>
+                <div class="faq-item" onclick="this.classList.toggle('open')">
+                    <div class="faq-q"><span data-i18n="fq2">Почему кнопка оплаты неактивна сразу после создания?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-a" data-i18n="fa2">В целях безопасности оба участника сделки должны сначала перейти по сгенерированной ссылке в @hladicebot. Как только оба войдут в сделку, кнопка оплаты разблокируется.</div>
+                </div>
+                <div class="faq-item" style="margin-bottom:0;" onclick="this.classList.toggle('open')">
+                    <div class="faq-q"><span data-i18n="fq3">Что делать, если возник спорный вопрос?</span><i class="fas fa-chevron-down"></i></div>
+                    <div class="faq-a" data-i18n="fa3">Пока покупатель не подтвердил получение, средства заморожены на балансе сделки. Напишите в встроенный чат поддержки или менеджеру @Hladpriemka — мы проверим передачу и поможем завершить сделку.</div>
+                </div>
+            </div>
+
+
+            <!-- АКТИВНЫЕ СДЕЛКИ И ОТЗЫВЫ НА ГЛАВНОЙ -->
+            <div class="ice-panel">
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-bolt"></i> <span data-i18n="active_deals">Ваши активные сделки</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="showPage('deals')" data-i18n="all_btn">Все</button>
+                </div>
+                <div id="quickDeals" style="font-size: 13px; color: var(--text-secondary);">...</div>
+            </div>
+
+
+            <div class="ice-panel">
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-star"></i> <span data-i18n="reviews_preview">Последние отзывы</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="showPage('reviews')" data-i18n="all_btn">Все</button>
+                </div>
+                <div id="quickReviews"></div>
+            </div>
+        </div>
+
+
+        <!-- PAGE: MARKET -->
+        <div class="page" id="page-market">
+            <div class="ice-panel">
+                <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
+                    <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.35)"/>
+                </svg>
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-store"></i> <span data-i18n="market_title">Маркет Hlad Ice</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="loadMarket()"><i class="fas fa-rotate"></i></button>
+                </div>
+
+
+                <div class="seg-tabs">
+                    <button type="button" class="seg-btn active" id="mktTabNft" onclick="switchMarketTab('nft')">NFT Подарки</button>
+                    <button type="button" class="seg-btn" id="mktTabAcc" onclick="switchMarketTab('acc')">Игровые аккаунты</button>
+                </div>
+
+
+                <div id="marketNftSection"></div>
+
+
+                <div id="marketAccSection" style="display: none; text-align: center; padding: 30px 14px;">
+                    <div style="font-size: 40px; color: var(--arctic-cyan); margin-bottom: 10px;"><i class="fas fa-gamepad"></i></div>
+                    <div style="font-size: 17px; font-weight: 800; margin-bottom: 6px;">Маркет игровых аккаунтов в разработке</div>
+                    <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+                        Скоро здесь откроется витрина проверенных игровых аккаунтов с автоматической проверкой и моментальной выдачей. Сейчас вы можете провести сделку на любой аккаунт через раздел «Создать».
+                    </div>
+                    <button class="btn btn-ice btn-sm" onclick="openCreateRole('buyer')">Создать сделку на аккаунт</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- PAGE: CREATE -->
+        <div class="page" id="page-create">
+            <div class="ice-panel">
+                <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
+                    <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.35)"/>
+                </svg>
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-plus-circle"></i> <span data-i18n="create_title">Создать сделку</span></div>
+                </div>
+
+
+                <div class="seg-tabs">
+                    <button type="button" class="seg-btn active" id="tabSeller" onclick="setCreatorRole('seller')" data-i18n="sell_btn">Я продавец</button>
+                    <button type="button" class="seg-btn" id="tabBuyer" onclick="setCreatorRole('buyer')" data-i18n="buy_btn">Я покупатель</button>
+                </div>
+
+
+                <div class="info-callout" id="roleHint"></div>
+
+
+                <form id="dealForm">
+                    <div class="field">
+                        <label data-i18n="lbl_cat">Категория</label>
+                        <div class="custom-select" id="csCategory">
+                            <div class="cs-trigger" onclick="toggleCustomSelect('csCategory')">
+                                <span id="csCategoryText"><i class="fas fa-gem" style="color:var(--arctic-cyan); margin-right:8px;"></i>NFT / Telegram Gift</span>
+                                <i class="fas fa-chevron-down arrow"></i>
+                            </div>
+                            <div class="cs-menu">
+                                <div class="cs-option selected" onclick="selectCustomOption('csCategory', 'nft_gift', 'NFT / Telegram Gift', 'fa-gem')"><i class="fas fa-gem"></i> NFT / Telegram Gift</div>
+                                <div class="cs-option" onclick="selectCustomOption('csCategory', 'game_account', 'Игровой аккаунт', 'fa-gamepad')"><i class="fas fa-gamepad"></i> Игровой аккаунт</div>
+                                <div class="cs-option" onclick="selectCustomOption('csCategory', 'other', 'Цифровой товар', 'fa-box-open')"><i class="fas fa-box-open"></i> Цифровой товар</div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="catValue" value="nft_gift">
+                    </div>
+
+
+                    <div class="field">
+                        <label data-i18n="lbl_prod">Название товара</label>
+                        <input type="text" id="prodInput" placeholder="Plush Pepe #120" required>
+                    </div>
+
+
+                    <div class="field" id="nftField">
+                        <label data-i18n="lbl_nft">Ссылка на NFT (t.me/nft/...)</label>
+                        <input type="text" id="nftInput" placeholder="t.me/nft/PlushPepe-120" oninput="validateNftLive()">
+                        <div class="nft-check-msg" id="nftValidationBadge"></div>
+                    </div>
+
+
+                    <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px;">
+                        <div class="field">
+                            <label data-i18n="lbl_curr">Валюта</label>
+                            <div class="custom-select" id="csDealCurr">
+                                <div class="cs-trigger" onclick="toggleCustomSelect('csDealCurr')">
+                                    <span id="csDealCurrText"><i class="fas fa-diamond" style="color:var(--arctic-cyan); margin-right:6px;"></i>TON</span>
+                                    <i class="fas fa-chevron-down arrow"></i>
+                                </div>
+                                <div class="cs-menu">
+                                    <div class="cs-option selected" onclick="selectCustomOption('csDealCurr', 'TON', 'TON', 'fa-diamond')"><i class="fas fa-diamond"></i> TON</div>
+                                    <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'STARS', 'STARS', 'fa-star')"><i class="fas fa-star"></i> STARS</div>
+                                    <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'RUB', 'RUB', 'fa-ruble-sign')"><i class="fas fa-ruble-sign"></i> RUB</div>
+                                    <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'UAH', 'UAH', 'fa-hryvnia-sign')"><i class="fas fa-hryvnia-sign"></i> UAH</div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="currValue" value="TON">
+                        </div>
+
+
+                        <div class="field">
+                            <label data-i18n="lbl_amt">Сумма</label>
+                            <input type="number" id="amtInput" placeholder="25" min="0.01" step="0.01" required>
+                        </div>
+                    </div>
+
+
+                    <div class="field">
+                        <label id="partnerLbl">@username покупателя</label>
+                        <input type="text" id="partnerInput" placeholder="username" required>
+                    </div>
+
+
+                    <button type="submit" class="btn btn-ice" id="submitDealBtn">
+                        <i class="fas fa-check-circle"></i> <span data-i18n="btn_create">Создать и получить ссылку</span>
+                    </button>
+                </form>
+
+
+                <div id="createdResult" style="display: none; margin-top: 14px;"></div>
+            </div>
+        </div>
+
+
+        <!-- PAGE: DEALS -->
+        <div class="page" id="page-deals">
+            <div class="ice-panel">
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-layer-group"></i> <span data-i18n="my_deals">Мои сделки</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="loadDeals()"><i class="fas fa-rotate"></i></button>
+                </div>
+                <div id="dealsContainer"></div>
+            </div>
+        </div>
+
+
+        <!-- PAGE: REVIEWS -->
+        <div class="page" id="page-reviews">
+            <div class="ice-panel">
+                <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
+                    <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.35)"/>
+                </svg>
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-star"></i> <span data-i18n="reviews_title">Отзывы о сервисе</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="loadReviews()"><i class="fas fa-rotate"></i></button>
+                </div>
+
+
+                <div class="rating-banner">
+                    <div>
+                        <div style="font-family: 'Unbounded', sans-serif; font-size: 20px; font-weight: 800; color: var(--gold-star);" id="avgRatingText">4.9 ★</div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;" id="reviewsCountText">Проверенные сделки • Анонимно</div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--arctic-ice); font-weight: 700;">@hladicebot</div>
+                </div>
+
+
+                <div class="filter-row" id="reviewFilterChips">
+                    <button class="filter-pill active" onclick="filterReviewsByCurr('ALL', this)">Все</button>
+                    <button class="filter-pill" onclick="filterReviewsByCurr('TON', this)">TON</button>
+                    <button class="filter-pill" onclick="filterReviewsByCurr('STARS', this)">STARS</button>
+                    <button class="filter-pill" onclick="filterReviewsByCurr('RUB', this)">RUB</button>
+                    <button class="filter-pill" onclick="filterReviewsByCurr('UAH', this)">UAH</button>
+                </div>
+
+
+                <div id="reviewFormBlock" style="margin-bottom: 14px;"></div>
+                <div id="reviewsListContainer"></div>
+            </div>
+        </div>
+
+
+        <!-- PAGE: WALLET -->
+        <div class="page" id="page-balance">
+            <div class="ice-panel">
+                <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
+                    <path d="M0,0 L400,0 L400,2 Q385,15 372,2 Q355,11 340,2 Q322,16 305,2 Q285,10 268,2 Q250,15 232,2 Q212,10 195,2 Q175,16 158,2 Q138,11 120,2 Q100,15 82,2 Q62,10 45,2 Q25,14 10,2 L0,2 Z" fill="rgba(186,230,253,0.38)"/>
+                </svg>
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-wallet"></i> <span data-i18n="wallet_title">Кошелёк Hlad Ice</span></div>
+                </div>
+
+
+                <!-- 3D ПРЕМИАЛЬНАЯ КАРТА КОШЕЛЬКА -->
+                <div class="card-3d-stage" id="card3dStage">
+                    <div class="wallet-3d-card theme-ton" id="wallet3dCard">
+                        <div class="cc-top-row">
+                            <div class="cc-chip-box">
+                                <div class="cc-emv"></div>
+                                <i class="fas fa-wifi" style="color:rgba(255,255,255,0.7); transform: rotate(90deg);"></i>
+                            </div>
+                            <div class="cc-net-pill" id="cardNetworkBadge">THE OPEN NETWORK</div>
+                        </div>
+                        <div class="cc-label-title" id="cardWalletTitle">TON КОШЕЛЁК</div>
+                        <div class="cc-amount-display" id="cardMainBalance">0 TON</div>
+                        <div class="cc-card-footer">
+                            <span id="cardMaskNum">HLAD •••• 7741</span>
+                            <span>FROST VAULT</span>
+                        </div>
+                        <div class="cc-currency-tabs">
+                            <div class="cc-curr-btn active" id="pill-ton" onclick="selectCardCurrency('ton')"><small>TON</small><b id="val-ton">0</b></div>
+                            <div class="cc-curr-btn" id="pill-stars" onclick="selectCardCurrency('stars')"><small>STARS</small><b id="val-stars">0</b></div>
+                            <div class="cc-curr-btn" id="pill-rub" onclick="selectCardCurrency('rub')"><small>RUB</small><b id="val-rub">0</b></div>
+                            <div class="cc-curr-btn" id="pill-uah" onclick="selectCardCurrency('uah')"><small>UAH</small><b id="val-uah">0</b></div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div id="freezeNotice" class="info-callout" style="display:none; border-color: var(--danger); color: var(--danger);"></div>
+
+
+                <!-- ПОДСКАЗКА ПО ВЫБРАННОЙ КАРТЕ -->
+                <div class="info-callout" id="walletMethodHint">
+                    Для вывода TON укажите сумму и адрес вашего TON-кошелька (например, UQ... или EQ...).
+                </div>
+
+
+                <div class="field">
+                    <label data-i18n="lbl_w_curr">Выбранный счёт вывода</label>
+                    <div class="custom-select" id="csWithdrawCurr">
+                        <div class="cs-trigger" onclick="toggleCustomSelect('csWithdrawCurr')">
+                            <span id="csWithdrawCurrText"><i class="fas fa-diamond" style="color:var(--arctic-cyan); margin-right:8px;"></i>TON Кошелёк</span>
+                            <i class="fas fa-chevron-down arrow"></i>
+                        </div>
+                        <div class="cs-menu">
+                            <div class="cs-option selected" onclick="selectWithdrawCurr('TON')"><i class="fas fa-diamond"></i> TON Кошелёк</div>
+                            <div class="cs-option" onclick="selectWithdrawCurr('STARS')"><i class="fas fa-star"></i> STARS Кошелёк</div>
+                            <div class="cs-option" onclick="selectWithdrawCurr('RUB')"><i class="fas fa-ruble-sign"></i> RUB Кошелёк (Карта / СБП)</div>
+                            <div class="cs-option" onclick="selectWithdrawCurr('UAH')"><i class="fas fa-hryvnia-sign"></i> UAH Кошелёк (Карта UA)</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="withdrawCurrValue" value="TON">
+                </div>
+
+
+                <div class="field">
+                    <label id="withdrawAmtLabel">Сумма вывода (TON)</label>
+                    <input type="number" id="withdrawAmt" placeholder="10" min="0.01" step="0.01">
+                </div>
+
+
+                <div class="field">
+                    <label id="withdrawReqLabel">Адрес TON кошелька</label>
+                    <input type="text" id="withdrawReq" placeholder="UQ...">
+                </div>
+
+
+                <button class="btn btn-ice" onclick="handleWithdrawClick()">
+                    <i class="fas fa-arrow-up-right-from-square"></i> <span data-i18n="btn_withdraw">Вывести средства</span>
+                </button>
+            </div>
+        </div>
+
+
+        <!-- PAGE: SUPPORT CHAT -->
+        <div class="page" id="page-support">
+            <div class="ice-panel">
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-comments"></i> <span data-i18n="chat_title">Чат с поддержкой</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="openTg('Hladpriemka')">@Hladpriemka</button>
+                </div>
+
+
+                <div class="chat-stream" id="userChatBox"></div>
+
+
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="userMsgInput" placeholder="Напишите сообщение..." style="flex:1; padding:12px 14px; border-radius:14px; border:1px solid var(--border-crystal); background:var(--bg-field); color:var(--text-primary); outline:none;" onkeydown="if(event.key==='Enter') sendUserMessage()">
+                    <button class="btn btn-ice btn-sm" onclick="sendUserMessage()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- PAGE: ADMIN -->
+        <div class="page" id="page-admin">
+            <div class="ice-panel">
+                <div class="head-row">
+                    <div class="head-title"><i class="fas fa-crown"></i> <span>Админ-панель</span></div>
+                    <button class="btn btn-glass btn-sm" onclick="loadAdminPanel()"><i class="fas fa-rotate"></i></button>
+                </div>
+                <div id="adminBody"></div>
+            </div>
+        </div>
+
+
+        <!-- FOOTER -->
+        <footer class="footer-bar">
+            <div>© 2026 Hlad Ice (@hladicebot) • <span class="privacy-btn" onclick="openPrivacyPolicy()" data-i18n="privacy_link">Политика конфиденциальности</span></div>
+        </footer>
+    </div>
+
+
+    <!-- DOCK TABBAR -->
+    <nav class="dock-nav">
+        <button class="dock-item active" data-page="main" onclick="showPage('main')"><i class="fas fa-house"></i><span data-i18n="nav_home">Главная</span></button>
+        <button class="dock-item" data-page="market" onclick="showPage('market')"><i class="fas fa-store"></i><span data-i18n="nav_market">Маркет</span></button>
+        <button class="dock-item" data-page="create" onclick="showPage('create')"><i class="fas fa-plus-circle"></i><span data-i18n="nav_create">Создать</span></button>
+        <button class="dock-item" data-page="deals" onclick="showPage('deals')"><i class="fas fa-layer-group"></i><span data-i18n="nav_deals">Сделки</span></button>
+        <button class="dock-item" data-page="reviews" onclick="showPage('reviews')"><i class="fas fa-star"></i><span data-i18n="nav_reviews">Отзывы</span></button>
+        <button class="dock-item" data-page="balance" onclick="showPage('balance')"><i class="fas fa-wallet"></i><span data-i18n="nav_wallet">Кошелёк</span></button>
+        <button class="dock-item" data-page="support" onclick="showPage('support')"><i class="fas fa-comment-dots"></i><span data-i18n="nav_chat">Чат</span></button>
+        <button class="dock-item" data-page="admin" id="adminTab" style="display:none;" onclick="showPage('admin')"><i class="fas fa-crown"></i><span>Админ</span></button>
+    </nav>
+
+
+    <!-- MODAL -->
+    <div class="modal-overlay" id="modal" onclick="if(event.target===this) closeModal()">
+        <div class="modal-window" id="modalBody"></div>
+    </div>
+
+
+    <script>
+        // ============================================================
+        // 1. СНЕГОПАД
+        // ============================================================
+        (function initSnow() {
+            const canvas = document.getElementById('snowCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height, flakes = [];
+
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+
+            for (let i = 0; i < 70; i++) {
+                flakes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    r: Math.random() * 2.6 + 0.8,
+                    d: Math.random() * 0.85 + 0.3,
+                    drift: Math.random() * 0.6 - 0.3
+                });
+            }
+
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = 'rgba(224, 242, 254, 0.82)';
+                ctx.beginPath();
+                for (const f of flakes) {
+                    ctx.moveTo(f.x, f.y);
+                    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+                }
+                ctx.fill();
+
+
+                for (const f of flakes) {
+                    f.y += f.d;
+                    f.x += f.drift + Math.sin(f.y * 0.012) * 0.3;
+                    if (f.y > height) { f.y = -5; f.x = Math.random() * width; }
+                    if (f.x > width) f.x = 0;
+                    if (f.x < 0) f.x = width;
+                }
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+
+        // ============================================================
+        // 2. КОНФИГ И ПЕРЕВОДЫ
+        // ============================================================
+        const CONFIG = {
+            API_BASE: 'https://bot-1795612426-1404-uhffhbafvbfb.bothost.tech',
+            BOT_USERNAME: 'hladicebot',
+            ESCROW_ACCOUNT: 'Hladpriemka',
+            ADMIN_IDS: [1544353769, 8986358602]
+        };
+
+
+        const tg = window.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+
+
+        const tgUser = tg?.initDataUnsafe?.user || {};
+        const user = {
+            id: tgUser.id || 1544353769,
+            username: tgUser.username || 'user_' + (tgUser.id || 'demo')
+        };
+
+
+        document.getElementById('cardMaskNum').textContent = `HLAD •••• ${String(user.id).slice(-4)}`;
+
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentLang = urlParams.get('lang') || localStorage.getItem('hg_lang') || 'ru';
+        if (!['ru', 'en'].includes(currentLang)) currentLang = 'ru';
+        let creatorRole = urlParams.get('role') === 'buyer' ? 'buyer' : 'seller';
+
+
+        const I18N = {
+            ru: {
+                online: 'онлайн',
+                st_deals: 'Сделок сегодня',
+                st_users: 'Участников',
+                st_vol: 'Объём TON',
+                winter_badge: 'ЗАЩИЩЁННЫЕ СДЕЛКИ • WINTER 2026',
+                hero_title: 'Сделки на NFT и цифровые товары',
+                hero_desc: 'Средства покупателя замораживаются системой до полного подтверждения передачи. Создавайте сделку как продавец или покупатель.',
+                sell_btn: 'Я продавец',
+                sell_sub: 'Сделка с покупателем',
+                buy_btn: 'Я покупатель',
+                buy_sub: 'Сделка с продавцом',
+                go_market: 'Маркет NFT подарков',
+                go_reviews: '470+ живых отзывов',
+                safety_title: 'Почему сделки в Hlad Ice безопасны',
+                t1_h: 'Заморозка оплаты',
+                t1_p: 'Деньги резервируются на время передачи и не уходят до вашего подтверждения.',
+                t2_h: 'Двойное подтверждение',
+                t2_p: 'Оплата открывается только после входа обоих участников по ссылке в боте.',
+                t3_h: 'Официальный приём',
+                t3_p: 'Передача NFT проходит строго через аккаунт @Hladpriemka.',
+                t4_h: 'Поддержка 24/7',
+                t4_p: 'Оперативная помощь по любой сделке: @Hladpriemka.',
+                guide_title: 'Пошаговый гайд по сделке',
+                g1: 'Выберите роль (Продавец или Покупатель), укажите товар, ссылку на NFT, валюту, сумму и @username собеседника.',
+                g2: 'Бот автоматически пришлёт ссылку в ЛС. Перешлите её второму участнику — когда оба зайдут, откроется оплата.',
+                g3: 'Продавец передаёт NFT на @Hladpriemka, покупатель подтверждает получение — средства зачисляются продавцу.',
+                faq_title: 'Частые вопросы',
+                fq1: 'Куда передавать NFT после оплаты?',
+                fa1: 'Передача NFT и Telegram-подарков выполняется строго через кнопку «Передать подарок на @Hladpriemka». Никогда не отправляйте подарок напрямую покупателю в обход аккаунта приёма.',
+                fq2: 'Почему кнопка оплаты неактивна сразу после создания?',
+                fa2: 'В целях безопасности оба участника сделки должны сначала перейти по сгенерированной ссылке в @hladicebot. Как только оба войдут в сделку, кнопка оплаты разблокируется.',
+                fq3: 'Что делать, если возник спорный вопрос?',
+                fa3: 'Пока покупатель не подтвердил получение, средства заморожены на балансе сделки. Напишите в встроенный чат поддержки или менеджеру @Hladpriemka — мы проверим передачу и поможем завершить сделку.',
+                active_deals: 'Ваши активные сделки',
+                reviews_preview: 'Последние отзывы',
+                reviews_title: 'Отзывы о сервисе',
+                market_title: 'Маркет Hlad Ice',
+                all_btn: 'Все',
+                create_title: 'Создать сделку',
+                hint_seller: 'Вы создаёте сделку как <b>продавец</b>. Ссылка придёт вам в бота — покупатель сможет оплатить сделку только после входа по ней.',
+                hint_buyer: 'Вы создаёте сделку как <b>покупатель</b>. Ссылка придёт в бота — продавец должен зайти по ней, после чего откроется оплата.',
+                lbl_cat: 'Категория',
+                lbl_prod: 'Название товара',
+                lbl_nft: 'Ссылка на NFT (t.me/nft/...)',
+                lbl_curr: 'Валюта',
+                lbl_w_curr: 'Выбранный счёт вывода',
+                lbl_amt: 'Сумма',
+                partner_buyer: '@username покупателя',
+                partner_seller: '@username продавца',
+                btn_create: 'Создать и получить ссылку',
+                my_deals: 'Мои сделки',
+                wallet_title: 'Кошелёк Hlad Ice',
+                btn_withdraw: 'Вывести средства',
+                chat_title: 'Чат с поддержкой',
+                privacy_link: 'Политика конфиденциальности',
+                nav_home: 'Главная',
+                nav_market: 'Маркет',
+                nav_create: 'Создать',
+                nav_deals: 'Сделки',
+                nav_reviews: 'Отзывы',
+                nav_wallet: 'Кошелёк',
+                nav_chat: 'Чат',
+                no_deals: 'У вас пока нет сделок',
+                wait_both_join: 'Ожидаем входа второго участника по ссылке в боте. После этого откроется кнопка оплаты.',
+                pay_btn: 'Оплатить сделку',
+                send_gift_btn: 'Передать подарок на @Hladpriemka',
+                confirm_sent_btn: 'Я передал подарок',
+                confirm_recv_btn: 'Подтвердить получение'
+            },
+            en: {
+                online: 'online',
+                st_deals: 'Deals today',
+                st_users: 'Users',
+                st_vol: 'Volume TON',
+                winter_badge: 'SAFE DEALS • WINTER 2026',
+                hero_title: 'Deals for NFTs & Digital Goods',
+                hero_desc: 'Buyer funds are frozen by the system until delivery is confirmed. Create a deal as a seller or a buyer.',
+                sell_btn: 'I am Seller',
+                sell_sub: 'Deal with a buyer',
+                buy_btn: 'I am Buyer',
+                buy_sub: 'Deal with a seller',
+                go_market: 'NFT Gift Market',
+                go_reviews: '470+ Live Reviews',
+                safety_title: 'Why Hlad Ice Deals Are Safe',
+                t1_h: 'Payment Freeze',
+                t1_p: 'Funds stay reserved during transfer until you confirm receipt.',
+                t2_h: 'Mutual Entry',
+                t2_p: 'Payment unlocks only after both users enter via the bot link.',
+                t3_h: 'Official Escrow',
+                t3_p: 'NFT transfers go strictly through @Hladpriemka.',
+                t4_h: '24/7 Support',
+                t4_p: 'Fast help on any deal: @Hladpriemka.',
+                guide_title: 'Step-by-Step Deal Guide',
+                g1: 'Select your role (Seller or Buyer), enter item title, NFT link, currency, amount, and partner @username.',
+                g2: 'The bot sends the link to your DM. Forward it to your partner — payment unlocks once both enter.',
+                g3: 'Seller sends the NFT to @Hladpriemka, buyer confirms receipt — funds are credited to the seller.',
+                faq_title: 'FAQ',
+                fq1: 'Where should I send the NFT after payment?',
+                fa1: 'NFT and Telegram Gift transfers must go strictly via the "Send Gift to @Hladpriemka" button. Never send directly to the buyer.',
+                fq2: 'Why is the pay button locked right after creation?',
+                fa2: 'For security, both users must first open the deal link in @hladicebot. Once both join, payment unlocks automatically.',
+                fq3: 'What if a dispute occurs?',
+                fa3: 'Until receipt is confirmed, funds remain frozen. Contact support chat or @Hladpriemka and we will resolve it.',
+                active_deals: 'Your active deals',
+                reviews_preview: 'Latest reviews',
+                reviews_title: 'Service Reviews',
+                market_title: 'Hlad Ice Market',
+                all_btn: 'All',
+                create_title: 'Create Deal',
+                hint_seller: 'You are creating a deal as <b>Seller</b>. Payment will unlock once the buyer joins via the link.',
+                hint_buyer: 'You are creating a deal as <b>Buyer</b>. Payment will unlock once the seller joins via the link.',
+                lbl_cat: 'Category',
+                lbl_prod: 'Item title',
+                lbl_nft: 'NFT link (t.me/nft/...)',
+                lbl_curr: 'Currency',
+                lbl_w_curr: 'Withdrawal account',
+                lbl_amt: 'Amount',
+                partner_buyer: 'Buyer @username',
+                partner_seller: 'Seller @username',
+                btn_create: 'Create & Get Link',
+                my_deals: 'My Deals',
+                wallet_title: 'Hlad Ice Wallet',
+                btn_withdraw: 'Withdraw Funds',
+                chat_title: 'Support Chat',
+                privacy_link: 'Privacy Policy',
+                nav_home: 'Home',
+                nav_market: 'Market',
+                nav_create: 'Create',
+                nav_deals: 'Deals',
+                nav_reviews: 'Reviews',
+                nav_wallet: 'Wallet',
+                nav_chat: 'Chat',
+                no_deals: 'You have no deals yet',
+                wait_both_join: 'Waiting for the second participant to join via the bot link before payment unlocks.',
+                pay_btn: 'Pay for Deal',
+                send_gift_btn: 'Send Gift to @Hladpriemka',
+                confirm_sent_btn: 'Confirm Gift Sent',
+                confirm_recv_btn: 'Confirm Receipt'
+            }
+        };
+
+
+        function t(key) {
+            return (I18N[currentLang] && I18N[currentLang][key]) || I18N.ru[key] || key;
+        }
+
+
+        function applyTranslations() {
+            document.getElementById('langBtn').textContent = currentLang.toUpperCase();
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                if (I18N[currentLang][k]) el.textContent = I18N[currentLang][k];
+            });
+            setCreatorRole(creatorRole);
+            selectCardCurrency(selectedCardCurr);
+            renderReviewsUI();
+        }
+
+
+        async function toggleLang() {
+            currentLang = currentLang === 'ru' ? 'en' : 'ru';
+            localStorage.setItem('hg_lang', currentLang);
+            applyTranslations();
+            renderDeals();
+            await apiCall('/api/set_language', { lang: currentLang });
+        }
+
+
+        // ============================================================
+        // 3. ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ
+        // ============================================================
+        function openPrivacyPolicy() {
+            showModal(`
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 style="color:var(--arctic-ice);">Политика конфиденциальности и правила</h3>
+                    <button class="btn btn-glass btn-sm" onclick="closeModal()">Закрыть</button>
+                </div>
+                <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;">
+                    <p style="margin-bottom: 10px;"><b>1. Общие положения</b><br>
+                    Настоящая Политика регулирует порядок использования сервиса <b>Hlad Ice</b> (@hladicebot) и правила проведения сделок с NFT и цифровыми товарами.</p>
+
+
+                    <p style="margin-bottom: 10px;"><b>2. Порядок передачи NFT и сохранность средств</b><br>
+                    Передача всех NFT и Telegram-подарков в рамках сделок осуществляется <b>строго на официальный аккаунт приёма @Hladpriemka</b>. В случае если продавец передаёт NFT или цифровой товар напрямую покупателю в обход официального аккаунта @Hladpriemka, сервис не фиксирует факт передачи и <b>средства по сделке безвозвратно утрачиваются</b> без возможности компенсации.</p>
+
+
+                    <p style="margin-bottom: 10px;"><b>3. Условия вывода средств и верификация</b><br>
+                    • Для активации функции вывода средств с внутреннего кошелька Hlad Ice пользователю необходимо провести не менее <b>2 (двух) успешных завершённых сделок</b>.<br>
+                    • После выполнения условия по количеству сделок для первого вывода средств требуется прохождение процедуры верификации через официального менеджера <b>@Hladpriemka</b>.</p>
+
+
+                    <p style="margin-bottom: 10px;"><b>4. Обработка данных</b><br>
+                    Сервис обрабатывает только технические идентификаторы Telegram (User ID, @username, историю сделок) для обеспечения безопасности расчётов и защиты от мошенничества.</p>
+                </div>
+            `);
+        }
+
+
+        // ============================================================
+        // 4. КАСТОМНЫЕ ВЫПАДАЮЩИЕ СПИСКИ
+        // ============================================================
+        function toggleCustomSelect(id) {
+            const el = document.getElementById(id);
+            const wasOpen = el.classList.contains('open');
+            document.querySelectorAll('.custom-select').forEach(s => s.classList.remove('open'));
+            if (!wasOpen) el.classList.add('open');
+        }
+
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-select')) {
+                document.querySelectorAll('.custom-select').forEach(s => s.classList.remove('open'));
+            }
+        });
+
+
+        function selectCustomOption(selectId, value, label, iconClass) {
+            const container = document.getElementById(selectId);
+            container.classList.remove('open');
+            container.querySelectorAll('.cs-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.textContent.trim() === label);
+            });
+
+
+            if (selectId === 'csCategory') {
+                document.getElementById('catValue').value = value;
+                document.getElementById('csCategoryText').innerHTML = `<i class="fas ${iconClass}" style="color:var(--arctic-cyan); margin-right:8px;"></i>${label}`;
+                document.getElementById('nftField').style.display = value === 'nft_gift' ? 'block' : 'none';
+            } else if (selectId === 'csDealCurr') {
+                document.getElementById('currValue').value = value;
+                document.getElementById('csDealCurrText').innerHTML = `<i class="fas ${iconClass}" style="color:var(--arctic-cyan); margin-right:6px;"></i>${label}`;
+            } else if (selectId === 'csRevCategory') {
+                document.getElementById('revCatValue').value = value;
+                document.getElementById('csRevCategoryText').innerHTML = `<i class="fas ${iconClass}" style="color:var(--arctic-cyan); margin-right:8px;"></i>${label}`;
+            } else if (selectId === 'csRevCurr') {
+                document.getElementById('revCurrValue').value = value;
+                document.getElementById('csRevCurrText').innerHTML = `<i class="fas ${iconClass}" style="color:var(--arctic-cyan); margin-right:6px;"></i>${label}`;
+            }
+        }
+
+
+        function updateWalletWithdrawUI(curr) {
+            const upper = curr.toUpperCase();
+            const map = {
+                TON: {
+                    label: 'TON Кошелёк',
+                    icon: 'fa-diamond',
+                    hint: currentLang === 'en'
+                        ? 'Enter the TON amount and your personal TON wallet address (UQ... or EQ...).'
+                        : 'Для вывода TON укажите сумму и адрес вашего TON-кошелька (например, UQ... или EQ...).',
+                    amtLbl: currentLang === 'en' ? 'Amount (TON)' : 'Сумма вывода (TON)',
+                    reqLbl: currentLang === 'en' ? 'TON Wallet Address' : 'Адрес TON кошелька',
+                    ph: 'UQ...'
+                },
+                STARS: {
+                    label: 'STARS Кошелёк',
+                    icon: 'fa-star',
+                    hint: currentLang === 'en'
+                        ? 'Enter the Stars amount and the @username of the Telegram account where Stars should be sent.'
+                        : 'Для вывода звёзд укажите сумму и @username аккаунта Telegram, куда пойдут звёзды.',
+                    amtLbl: currentLang === 'en' ? 'Amount (STARS)' : 'Количество звёзд (STARS)',
+                    reqLbl: currentLang === 'en' ? 'Recipient @username' : 'Юзернейм аккаунта (@username)',
+                    ph: '@username'
+                },
+                RUB: {
+                    label: 'RUB Кошелёк (Карта / СБП)',
+                    icon: 'fa-ruble-sign',
+                    hint: currentLang === 'en'
+                        ? 'Enter the RUB amount and your bank card number or phone number (SBP + bank name).'
+                        : 'Для вывода рублей укажите сумму и номер банковской карты РФ или номер телефона для СБП (с названием банка).',
+                    amtLbl: currentLang === 'en' ? 'Amount (RUB)' : 'Сумма вывода (RUB)',
+                    reqLbl: currentLang === 'en' ? 'Card Number / SBP Phone' : 'Номер карты или телефон (СБП)',
+                    ph: '2200 7000 •••• •••• (Т-Банк / Сбер)'
+                },
+                UAH: {
+                    label: 'UAH Кошелёк (Карта UA)',
+                    icon: 'fa-hryvnia-sign',
+                    hint: currentLang === 'en'
+                        ? 'Enter the UAH amount and your Ukrainian bank card number (Monobank / PrivatBank).'
+                        : 'Для вывода гривен укажите сумму и номер карты украинского банка (Monobank / ПриватБанк).',
+                    amtLbl: currentLang === 'en' ? 'Amount (UAH)' : 'Сумма вывода (UAH)',
+                    reqLbl: currentLang === 'en' ? 'UAH Card Number' : 'Номер карты банка (UAH)',
+                    ph: '5375 4112 •••• ••••'
+                }
+            };
+
+
+            const info = map[upper] || map.TON;
+            document.getElementById('withdrawCurrValue').value = upper;
+            document.getElementById('csWithdrawCurrText').innerHTML = `<i class="fas ${info.icon}" style="color:var(--arctic-cyan); margin-right:8px;"></i>${info.label}`;
+            document.getElementById('walletMethodHint').textContent = info.hint;
+            document.getElementById('withdrawAmtLabel').textContent = info.amtLbl;
+            document.getElementById('withdrawReqLabel').textContent = info.reqLbl;
+            document.getElementById('withdrawReq').placeholder = info.ph;
+
+
+            document.querySelectorAll('#csWithdrawCurr .cs-option').forEach(opt => {
+                opt.classList.toggle('selected', opt.textContent.trim().startsWith(upper));
+            });
+        }
+
+
+        function selectWithdrawCurr(curr) {
+            document.getElementById('csWithdrawCurr').classList.remove('open');
+            selectCardCurrency(curr.toLowerCase());
+        }
+
+
+        // ============================================================
+        // 5. ВАЛИДАЦИЯ NFT И API
+        // ============================================================
+        function parseNftLink(raw) {
+            if (!raw) return null;
+            const m = raw.trim().match(/^(?:https?:\/\/)?(?:www\.)?t\.me\/nft\/([A-Za-z0-9_-]+)-(\d+)\/?$/i);
+            if (!m) return null;
+            return { name: m[1], number: m[2], url: `https://t.me/nft/${m[1]}-${m[2]}` };
+        }
+
+
+        function validateNftLive() {
+            const val = document.getElementById('nftInput').value.trim();
+            const badge = document.getElementById('nftValidationBadge');
+            if (!val) {
+                badge.className = 'nft-check-msg';
+                badge.textContent = '';
+                return;
+            }
+            const parsed = parseNftLink(val);
+            if (parsed) {
+                badge.className = 'nft-check-msg valid';
+                badge.innerHTML = `<i class="fas fa-check-circle"></i> NFT найден: <b>${esc(parsed.name)} #${esc(parsed.number)}</b>`;
+            } else {
+                badge.className = 'nft-check-msg invalid';
+                badge.innerHTML = `<i class="fas fa-circle-exclamation"></i> Неверный формат ссылки. Укажите: t.me/nft/Название-Номер`;
+            }
+        }
+
+
+        async function apiCall(endpoint, payload = {}) {
+            try {
+                const res = await fetch(CONFIG.API_BASE + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: user.id, username: user.username, ...payload })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, error: 'Connection error' };
+            }
+        }
+
+
+        function showToast(text) {
+            document.querySelectorAll('.toast-alert').forEach(e => e.remove());
+            const el = document.createElement('div');
+            el.className = 'toast-alert';
+            el.textContent = text;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3500);
+        }
+
+
+        function esc(str) {
+            const d = document.createElement('div');
+            d.textContent = str || '';
+            return d.innerHTML;
+        }
+
+
+        function openTg(username) {
+            const url = 'https://t.me/' + username.replace('@', '');
+            if (tg) tg.openTelegramLink(url);
+            else window.open(url, '_blank');
+        }
+
+
+        function openSendGiftToEscrow() {
+            const giftUrl = `tg://send_gift?to=${CONFIG.ESCROW_ACCOUNT}`;
+            if (tg && tg.openTelegramLink) {
+                try { tg.openTelegramLink(giftUrl); } catch (e) { window.location.href = giftUrl; }
+            } else {
+                window.location.href = giftUrl;
+            }
+        }
+
+
+        function showModal(html) {
+            document.getElementById('modalBody').innerHTML = html;
+            document.getElementById('modal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+
+        // ============================================================
+        // 6. НАВИГАЦИЯ
+        // ============================================================
+        let chatPollTimer = null;
+
+
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.dock-item').forEach(b => b.classList.remove('active'));
+            document.getElementById('page-' + page)?.classList.add('active');
+            document.querySelector(`.dock-item[data-page="${page}"]`)?.classList.add('active');
+
+
+            if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+
+
+            if (page === 'market') loadMarket();
+            if (page === 'deals') loadDeals();
+            if (page === 'reviews') loadReviews();
+            if (page === 'balance') loadBalance();
+            if (page === 'support') {
+                loadUserChat();
+                chatPollTimer = setInterval(loadUserChat, 3500);
+            }
+            if (page === 'admin') loadAdminPanel();
+        }
+
+
+        function openCreateRole(role) {
+            setCreatorRole(role);
+            showPage('create');
+        }
+
+
+        function setCreatorRole(role) {
+            creatorRole = role;
+            document.getElementById('tabSeller').classList.toggle('active', role === 'seller');
+            document.getElementById('tabBuyer').classList.toggle('active', role === 'buyer');
+            document.getElementById('roleHint').innerHTML = role === 'seller' ? t('hint_seller') : t('hint_buyer');
+            document.getElementById('partnerLbl').textContent = role === 'seller' ? t('partner_buyer') : t('partner_seller');
+        }
+
+
+        // ============================================================
+        // 7. NFT МАРКЕТ
+        // ============================================================
+        let marketItems = [];
+        let marketVariantIndex = {};
+
+
+        function switchMarketTab(tab) {
+            document.getElementById('mktTabNft').classList.toggle('active', tab === 'nft');
+            document.getElementById('mktTabAcc').classList.toggle('active', tab === 'acc');
+            document.getElementById('marketNftSection').style.display = tab === 'nft' ? 'block' : 'none';
+            document.getElementById('marketAccSection').style.display = tab === 'acc' ? 'block' : 'none';
+        }
+
+
+        async function loadMarket() {
+            const res = await apiCall('/api/market');
+            if (res.success) {
+                marketItems = res.items || [];
+                renderMarket();
+            }
+        }
+
+
+        function cycleMarketModel(itemId, dir) {
+            const item = marketItems.find(x => x.id === itemId);
+            if (!item || !item.variants || !item.variants.length) return;
+            const cur = marketVariantIndex[itemId] || 0;
+            const next = (cur + dir + item.variants.length) % item.variants.length;
+            marketVariantIndex[itemId] = next;
+            renderMarket();
+        }
+
+
+        function renderMarket() {
+            const container = document.getElementById('marketNftSection');
+            if (!container) return;
+
+
+            if (!marketItems.length) {
+                container.innerHTML = `<div style="text-align:center; padding:26px; color:var(--text-muted); font-size:13px;">В маркете пока нет активных лотов. Новые подарки скоро появятся!</div>`;
+                return;
+            }
+
+
+            container.innerHTML = marketItems.map(item => {
+                const variants = item.variants && item.variants.length ? item.variants : [{
+                    number: item.number,
+                    model: item.model,
+                    backdrop: item.backdrop,
+                    symbol: item.symbol,
+                    image_url: item.image_url
+                }];
+                const vIdx = marketVariantIndex[item.id] || 0;
+                const activeVar = variants[vIdx] || variants[0];
+                const colors = item.backdrop_colors || ['#13284c', '#070e1d'];
+
+
+                const pricesEntries = Object.entries(item.prices || {});
+                const priceBadgesHtml = pricesEntries.map(([curr, val]) => `<span class="price-tag">${val} ${curr}</span>`).join('');
+                const buyButtonsHtml = pricesEntries.map(([curr, val]) => `
+                    <button class="btn btn-ice btn-sm" style="flex:1;" onclick="buyMarketItem('${item.id}', '${curr}')">
+                        Купить за ${val} ${curr}
+                    </button>
+                `).join('');
+
+
+                return `
+                    <div class="market-lot">
+                        <div class="lot-stage" style="background: radial-gradient(circle at 50% 40%, ${colors[0]}88, ${colors[1]}ee);">
+                            <div class="lot-pattern"></div>
+                            <img class="lot-img" src="${esc(activeVar.image_url)}" alt="${esc(item.name)}" onerror="this.src='https://nft.fragment.com/gift/${esc(item.slug.toLowerCase())}-${esc(item.number)}.medium.jpg'">
+                            <div class="lot-carousel-ctrl">
+                                <button class="arrow-sq" onclick="cycleMarketModel('${item.id}', -1)"><i class="fas fa-chevron-left"></i></button>
+                                <div style="text-align:center;">
+                                    <div style="font-size:11px; font-weight:800; color:#fff;">Модель ${vIdx + 1} из ${variants.length}</div>
+                                    <div style="font-size:10px; color:var(--arctic-ice);">Листайте для просмотра</div>
+                                </div>
+                                <button class="arrow-sq" onclick="cycleMarketModel('${item.id}', 1)"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+
+
+                        <div class="lot-specs">
+                            <div class="spec-chip"><small>Model</small><b>${esc(activeVar.model)}</b></div>
+                            <div class="spec-chip"><small>Backdrop</small><b>${esc(activeVar.backdrop)}</b></div>
+                            <div class="spec-chip"><small>Symbol</small><b>${esc(activeVar.symbol)}</b></div>
+                        </div>
+
+
+                        <div class="lot-content">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-size:16px; font-weight:800;">${esc(item.name)} <span style="color:var(--arctic-cyan);">#${esc(activeVar.number)}</span></div>
+                                <a href="${esc(item.url)}" target="_blank" style="font-size:11px; color:var(--arctic-cyan); text-decoration:none;">Telegram ↗</a>
+                            </div>
+                            <div class="price-row">${priceBadgesHtml}</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                ${buyButtonsHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+
+        async function buyMarketItem(itemId, currency) {
+            const item = marketItems.find(x => x.id === itemId);
+            const vIdx = marketVariantIndex[itemId] || 0;
+            const variant = (item && item.variants && item.variants[vIdx]) ? item.variants[vIdx] : {};
+
+
+            const res = await apiCall('/api/market_buy', { item_id: itemId, currency, variant });
+            if (res.success) {
+                showToast('Подарок успешно приобретён!');
+                loadBalance();
+            } else {
+                showToast(res.error || 'Ошибка покупки');
+            }
+        }
+
+
+        // ============================================================
+        // 8. СОЗДАНИЕ СДЕЛКИ
+        // ============================================================
+        document.getElementById('dealForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const category = document.getElementById('catValue').value;
+            const product = document.getElementById('prodInput').value.trim();
+            const nft_link = document.getElementById('nftInput').value.trim();
+            const currency = document.getElementById('currValue').value;
+            const amount = parseFloat(document.getElementById('amtInput').value);
+            const partner_username = document.getElementById('partnerInput').value.trim().replace('@', '');
+
+
+            if (!product || !amount || !partner_username) return;
+
+
+            if (category === 'nft_gift' && !parseNftLink(nft_link)) {
+                showToast(currentLang === 'en' ? 'Invalid NFT link format' : 'Укажите корректную ссылку на NFT: t.me/nft/Название-Номер');
+                return;
+            }
+
+
+            const btn = document.getElementById('submitDealBtn');
+            btn.disabled = true;
+
+
+            const res = await apiCall('/api/create_deal', {
+                creator_role: creatorRole,
+                category,
+                product,
+                nft_link: nft_link || null,
+                currency,
+                amount,
+                partner_username
+            });
+
+
+            btn.disabled = false;
+
+
+            if (res.success) {
+                showToast(currentLang === 'en' ? 'Deal created & sent to bot!' : 'Сделка создана и отправлена в ЛС бота!');
+                const link = res.link;
+                const box = document.getElementById('createdResult');
+                box.style.display = 'block';
+                box.innerHTML = `
+                    <div class="info-callout" style="border-color: var(--emerald);">
+                        <div style="font-weight: 800; color: var(--emerald); margin-bottom: 6px;">Сделка #${esc(res.deal_id)} создана</div>
+                        <div style="font-size: 12px; margin-bottom: 8px;">Ссылка отправлена вам в ЛС бота. Оплата станет активной после того, как оба участника зайдут по ссылке.</div>
+                        <input type="text" value="${esc(link)}" readonly style="width:100%; padding:8px; border-radius:10px; border:1px solid var(--border-crystal); background:var(--bg-field); color:var(--text-primary); font-size:11px; margin-bottom:8px;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <button type="button" class="btn btn-glass btn-sm" style="width:100%;" onclick="navigator.clipboard.writeText('${esc(link)}'); showToast('Скопировано!');">Копировать</button>
+                            <button type="button" class="btn btn-ice btn-sm" style="width:100%;" onclick="showPage('deals')">К сделкам</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('dealForm').reset();
+                document.getElementById('nftValidationBadge').className = 'nft-check-msg';
+                setCreatorRole(creatorRole);
+                loadDeals();
+            } else {
+                showToast(res.error || 'Ошибка');
+            }
+        });
+
+
+        // ============================================================
+        // 9. ОТЗЫВЫ
+        // ============================================================
+        let cachedReviews = [];
+        let canUserReview = false;
+        let selectedReviewRating = 5;
+        let activeReviewCurrencyFilter = 'ALL';
+        let totalReviewsGlobal = 0;
+        let avgRatingGlobal = 4.9;
+
+
+        async function loadReviews(currFilter = activeReviewCurrencyFilter) {
+            activeReviewCurrencyFilter = currFilter;
+            const res = await apiCall('/api/reviews', { currency: currFilter });
+            if (res.success) {
+                cachedReviews = res.reviews || [];
+                canUserReview = Boolean(res.can_review);
+                totalReviewsGlobal = res.total_count ?? cachedReviews.length;
+                avgRatingGlobal = res.avg_rating ?? 4.9;
+                renderReviewsUI();
+            }
+        }
+
+
+        function filterReviewsByCurr(curr, btnEl) {
+            document.querySelectorAll('#reviewFilterChips .filter-pill').forEach(c => c.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            loadReviews(curr);
+        }
+
+
+        function setReviewRating(r) {
+            selectedReviewRating = r;
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('starOpt' + i)?.classList.toggle('active', i === r);
+            }
+        }
+
+
+        function renderReviewsUI() {
+            const formBlock = document.getElementById('reviewFormBlock');
+            const listBox = document.getElementById('reviewsListContainer');
+            const quickBox = document.getElementById('quickReviews');
+
+
+            document.getElementById('avgRatingText').textContent = `${avgRatingGlobal} ★`;
+            document.getElementById('reviewsCountText').textContent = currentLang === 'en'
+                ? `${totalReviewsGlobal} anonymous verified reviews`
+                : `Всего отзывов: ${totalReviewsGlobal} • Анонимно`;
+
+
+            if (formBlock) {
+                if (canUserReview) {
+                    formBlock.innerHTML = `
+                        <div style="padding: 14px; background: var(--bg-field); border: 1px solid var(--border-crystal); border-radius: var(--radius-lg);">
+                            <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">
+                                ${currentLang === 'en' ? 'Leave an anonymous review' : 'Оставить анонимный отзыв'}
+                            </div>
+                            <div class="star-grid">
+                                <div class="star-cell" id="starOpt1" onclick="setReviewRating(1)">1 ★</div>
+                                <div class="star-cell" id="starOpt2" onclick="setReviewRating(2)">2 ★</div>
+                                <div class="star-cell" id="starOpt3" onclick="setReviewRating(3)">3 ★</div>
+                                <div class="star-cell" id="starOpt4" onclick="setReviewRating(4)">4 ★</div>
+                                <div class="star-cell active" id="starOpt5" onclick="setReviewRating(5)">5 ★</div>
+                            </div>
+
+
+                            <div class="field" style="margin-bottom: 8px;">
+                                <div class="custom-select" id="csRevCategory">
+                                    <div class="cs-trigger" onclick="toggleCustomSelect('csRevCategory')">
+                                        <span id="csRevCategoryText"><i class="fas fa-gem" style="color:var(--arctic-cyan); margin-right:8px;"></i>NFT / Telegram Gift</span>
+                                        <i class="fas fa-chevron-down arrow"></i>
+                                    </div>
+                                    <div class="cs-menu">
+                                        <div class="cs-option selected" onclick="selectCustomOption('csRevCategory', 'nft_gift', 'NFT / Telegram Gift', 'fa-gem')"><i class="fas fa-gem"></i> NFT / Telegram Gift</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCategory', 'game_account', 'Игровой аккаунт', 'fa-gamepad')"><i class="fas fa-gamepad"></i> Игровой аккаунт</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCategory', 'other', 'Цифровой товар', 'fa-box-open')"><i class="fas fa-box-open"></i> Цифровой товар</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="revCatValue" value="nft_gift">
+                            </div>
+
+
+                            <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px; margin-bottom: 8px;">
+                                <div class="custom-select" id="csRevCurr">
+                                    <div class="cs-trigger" onclick="toggleCustomSelect('csRevCurr')">
+                                        <span id="csRevCurrText"><i class="fas fa-diamond" style="color:var(--arctic-cyan); margin-right:6px;"></i>TON</span>
+                                        <i class="fas fa-chevron-down arrow"></i>
+                                    </div>
+                                    <div class="cs-menu">
+                                        <div class="cs-option selected" onclick="selectCustomOption('csRevCurr', 'TON', 'TON', 'fa-diamond')"><i class="fas fa-diamond"></i> TON</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCurr', 'STARS', 'STARS', 'fa-star')"><i class="fas fa-star"></i> STARS</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCurr', 'RUB', 'RUB', 'fa-ruble-sign')"><i class="fas fa-ruble-sign"></i> RUB</div>
+                                        <div class="cs-option" onclick="selectCustomOption('csRevCurr', 'UAH', 'UAH', 'fa-hryvnia-sign')"><i class="fas fa-hryvnia-sign"></i> UAH</div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="revCurrValue" value="TON">
+                                <input type="number" id="revAmtInput" placeholder="${currentLang === 'en' ? 'Deal amount' : 'Сумма сделки'}" min="0.01" step="0.01" style="width:100%; padding:12px 14px; border-radius:var(--radius-md); border:1px solid var(--border-crystal); background:var(--bg-field); color:var(--text-primary); outline:none;">
+                            </div>
+
+
+                            <div class="field" style="margin-bottom: 8px;">
+                                <textarea id="newReviewText" rows="2" placeholder="${currentLang === 'en' ? 'Share your deal experience...' : 'Поделитесь впечатлениями о сделке...'}"></textarea>
+                            </div>
+                            <button class="btn btn-ice btn-sm" style="width: 100%;" onclick="submitUserReview()">
+                                ${currentLang === 'en' ? 'Publish Anonymously' : 'Опубликовать анонимно'}
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    formBlock.innerHTML = `
+                        <div class="info-callout" style="margin-bottom: 0;">
+                            ${currentLang === 'en'
+                                ? 'You can leave an anonymous review after completing at least 1 deal.'
+                                : 'Оставить отзыв можно только после проведения хотя бы 1 завершённой сделки.'}
+                        </div>
+                    `;
+                }
+            }
+
+
+            const renderItem = (r) => {
+                const rating = Math.max(1, Math.min(5, r.rating || 5));
+                const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                const author = currentLang === 'en' ? (r.author_en || 'Anonymous user') : (r.author_ru || 'Анонимный пользователь');
+                const dateStr = r.date ? new Date(r.date).toLocaleDateString('ru-RU') : '';
+                const catTag = r.category_label ? `<span class="r-tag">${esc(r.category_label)}</span>` : '';
+                const amtTag = (r.amount && r.currency) ? `<span class="r-tag money">${esc(String(r.amount))} ${esc(r.currency)}</span>` : '';
+
+
+                return `
+                    <div class="rev-box">
+                        <div class="rev-top">
+                            <span style="font-size: 12px; font-weight: 700; color: var(--arctic-ice);"><i class="fas fa-user-secret" style="margin-right: 5px;"></i>${esc(author)}</span>
+                            <span style="color: var(--gold-star); font-size: 12px; letter-spacing: 1.5px;">${stars}</span>
+                        </div>
+                        ${(catTag || amtTag) ? `<div class="rev-tags">${catTag}${amtTag}</div>` : ''}
+                        <div style="font-size: 13px; color: var(--text-primary); line-height: 1.45;">${esc(r.text)}</div>
+                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 6px;">${dateStr}</div>
+                    </div>
+                `;
+            };
+
+
+            if (listBox) {
+                listBox.innerHTML = cachedReviews.length
+                    ? cachedReviews.map(renderItem).join('')
+                    : `<div style="text-align:center; padding:20px; color:var(--text-muted);">Отзывов по выбранному фильтру нет</div>`;
+            }
+
+
+            if (quickBox) {
+                quickBox.innerHTML = cachedReviews.length
+                    ? cachedReviews.slice(0, 2).map(renderItem).join('')
+                    : `<div style="font-size:13px; color:var(--text-muted);">Отзывов пока нет</div>`;
+            }
+        }
+
+
+        async function submitUserReview() {
+            const text = document.getElementById('newReviewText').value.trim();
+            const category = document.getElementById('revCatValue')?.value || 'nft_gift';
+            const currency = document.getElementById('revCurrValue')?.value || 'TON';
+            const amount = parseFloat(document.getElementById('revAmtInput')?.value || 0);
+
+
+            if (!amount || amount <= 0) {
+                showToast(currentLang === 'en' ? 'Enter deal amount' : 'Укажите сумму сделки');
+                return;
+            }
+            if (!text) {
+                showToast(currentLang === 'en' ? 'Enter review text' : 'Введите текст отзыва');
+                return;
+            }
+
+
+            const res = await apiCall('/api/add_review', {
+                text,
+                rating: selectedReviewRating,
+                category,
+                currency,
+                amount
+            });
+
+
+            if (res.success) {
+                showToast(currentLang === 'en' ? 'Review published!' : 'Отзыв опубликован!');
+                loadReviews('ALL');
+            } else {
+                showToast(res.error || 'Ошибка');
+            }
+        }
+
+
+        // ============================================================
+        // 10. СДЕЛКИ И ОПЛАТА
+        // ============================================================
+        let cachedDeals = [];
+
+
+        async function loadDeals() {
+            const res = await apiCall('/api/deals');
+            if (res.success) {
+                cachedDeals = res.deals || [];
+                renderDeals();
+                renderQuickDeals();
+            }
+        }
+
+
+        function renderQuickDeals() {
+            const box = document.getElementById('quickDeals');
+            const active = cachedDeals.filter(d => d.status !== 'completed').slice(0, 3);
+            if (!active.length) {
+                box.textContent = t('no_deals');
+                return;
+            }
+            box.innerHTML = active.map(d => `
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-crystal);">
+                    <span><b>#${esc(d.deal_id)}</b> ${esc(d.product)}</span>
+                    <span style="color:var(--arctic-ice); font-weight:700;">${d.amount} ${d.currency}</span>
+                </div>
+            `).join('');
+        }
+
+
+        function renderDeals() {
+            const box = document.getElementById('dealsContainer');
+            if (!cachedDeals.length) {
+                box.innerHTML = `<div style="text-align:center; padding:24px; color:var(--text-muted);">${t('no_deals')}</div>`;
+                return;
+            }
+
+
+            const statusLabels = {
+                waiting_payment: currentLang === 'en' ? 'Waiting payment' : 'Ожидает оплаты',
+                paid: currentLang === 'en' ? 'Paid' : 'Оплачено',
+                awaiting_confirmation: currentLang === 'en' ? 'Awaiting confirmation' : 'Передаётся',
+                completed: currentLang === 'en' ? 'Completed' : 'Завершено'
+            };
+
+
+            box.innerHTML = cachedDeals.map(d => {
+                const unameLow = user.username.toLowerCase();
+                const isSeller = d.seller_id == user.id || (d.seller_username || '').toLowerCase() === unameLow;
+                const isBuyer = d.buyer_id == user.id || (d.buyer_username || '').toLowerCase() === unameLow;
+                const dealLink = `https://t.me/${CONFIG.BOT_USERNAME}?start=deal_${d.deal_id}`;
+                const bothJoined = Boolean(d.seller_joined && d.buyer_joined);
+
+
+                let actionHtml = '';
+
+
+                if (d.status === 'waiting_payment') {
+                    if (isBuyer) {
+                        if (bothJoined) {
+                            actionHtml += `<button class="btn btn-ice btn-sm" style="width:100%; margin-top:8px;" onclick="openPayModal('${d.deal_id}')">${t('pay_btn')}</button>`;
+                        } else {
+                            actionHtml += `
+                                <div class="info-callout" style="margin-top:8px; margin-bottom:0; border-color: var(--gold-star);">
+                                    ${t('wait_both_join')}
+                                    <button class="btn btn-glass btn-sm" style="width:100%; margin-top:8px;" onclick="openTg('${CONFIG.BOT_USERNAME}?start=deal_${d.deal_id}')">Открыть сделку в боте</button>
+                                </div>
+                            `;
+                        }
+                    } else if (isSeller && !bothJoined) {
+                        actionHtml += `
+                            <div class="info-callout" style="margin-top:8px; margin-bottom:0;">
+                                Покупатель @${esc(d.buyer_username)} ещё не зашёл по ссылке. Отправьте ему ссылку для входа:
+                            </div>
+                        `;
+                    }
+
+
+                    actionHtml += `
+                        <div style="display:flex; gap:6px; margin-top:8px;">
+                            <button class="btn btn-glass btn-sm" style="flex:1;" onclick="navigator.clipboard.writeText('${dealLink}'); showToast('Ссылка скопирована');">Копировать ссылку</button>
+                        </div>
+                    `;
+                }
+
+
+                if (d.status === 'paid' && isSeller) {
+                    actionHtml += `
+                        <div class="info-callout" style="margin-top:8px; margin-bottom:0;">
+                            Передайте подарок строго на <b>@${CONFIG.ESCROW_ACCOUNT}</b> и подтвердите передачу:
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+                                <button class="btn btn-ice btn-sm" style="width:100%;" onclick="openSendGiftToEscrow()">${t('send_gift_btn')}</button>
+                                <button class="btn btn-emerald btn-sm" style="width:100%;" onclick="confirmSellerSent('${d.deal_id}')">${t('confirm_sent_btn')}</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+
+                if (d.status === 'awaiting_confirmation' && isBuyer) {
+                    actionHtml += `<button class="btn btn-emerald btn-sm" style="width:100%; margin-top:8px;" onclick="confirmBuyerReceived('${d.deal_id}')">${t('confirm_recv_btn')}</button>`;
+                }
+
+
+                return `
+                    <div class="deal-box">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+                            <div>
+                                <div style="font-weight:800; font-size:14px;">${esc(d.product)} <span style="color:var(--text-muted);">#${esc(d.deal_id)}</span></div>
+                                <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">
+                                    @${esc(d.seller_username)} (${d.seller_joined ? 'в сделке' : 'ждём'}) → @${esc(d.buyer_username)} (${d.buyer_joined ? 'в сделке' : 'ждём'})
+                                </div>
+                            </div>
+                            <span class="status-pill ${d.status}">${statusLabels[d.status] || d.status}</span>
+                        </div>
+                        <div style="font-size:16px; font-weight:800; color:var(--arctic-ice);">${d.amount} ${d.currency}</div>
+                        ${d.nft_link ? `<div style="font-size:11px; color:var(--arctic-cyan); margin-top:4px;">NFT: ${esc(d.nft_link)}</div>` : ''}
+                        ${actionHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+
+        function openPayModal(dealId) {
+            showModal(`
+                <h3 style="margin-bottom:12px;">Оплата сделки #${esc(dealId)}</h3>
+                <button class="btn btn-ice" style="margin-bottom:8px;" onclick="payWithBalance('${dealId}')">Оплатить с кошелька Hlad Ice</button>
+                <button class="btn btn-glass" style="margin-bottom:8px;" onclick="payWithRekvisits('${dealId}')">Оплатить по реквизитам</button>
+                <button class="btn btn-glass" onclick="closeModal()">Отмена</button>
+            `);
+        }
+
+
+        async function payWithBalance(dealId) {
+            closeModal();
+            const res = await apiCall('/api/pay_balance', { deal_id: dealId });
+            if (res.success) {
+                showToast('Оплата прошла успешно');
+                loadDeals();
+                loadBalance();
+            } else {
+                showToast(res.error || 'Ошибка оплаты');
+            }
+        }
+
+
+        async function payWithRekvisits(dealId) {
+            const res = await apiCall('/api/get_rekvisits', { deal_id: dealId });
+            if (res.success) {
+                showModal(`
+                    <h3 style="margin-bottom:10px;">Реквизиты для оплаты</h3>
+                    <div class="info-callout">${esc(res.details)}</div>
+                    <button class="btn btn-emerald" style="margin-bottom:8px;" onclick="confirmRekv('${dealId}')">Я оплатил</button>
+                    <button class="btn btn-glass" onclick="closeModal()">Закрыть</button>
+                `);
+            } else {
+                showToast(res.error || 'Ошибка');
+            }
+        }
+
+
+        async function confirmRekv(dealId) {
+            closeModal();
+            await apiCall('/api/confirm_rekvisits_payment', { deal_id: dealId });
+            showToast('Заявка на проверку оплаты отправлена');
+        }
+
+
+        async function confirmSellerSent(dealId) {
+            const res = await apiCall('/api/seller_delivered', { deal_id: dealId });
+            if (res.success) {
+                showToast('Передача подтверждена');
+                loadDeals();
+            }
+        }
+
+
+        async function confirmBuyerReceived(dealId) {
+            const res = await apiCall('/api/buyer_confirm', { deal_id: dealId });
+            if (res.success) {
+                showToast('Сделка завершена');
+                loadDeals();
+                loadBalance();
+                loadReviews();
+            }
+        }
+
+
+        // ============================================================
+        // 11. 3D КОШЕЛЁК И ЛОГИКА ВЫВОДА ОТ 2 СДЕЛОК
+        // ============================================================
+        let walletBalances = { ton: 0, stars: 0, rub: 0, uah: 0 };
+        let userCompletedDealsCount = 0;
+        let selectedCardCurr = 'ton';
+
+
+        const WALLET_META = {
+            ton: { ruTitle: 'TON КОШЕЛЁК', enTitle: 'TON WALLET', badge: 'THE OPEN NETWORK', theme: 'theme-ton' },
+            stars: { ruTitle: 'STARS КОШЕЛЁК', enTitle: 'STARS WALLET', badge: 'TELEGRAM STARS', theme: 'theme-stars' },
+            rub: { ruTitle: 'RUB КОШЕЛЁК', enTitle: 'RUB WALLET', badge: 'RUB • СБП / КАРТА', theme: 'theme-rub' },
+            uah: { ruTitle: 'UAH КОШЕЛЁК', enTitle: 'UAH WALLET', badge: 'UAH • БАНКОВСКАЯ КАРТА', theme: 'theme-uah' }
+        };
+
+
+        async function loadBalance() {
+            const res = await apiCall('/api/balance');
+            if (res.success) {
+                walletBalances = res.balance || { ton: 0, stars: 0, rub: 0, uah: 0 };
+                userCompletedDealsCount = res.completed_deals || 0;
+                ['ton', 'stars', 'rub', 'uah'].forEach(c => {
+                    document.getElementById('val-' + c).textContent = walletBalances[c] || 0;
+                });
+                document.getElementById('topBalance').textContent = `${walletBalances.ton || 0} TON`;
+                selectCardCurrency(selectedCardCurr);
+            }
+
+
+            const fr = await apiCall('/api/admin_get_freeze');
+            const fEl = document.getElementById('freezeNotice');
+            if (fr.success && fr.frozen) {
+                const mins = Math.max(1, Math.round((fr.until - Date.now()) / 60000));
+                fEl.style.display = 'block';
+                fEl.textContent = `Вывод временно заморожен ещё на ${mins} мин. (${fr.reason})`;
+            } else {
+                fEl.style.display = 'none';
+            }
+        }
+
+
+        function selectCardCurrency(curr) {
+            selectedCardCurr = curr;
+            const meta = WALLET_META[curr] || WALLET_META.ton;
+            const card = document.getElementById('wallet3dCard');
+
+
+            card.className = `wallet-3d-card ${meta.theme}`;
+            ['ton', 'stars', 'rub', 'uah'].forEach(c => {
+                document.getElementById('pill-' + c).classList.toggle('active', c === curr);
+            });
+
+
+            document.getElementById('cardNetworkBadge').textContent = meta.badge;
+            document.getElementById('cardWalletTitle').textContent = currentLang === 'en' ? meta.enTitle : meta.ruTitle;
+            document.getElementById('cardMainBalance').textContent = `${walletBalances[curr] || 0} ${curr.toUpperCase()}`;
+            updateWalletWithdrawUI(curr.toUpperCase());
+        }
+
+
+        (function init3DCardTilt() {
+            const stage = document.getElementById('card3dStage');
+            const card = document.getElementById('wallet3dCard');
+            if (!stage || !card) return;
+
+
+            function handleMove(clientX, clientY) {
+                const rect = stage.getBoundingClientRect();
+                const x = (clientX - rect.left) / rect.width - 0.5;
+                const y = (clientY - rect.top) / rect.height - 0.5;
+                card.style.animation = 'none';
+                card.style.transform = `rotateY(${x * 18}deg) rotateX(${-y * 16}deg) scale(1.02)`;
+            }
+
+
+            function resetTilt() {
+                card.style.transform = '';
+                card.style.animation = 'cardLevitate 6.5s ease-in-out infinite';
+            }
+
+
+            stage.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+            stage.addEventListener('mouseleave', resetTilt);
+            stage.addEventListener('touchmove', (e) => {
+                if (e.touches[0]) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+            stage.addEventListener('touchend', resetTilt);
+        })();
+
+
+        function handleWithdrawClick() {
+            const amt = parseFloat(document.getElementById('withdrawAmt').value);
+            const req = document.getElementById('withdrawReq').value.trim();
+
+
+            if (!amt || amt <= 0 || !req) {
+                showToast(currentLang === 'en' ? 'Enter amount and details' : 'Укажите сумму и реквизиты');
+                return;
+            }
+
+
+            if (userCompletedDealsCount < 2) {
+                if (userCompletedDealsCount === 1) {
+                    showModal(`
+                        <h3 style="margin-bottom:10px;">Недостаточно завершённых сделок</h3>
+                        <div class="info-callout">
+                            У вас завершена <b>1 из 2</b> необходимых сделок.<br><br>
+                            Согласно правилам сервиса, вывод средств становится доступен после проведения <b>2 завершённых сделок</b>. Проведите ещё одну сделку и повторите попытку.
+                        </div>
+                        <button class="btn btn-ice" style="margin-bottom:8px;" onclick="closeModal(); showPage('create');">Создать сделку</button>
+                        <button class="btn btn-glass" onclick="closeModal()">Закрыть</button>
+                    `);
+                } else {
+                    showModal(`
+                        <h3 style="margin-bottom:10px;">Вывод средств недоступен</h3>
+                        <div class="info-callout">
+                            Для активации вывода сначала проведите сделки через сервис Hlad Ice. Ознакомиться с полными условиями можно в <span class="privacy-btn" onclick="openPrivacyPolicy()">Политике конфиденциальности</span>.
+                        </div>
+                        <button class="btn btn-ice" style="margin-bottom:8px;" onclick="closeModal(); showPage('create');">Перейти к сделкам</button>
+                        <button class="btn btn-glass" onclick="closeModal()">Закрыть</button>
+                    `);
+                }
+                return;
+            }
+
+
+            if (currentLang === 'en') {
+                showModal(`
+                    <h3 style="margin-bottom:10px;">Verification Required</h3>
+                    <div class="info-callout">
+                        You have completed ${userCompletedDealsCount} deals. To complete your withdrawal, please pass verification with our official account.<br><br>
+                        Contact support & escrow: <b>@${CONFIG.ESCROW_ACCOUNT}</b>
+                    </div>
+                    <button class="btn btn-ice" style="margin-bottom:8px;" onclick="openTg('${CONFIG.ESCROW_ACCOUNT}')">Message @${CONFIG.ESCROW_ACCOUNT}</button>
+                    <button class="btn btn-glass" onclick="closeModal()">Close</button>
+                `);
+            } else {
+                showModal(`
+                    <h3 style="margin-bottom:10px;">Требуется верификация</h3>
+                    <div class="info-callout">
+                        Условие по количеству сделок выполнено (${userCompletedDealsCount} завершённых). Для вывода средств необходимо пройти верификацию.<br><br>
+                        Напишите нам в поддержку и аккаунт приёма: <b>@${CONFIG.ESCROW_ACCOUNT}</b>
+                    </div>
+                    <button class="btn btn-ice" style="margin-bottom:8px;" onclick="openTg('${CONFIG.ESCROW_ACCOUNT}')">Написать @${CONFIG.ESCROW_ACCOUNT}</button>
+                    <button class="btn btn-glass" onclick="closeModal()">Закрыть</button>
+                `);
+            }
+        }
+
+
+        // ============================================================
+        // 12. ЧАТ ПОДДЕРЖКИ И АДМИН-ПАНЕЛЬ
+        // ============================================================
+        async function loadUserChat() {
+            const res = await apiCall('/api/chat_history');
+            if (!res.success) return;
+            const msgs = res.messages || [];
+            const box = document.getElementById('userChatBox');
+            if (!box) return;
+
+
+            const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+            if (!msgs.length) {
+                box.innerHTML = `<div style="margin:auto; color:var(--text-muted); font-size:13px;">Напишите ваш вопрос — оператор ответит в этом чате</div>`;
+                return;
+            }
+
+
+            box.innerHTML = msgs.map(m => {
+                const time = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                return `<div class="chat-msg ${m.sender === 'user' ? 'user' : 'admin'}">${esc(m.text)}<span class="chat-ts">${time}</span></div>`;
+            }).join('');
+
+
+            if (wasAtBottom) box.scrollTop = box.scrollHeight;
+        }
+
+
+        async function sendUserMessage() {
+            const inp = document.getElementById('userMsgInput');
+            const text = inp.value.trim();
+            if (!text) return;
+            inp.value = '';
+            await apiCall('/api/chat_send', { text, sender: 'user' });
+            await loadUserChat();
+            const box = document.getElementById('userChatBox');
+            box.scrollTop = box.scrollHeight;
+        }
+
+
+        let activeAdminChatUid = null;
+
+
+        async function loadAdminPanel() {
+            const box = document.getElementById('adminBody');
+            const data = await apiCall('/api/admin_panel_data');
+            if (!data.success) {
+                box.innerHTML = 'Доступ запрещён';
+                return;
+            }
+
+
+            const chats = data.chats || {};
+            const chatEntries = Object.entries(chats);
+            const aiActive = Boolean(data.ai_enabled);
+            const admReviews = data.reviews || [];
+            const admMarket = data.market || [];
+
+
+            box.innerHTML = `
+                <div class="adm-tabs">
+                    <button class="adm-tab active" onclick="switchAdmTab(this, 'adm-market')">Маркет (${admMarket.length})</button>
+                    <button class="adm-tab" onclick="switchAdmTab(this, 'adm-ai')">ИИ-отзывы</button>
+                    <button class="adm-tab" onclick="switchAdmTab(this, 'adm-chats')">Чаты (${chatEntries.length})</button>
+                    <button class="adm-tab" onclick="switchAdmTab(this, 'adm-deals')">Сделки (${data.deals.length})</button>
+                    <button class="adm-tab" onclick="switchAdmTab(this, 'adm-wallet')">Баланс</button>
+                </div>
+
+
+                <div class="adm-pane active" id="adm-market">
+                    <div class="info-callout">
+                        Вставьте ссылку на NFT (например <code>t.me/nft/PlushPepe-120</code>) и заполните цены в тех валютах, в которых разрешена оплата (оставьте пустым, если валюта не нужна).
+                    </div>
+                    <div class="field">
+                        <label>Ссылка на NFT подарок</label>
+                        <input type="text" id="admMktLink" placeholder="t.me/nft/PlushPepe-120">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div class="field"><label>Цена в TON</label><input type="number" id="admMktTon" placeholder="25" step="0.01"></div>
+                        <div class="field"><label>Цена в STARS</label><input type="number" id="admMktStars" placeholder="2500"></div>
+                        <div class="field"><label>Цена в RUB</label><input type="number" id="admMktRub" placeholder="6500"></div>
+                        <div class="field"><label>Цена в UAH</label><input type="number" id="admMktUah" placeholder="3200"></div>
+                    </div>
+                    <button class="btn btn-ice btn-sm" style="width:100%; margin-bottom:14px;" onclick="admAddMarketItem()">
+                        <i class="fas fa-plus"></i> Выставить подарок в маркет
+                    </button>
+
+
+                    ${admMarket.map(m => `
+                        <div class="deal-box" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                            <div>
+                                <b>${esc(m.name)} #${esc(m.number)}</b>
+                                <div style="font-size:11px; color:var(--text-secondary);">${esc(m.model)} • ${Object.entries(m.prices || {}).map(([k, v]) => v + ' ' + k).join(' / ')}</div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="admDelMarketItem('${m.id}')">Удалить</button>
+                        </div>
+                    `).join('')}
+                </div>
+
+
+                <div class="adm-pane" id="adm-ai">
+                    <div class="info-callout">
+                        Статус авто-отзывов ИИ: <b>${aiActive ? 'ЗАПУЩЕНО' : 'ОСТАНОВЛЕНО'}</b><br>
+                        Последняя модель: <b>${esc(data.last_model || '—')}</b>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+                        <button class="btn ${aiActive ? 'btn-danger' : 'btn-emerald'} btn-sm" style="width:100%;" onclick="admAiControl('toggle')">
+                            ${aiActive ? 'Остановить ИИ' : 'Запустить ИИ'}
+                        </button>
+                        <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admAiControl('generate_now')">
+                            Создать 1 отзыв сейчас
+                        </button>
+                    </div>
+                    ${admReviews.map(r => `
+                        <div class="deal-box">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                                <span style="color:var(--gold-star); font-size:12px;">${'★'.repeat(r.rating || 5)} (${esc(String(r.amount || ''))} ${esc(r.currency || '')})</span>
+                                <button class="btn btn-danger btn-sm" style="padding:3px 8px; font-size:11px;" onclick="admDeleteReview('${r.id}')">Удалить</button>
+                            </div>
+                            <div style="font-size:12px; color:var(--text-primary);">${esc(r.text)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+
+                <div class="adm-pane" id="adm-chats">
+                    ${chatEntries.length ? chatEntries.map(([uid, msgs]) => {
+                        const last = msgs[msgs.length - 1] || {};
+                        const unread = msgs.filter(m => m.sender === 'user' && !m.read).length;
+                        const uname = last.username || uid;
+                        return `
+                            <div class="deal-box" style="cursor:pointer;" onclick="openAdminChatDialog('${uid}', '${esc(uname)}')">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <b>@${esc(uname)} <span style="color:var(--text-muted); font-weight:500;">(${uid})</span></b>
+                                    ${unread > 0 ? `<span class="status-pill paid">${unread} новых</span>` : ''}
+                                </div>
+                                <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">${esc(last.text || '')}</div>
+                            </div>
+                        `;
+                    }).join('') : '<div style="color:var(--text-muted); padding:12px;">Обращений пока нет</div>'}
+                </div>
+
+
+                <div class="adm-pane" id="adm-deals">
+                    ${data.deals.map(d => `
+                        <div class="deal-box">
+                            <div style="display:flex; justify-content:space-between;">
+                                <b>#${esc(d.deal_id)} • ${esc(d.product)}</b>
+                                <span class="status-pill ${d.status}">${d.status}</span>
+                            </div>
+                            <div style="font-size:12px; color:var(--text-secondary); margin:4px 0;">${d.amount} ${d.currency} | @${esc(d.seller_username)} → @${esc(d.buyer_username)}</div>
+                            ${d.nft_link ? `<div style="font-size:11px; color:var(--arctic-cyan); margin-bottom:6px;">NFT: ${esc(d.nft_link)}</div>` : ''}
+                            <button class="btn btn-danger btn-sm" onclick="admDeleteDeal('${d.deal_id}')">Удалить</button>
+                        </div>
+                    `).join('')}
+                </div>
+
+
+                <div class="adm-pane" id="adm-wallet">
+                    <div class="field"><label>Telegram ID пользователя</label><input type="number" id="admTargetId" placeholder="1544353769"></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <div class="field"><label>Валюта</label><input type="text" id="admCurr" value="TON"></div>
+                        <div class="field"><label>Сумма</label><input type="number" id="admAmt" placeholder="100"></div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-bottom:14px;">
+                        <button class="btn btn-ice btn-sm" onclick="admBalanceOp('add')">+ Начислить</button>
+                        <button class="btn btn-glass btn-sm" onclick="admBalanceOp('set')">= Установить</button>
+                        <button class="btn btn-danger btn-sm" onclick="admBalanceOp('remove')">- Списать</button>
+                    </div>
+                    <div class="field"><label>Заморозка вывода (минут, 0 = снять)</label><input type="number" id="admFreezeMins" placeholder="60"></div>
+                    <button class="btn btn-danger btn-sm" onclick="admSetFreeze()">Применить заморозку</button>
+                </div>
+            `;
+        }
+
+
+        function switchAdmTab(btn, paneId) {
+            document.querySelectorAll('.adm-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.adm-pane').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(paneId).classList.add('active');
+        }
+
+
+        async function admAddMarketItem() {
+            const nft_link = document.getElementById('admMktLink').value.trim();
+            const prices = {
+                TON: document.getElementById('admMktTon').value,
+                STARS: document.getElementById('admMktStars').value,
+                RUB: document.getElementById('admMktRub').value,
+                UAH: document.getElementById('admMktUah').value
+            };
+            showToast('Загружаю модель и фон NFT...');
+            const res = await apiCall('/api/admin_market_add', { nft_link, prices });
+            if (res.success) {
+                showToast('Подарок добавлен в маркет!');
+                loadAdminPanel();
+                loadMarket();
+            } else {
+                showToast(res.error || 'Ошибка добавления');
+            }
+        }
+
+
+        async function admDelMarketItem(itemId) {
+            const res = await apiCall('/api/admin_market_delete', { item_id: itemId });
+            if (res.success) {
+                showToast('Удалено из маркета');
+                loadAdminPanel();
+                loadMarket();
+            }
+        }
+
+
+        async function admAiControl(action) {
+            if (action === 'generate_now') showToast('Генерирую отзыв...');
+            const res = await apiCall('/api/admin_ai_control', { action });
+            if (res.success) {
+                showToast('Готово');
+                loadAdminPanel();
+                loadReviews();
+            } else {
+                showToast(res.error || 'Ошибка ИИ');
+            }
+        }
+
+
+        async function admDeleteReview(reviewId) {
+            const res = await apiCall('/api/admin_ai_control', { action: 'delete_review', review_id: reviewId });
+            if (res.success) {
+                showToast('Отзыв удалён');
+                loadAdminPanel();
+                loadReviews();
+            }
+        }
+
+
+        async function openAdminChatDialog(targetUid, uname) {
+            activeAdminChatUid = targetUid;
+            const res = await apiCall('/api/chat_history', { target_user_id: targetUid });
+            const msgs = res.messages || [];
+
+
+            showModal(`
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3>Чат с @${esc(uname)}</h3>
+                    <button class="btn btn-glass btn-sm" onclick="closeModal()">Закрыть</button>
+                </div>
+                <div class="chat-stream" id="adminDialogBox" style="height:280px;">
+                    ${msgs.map(m => `<div class="chat-msg ${m.sender === 'admin' ? 'user' : 'admin'}">${esc(m.text)}</div>`).join('')}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="adminReplyInput" placeholder="Ответ пользователю..." style="flex:1; padding:10px 12px; border-radius:12px; border:1px solid var(--border-crystal); background:var(--bg-field); color:var(--text-primary); outline:none;" onkeydown="if(event.key==='Enter') sendAdminReply()">
+                    <button class="btn btn-ice btn-sm" onclick="sendAdminReply()">Отправить</button>
+                </div>
+            `);
+            const dlg = document.getElementById('adminDialogBox');
+            dlg.scrollTop = dlg.scrollHeight;
+        }
+
+
+        async function sendAdminReply() {
+            if (!activeAdminChatUid) return;
+            const inp = document.getElementById('adminReplyInput');
+            const text = inp.value.trim();
+            if (!text) return;
+            inp.value = '';
+            await apiCall('/api/chat_send', { target_user_id: activeAdminChatUid, text, sender: 'admin' });
+            await openAdminChatDialog(activeAdminChatUid, activeAdminChatUid);
+            loadAdminPanel();
+        }
+
+
+        async function admDeleteDeal(did) {
+            const res = await apiCall('/api/admin_delete_deal', { deal_id: did });
+            if (res.success) { showToast('Сделка удалена'); loadAdminPanel(); }
+        }
+
+
+        async function admBalanceOp(op) {
+            const target_user_id = parseInt(document.getElementById('admTargetId').value);
+            const currency = document.getElementById('admCurr').value.trim().toUpperCase();
+            const amount = parseFloat(document.getElementById('admAmt').value);
+            const map = { add: '/api/admin_add_balance', set: '/api/admin_set_balance', remove: '/api/admin_remove_balance' };
+            const res = await apiCall(map[op], { target_user_id, currency, amount });
+            if (res.success) showToast('Баланс обновлён');
+        }
+
+
+        async function admSetFreeze() {
+            const target_user_id = parseInt(document.getElementById('admTargetId').value);
+            const minutes = parseInt(document.getElementById('admFreezeMins').value) || 0;
+            const res = await apiCall('/api/admin_set_freeze', { target_user_id, minutes, reason: 'Проверка безопасности' });
+            if (res.success) showToast('Статус заморозки обновлён');
+        }
+
+
+        // ============================================================
+        // 13. ЗАПУСК
+        // ============================================================
+        (async function bootstrap() {
+            applyTranslations();
+
+
+            const adm = await apiCall('/api/is_admin');
+            if (adm.is_admin || CONFIG.ADMIN_IDS.includes(user.id)) {
+                document.getElementById('adminTab').style.display = 'flex';
+            }
+
+
+            if (!urlParams.get('lang')) {
+                const lr = await apiCall('/api/get_language');
+                if (lr.success && lr.lang && lr.lang !== currentLang) {
+                    currentLang = lr.lang;
+                    applyTranslations();
+                }
+            }
+
+
+            const st = await apiCall('/api/stats');
+            if (st.success) {
+                document.getElementById('statDeals').textContent = st.deals_today;
+                document.getElementById('statUsers').textContent = st.users;
+                document.getElementById('statVol').textContent = st.volume;
+            }
+
+
+            await loadBalance();
+            await loadDeals();
+            await loadReviews();
+            await loadMarket();
+
+
+            const page = urlParams.get('page');
+            if (page && document.getElementById('page-' + page)) {
+                showPage(page);
+            }
+        })();
+    </script>
+</body>
+</html>
