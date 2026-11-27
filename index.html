@@ -473,75 +473,199 @@
         }
 
         /* ============================================================
-           АПГРЕЙД (НОВОГОДНЯЯ ЁЛОЧКА)
+           АПГРЕЙД (ЗИМНЕЕ КОЛЕСО С ОРБИТАЛЬНОЙ ЁЛОЧКОЙ)
            ============================================================ */
-        .upgrade-tree-stage {
+        .upg-wheel-arena {
             position: relative;
-            background: radial-gradient(circle at 50% 45%, rgba(45, 212, 191, 0.18), rgba(6, 13, 26, 0.95));
+            background: radial-gradient(circle at 50% 45%, rgba(45, 212, 191, 0.16), rgba(5, 11, 24, 0.96) 72%);
             border: 1px solid var(--border-highlight);
-            border-radius: 22px;
-            padding: 18px 14px;
-            text-align: center;
+            border-radius: 24px;
+            padding: 18px 12px 14px;
             margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             overflow: hidden;
         }
-        .tree-svg-wrap {
+        .wheel-box {
             position: relative;
-            width: 210px;
-            height: 220px;
-            margin: 0 auto 10px;
+            width: 256px;
+            height: 256px;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 4px auto 8px;
         }
-        .tree-star-top {
-            animation: starSpin 5s linear infinite;
-            transform-origin: 105px 24px;
+        .wheel-svg {
+            width: 256px;
+            height: 256px;
+            overflow: visible;
         }
-        @keyframes starSpin {
-            0%, 100% { filter: drop-shadow(0 0 8px #fbbf24); transform: scale(1); }
-            50% { filter: drop-shadow(0 0 18px #fde047); transform: scale(1.12); }
+        /* Орбитальная ёлочка вместо стрелочки */
+        .tree-orbit-arm {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            transform: rotate(0deg);
+            will-change: transform;
         }
-        .tree-ornament {
-            transition: all 0.2s ease;
+        .tree-orbit-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 34px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.9)) drop-shadow(0 0 18px rgba(56, 189, 248, 0.7));
         }
-        .spinning .tree-ornament {
-            animation: ornamentFlash 0.25s infinite alternate;
+        .wheel-center-core {
+            position: absolute;
+            width: 118px;
+            height: 118px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 50% 35%, #112240, #060d1c);
+            border: 1px solid rgba(165, 224, 255, 0.28);
+            box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.18), 0 8px 24px rgba(0, 0, 0, 0.65);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8px;
+            z-index: 4;
         }
-        @keyframes ornamentFlash {
-            0% { opacity: 0.3; transform: scale(0.85); }
-            100% { opacity: 1; transform: scale(1.2); }
+        .wheel-center-core img {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            margin-bottom: 3px;
         }
-        .chance-readout {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 26px;
+        .wheel-core-ico {
+            font-size: 24px;
+            color: var(--emerald);
+            margin-bottom: 4px;
+        }
+        .wheel-core-lbl {
+            font-size: 9px;
             font-weight: 800;
-            background: var(--grad-aurora);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+            letter-spacing: 0.4px;
+            color: var(--emerald);
+            text-transform: uppercase;
         }
-        .upgrade-pair-grid {
+        .wheel-core-pct {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            margin-top: 2px;
+        }
+
+        /* Две карточки выбора (Ваш подарок -> Цель) со стрелкой по центру */
+        .upg-cards-pair {
+            position: relative;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-bottom: 12px;
         }
-        .upg-slot {
-            background: var(--bg-field);
-            border: 1px dashed var(--border-highlight);
-            border-radius: 16px;
-            padding: 12px 10px;
-            text-align: center;
-            cursor: pointer;
-            min-height: 124px;
+        .upg-arrow-bridge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--grad-aurora);
+            color: #030812;
+            border: 3px solid #091326;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            z-index: 5;
+            box-shadow: 0 0 16px rgba(45, 212, 191, 0.5);
+            pointer-events: none;
+        }
+        .upg-pick-card {
+            background: linear-gradient(160deg, rgba(16, 30, 58, 0.9), rgba(7, 15, 30, 0.96));
+            border: 1px solid var(--border-crystal);
+            border-radius: 18px;
+            padding: 16px 10px;
+            min-height: 138px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.18s;
         }
-        .upg-slot img { width: 58px; height: 58px; object-fit: contain; margin-bottom: 6px; }
-        .upg-slot b { font-size: 12px; display: block; }
-        .upg-slot small { font-size: 10.5px; color: var(--text-secondary); display: block; margin-top: 2px; }
+        .upg-pick-card:active { transform: scale(0.97); }
+        .upg-pick-card.filled { border-color: var(--border-highlight); }
+        .upg-plus-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(56, 189, 248, 0.14);
+            border: 1px solid rgba(125, 211, 252, 0.3);
+            color: var(--emerald);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .upg-pick-card img {
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+            margin-bottom: 6px;
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+        }
+        .upg-pick-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--emerald);
+            line-height: 1.25;
+        }
+        .upg-pick-card.target-empty .upg-pick-title { color: var(--text-secondary); }
+        .upg-pick-sub {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Ряд пресетов X2, X4, X8, 35%, 55%, 75% */
+        .upg-presets-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 5px;
+            margin-bottom: 12px;
+        }
+        .preset-chip {
+            padding: 8px 2px;
+            border-radius: 10px;
+            border: 1px solid var(--border-crystal);
+            background: var(--bg-field);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 800;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.18s;
+        }
+        .preset-chip:active { transform: scale(0.94); }
+        .preset-chip.active {
+            border-color: var(--emerald);
+            background: rgba(52, 211, 153, 0.18);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
+        }
 
         /* КАСТОМНЫЙ СЕЛЕКТ */
         .custom-select { position: relative; width: 100%; }
@@ -961,7 +1085,7 @@
         </div>
 
         <!-- ============================================================
-             PAGE: UPGRADE (НОВОГОДНЯЯ ЁЛОЧКА, ШАНС 5% — 75%)
+             PAGE: UPGRADE (ЗИМНЕЕ КОЛЕСО С ОРБИТАЛЬНОЙ ЁЛОЧКОЙ)
              ============================================================ -->
         <div class="page" id="page-upgrade">
             <div class="ice-panel">
@@ -973,56 +1097,71 @@
                     <span style="font-size:11px; color:var(--arctic-ice); font-weight:700;">5% — 75%</span>
                 </div>
 
-                <!-- Визуализация новогодней ёлочки -->
-                <div class="upgrade-tree-stage" id="upgradeTreeStage">
-                    <div class="tree-svg-wrap">
-                        <svg viewBox="0 0 210 220" width="210" height="220">
-                            <!-- Ствол -->
-                            <rect x="93" y="182" width="24" height="26" rx="5" fill="#78350f"/>
-                            <!-- Ярусы ёлки -->
-                            <polygon points="105,82 32,184 178,184" fill="url(#treeGrad1)"/>
-                            <polygon points="105,54 46,142 164,142" fill="url(#treeGrad2)"/>
-                            <polygon points="105,28 62,102 148,102" fill="url(#treeGrad3)"/>
-                            <!-- Звезда на макушке -->
-                            <polygon class="tree-star-top" points="105,8 110,20 123,20 113,28 116,40 105,33 94,40 97,28 87,20 100,20" fill="#fbbf24"/>
-                            <!-- Игрушки-шары -->
-                            <circle class="tree-ornament" cx="85" cy="84" r="5.5" fill="#38bdf8"/>
-                            <circle class="tree-ornament" cx="124" cy="88" r="5.5" fill="#f472b6"/>
-                            <circle class="tree-ornament" cx="72" cy="124" r="6" fill="#fbbf24"/>
-                            <circle class="tree-ornament" cx="106" cy="116" r="6" fill="#2dd4bf"/>
-                            <circle class="tree-ornament" cx="138" cy="126" r="6" fill="#38bdf8"/>
-                            <circle class="tree-ornament" cx="58" cy="166" r="6.5" fill="#f472b6"/>
-                            <circle class="tree-ornament" cx="92" cy="160" r="6.5" fill="#fbbf24"/>
-                            <circle class="tree-ornament" cx="122" cy="168" r="6.5" fill="#2dd4bf"/>
-                            <circle class="tree-ornament" cx="152" cy="164" r="6.5" fill="#38bdf8"/>
+                <!-- Колесо апгрейда с орбитальной ёлочкой -->
+                <div class="upg-wheel-arena">
+                    <div class="wheel-box">
+                        <svg class="wheel-svg" viewBox="0 0 260 260">
                             <defs>
-                                <linearGradient id="treeGrad1" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#0d9488"/>
-                                    <stop offset="100%" stop-color="#064e3b"/>
-                                </linearGradient>
-                                <linearGradient id="treeGrad2" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#14b8a6"/>
-                                    <stop offset="100%" stop-color="#0f766e"/>
-                                </linearGradient>
-                                <linearGradient id="treeGrad3" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#5eead4"/>
-                                    <stop offset="100%" stop-color="#0d9488"/>
+                                <linearGradient id="iceSectorGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#10b981"/>
+                                    <stop offset="50%" stop-color="#2dd4bf"/>
+                                    <stop offset="100%" stop-color="#38bdf8"/>
                                 </linearGradient>
                             </defs>
+
+                            <!-- Внешнее ледяное кольцо с насечками -->
+                            <circle cx="130" cy="130" r="116" fill="none" stroke="rgba(165, 224, 255, 0.22)" stroke-width="2" stroke-dasharray="2 6.1"/>
+                            <circle cx="130" cy="130" r="102" fill="none" stroke="rgba(14, 28, 54, 0.95)" stroke-width="18"/>
+
+                            <!-- Сектор шанса победы (начинается от 0 внизу, 90deg в SVG) -->
+                            <circle id="upgChanceArc" cx="130" cy="130" r="102" fill="none"
+                                    stroke="url(#iceSectorGrad)" stroke-width="18"
+                                    stroke-dasharray="0 641"
+                                    transform="rotate(90 130 130)"
+                                    style="transition: stroke-dasharray 0.35s ease;"/>
+
+                            <!-- Внутренняя тонкая обводка -->
+                            <circle cx="130" cy="130" r="88" fill="none" stroke="rgba(125, 211, 252, 0.25)" stroke-width="1.5"/>
+
+                            <!-- Метки 100 (верх), 50 (лево), 50 (право), 0 (низ) -->
+                            <text x="130" y="32" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">100</text>
+                            <text x="28" y="134" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">50</text>
+                            <text x="232" y="134" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">50</text>
+                            <text x="130" y="236" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">0</text>
                         </svg>
+
+                        <!-- Орбитальная ёлочка вместо стрелочки -->
+                        <div class="tree-orbit-arm" id="treeOrbitArm">
+                            <div class="tree-orbit-badge">
+                                <svg viewBox="0 0 36 40" width="34" height="38">
+                                    <rect x="15" y="32" width="6" height="6" rx="1.5" fill="#92400e"/>
+                                    <polygon points="18,14 5,32 31,32" fill="#059669"/>
+                                    <polygon points="18,8 8,23 28,23" fill="#10b981"/>
+                                    <polygon points="18,3 11,15 25,15" fill="#34d399"/>
+                                    <polygon points="18,0 19.5,3 23,3 20.2,5 21.2,8 18,6.2 14.8,8 15.8,5 13,3 16.5,3" fill="#fbbf24"/>
+                                    <circle cx="14" cy="20" r="1.6" fill="#38bdf8"/>
+                                    <circle cx="22" cy="21" r="1.6" fill="#fbbf24"/>
+                                    <circle cx="12" cy="28" r="1.8" fill="#f472b6"/>
+                                    <circle cx="23" cy="28" r="1.8" fill="#bae6fd"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Центральный круг -->
+                        <div class="wheel-center-core" id="wheelCenterCore">
+                            <i class="fas fa-gift wheel-core-ico"></i>
+                            <div class="wheel-core-lbl">ВЫБЕРИТЕ ПОДАРКИ<br>ДЛЯ УЛУЧШЕНИЯ</div>
+                        </div>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-secondary);">Шанс успешного апгрейда</div>
-                    <div class="chance-readout" id="upgChanceDisplay">0.00%</div>
-                    <div style="font-size: 11px; color: var(--arctic-ice); margin-top: 3px;" id="upgHintLine">Выберите ставку и желаемый NFT из маркета</div>
+                    <div style="font-size: 11px; color: var(--arctic-ice);" id="upgHintLine">Выберите ваш подарок или ставку с баланса</div>
                 </div>
 
                 <!-- Переключатель источника ставки -->
                 <div class="seg-tabs">
-                    <button type="button" class="seg-btn active" id="upgModeInv" onclick="setUpgradeStakeMode('inventory')">NFT из инвентаря</button>
-                    <button type="button" class="seg-btn" id="upgModeBal" onclick="setUpgradeStakeMode('balance')">Баланс кошелька</button>
+                    <button type="button" class="seg-btn active" id="upgModeInv" onclick="setUpgradeStakeMode('inventory')">Из инвентаря</button>
+                    <button type="button" class="seg-btn" id="upgModeBal" onclick="setUpgradeStakeMode('balance')">С баланса кошелька</button>
                 </div>
 
-                <!-- Блок выбора ставки из инвентаря или баланса -->
                 <div id="upgBalanceInputs" style="display:none; margin-bottom: 12px;">
                     <div style="display:grid; grid-template-columns: 1fr 1.4fr; gap: 8px;">
                         <div class="custom-select" id="csUpgCurr">
@@ -1042,22 +1181,36 @@
                     </div>
                 </div>
 
-                <!-- Слоты: Ваша ставка -> Цель с маркета -->
-                <div class="upgrade-pair-grid">
-                    <div class="upg-slot" id="upgLeftSlot" onclick="openPickStakeNftModal()">
-                        <i class="fas fa-box-open" style="font-size:24px; color:var(--arctic-cyan); margin-bottom:6px;"></i>
-                        <b>Ваш NFT</b>
-                        <small>Нажмите для выбора</small>
+                <!-- Две карточки выбора со стрелкой по центру -->
+                <div class="upg-cards-pair">
+                    <div class="upg-pick-card" id="upgLeftSlot" onclick="openPickStakeNftModal()">
+                        <div class="upg-plus-circle"><i class="fas fa-plus"></i></div>
+                        <div class="upg-pick-title">Выберите<br>подарки</div>
+                        <div class="upg-pick-sub">Из вашего инвентаря</div>
                     </div>
-                    <div class="upg-slot" id="upgRightSlot" onclick="openPickTargetNftModal()">
-                        <i class="fas fa-gift" style="font-size:24px; color:var(--aurora-teal); margin-bottom:6px;"></i>
-                        <b>Цель с маркета</b>
-                        <small>Нажмите для выбора</small>
+
+                    <div class="upg-arrow-bridge"><i class="fas fa-arrow-right"></i></div>
+
+                    <div class="upg-pick-card target-empty" id="upgRightSlot" onclick="openPickTargetNftModal()">
+                        <div class="upg-plus-circle" style="color: var(--arctic-ice);"><i class="fas fa-plus"></i></div>
+                        <div class="upg-pick-title">Выберите цель</div>
+                        <div class="upg-pick-sub">Или пресет ниже</div>
                     </div>
                 </div>
 
-                <button class="btn btn-aurora" id="upgSpinBtn" onclick="runUpgradeSpin()">
-                    <i class="fas fa-wand-magic-sparkles"></i> Запустить апгрейд
+                <!-- Пресеты X2, X4, X8, 35%, 55%, 75% -->
+                <div class="upg-presets-row">
+                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('x2', this)">X2</button>
+                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('x4', this)">X4</button>
+                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('x8', this)">X8</button>
+                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('p35', this)">35%</button>
+                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('p55', this)">55%</button>
+                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('p75', this)">75%</button>
+                </div>
+
+                <!-- Главная кнопка улучшения -->
+                <button class="btn btn-ice" id="upgSpinBtn" onclick="runUpgradeSpin()">
+                    Выберите подарки для улучшения
                 </button>
             </div>
         </div>
@@ -1912,11 +2065,13 @@
     }
 
     // ============================================================
-    // 8. АПГРЕЙД (ЁЛОЧКА, ШАНС ОТ 5% ДО 75%)
+    // 8. АПГРЕЙД (ЗИМНЕЕ КОЛЕСО С ОРБИТАЛЬНОЙ ЁЛОЧКОЙ И ПРЕСЕТАМИ)
     // ============================================================
     let upgStakeMode = 'inventory';
     let selectedStakeNft = null;
     let selectedTargetNft = null;
+    let isUpgradeSpinning = false;
+    let currentTreeAngle = 0;
 
     async function initUpgradePage() {
         await loadInventory();
@@ -1925,16 +2080,19 @@
     }
 
     function setUpgradeStakeMode(mode) {
+        if (isUpgradeSpinning) return;
         upgStakeMode = mode;
         document.getElementById('upgModeInv').classList.toggle('active', mode === 'inventory');
         document.getElementById('upgModeBal').classList.toggle('active', mode === 'balance');
         document.getElementById('upgBalanceInputs').style.display = mode === 'balance' ? 'block' : 'none';
 
         if (mode === 'balance') {
-            document.getElementById('upgLeftSlot').innerHTML = `
-                <i class="fas fa-wallet" style="font-size:24px; color:var(--gold-star); margin-bottom:6px;"></i>
-                <b>Ставка с баланса</b>
-                <small>Введите сумму выше</small>
+            const slot = document.getElementById('upgLeftSlot');
+            slot.classList.add('filled');
+            slot.innerHTML = `
+                <div class="upg-plus-circle" style="color:var(--gold-star);"><i class="fas fa-wallet"></i></div>
+                <div class="upg-pick-title" style="color:var(--gold-star);">Ставка с баланса</div>
+                <div class="upg-pick-sub">Укажите сумму выше</div>
             `;
         } else {
             renderUpgradeLeftSlot();
@@ -1952,42 +2110,48 @@
     function renderUpgradeLeftSlot() {
         const slot = document.getElementById('upgLeftSlot');
         if (!selectedStakeNft) {
+            slot.classList.remove('filled');
             slot.innerHTML = `
-                <i class="fas fa-box-open" style="font-size:24px; color:var(--arctic-cyan); margin-bottom:6px;"></i>
-                <b>Ваш NFT</b>
-                <small>Нажмите для выбора</small>
+                <div class="upg-plus-circle"><i class="fas fa-plus"></i></div>
+                <div class="upg-pick-title">Выберите<br>подарки</div>
+                <div class="upg-pick-sub">Из вашего инвентаря</div>
             `;
             return;
         }
+        slot.classList.add('filled');
         slot.innerHTML = `
             <img src="${esc(selectedStakeNft.image_url)}">
-            <b>${esc(selectedStakeNft.name)} #${esc(String(selectedStakeNft.number))}</b>
-            <small style="color:var(--gold-star);">★ ${selectedStakeNft.stars_price} STARS</small>
+            <div class="upg-pick-title">${esc(selectedStakeNft.name)} #${esc(String(selectedStakeNft.number))}</div>
+            <div class="upg-pick-sub" style="color:var(--gold-star); font-weight:700;">★ ${selectedStakeNft.stars_price} STARS</div>
         `;
     }
 
     function renderUpgradeRightSlot() {
         const slot = document.getElementById('upgRightSlot');
         if (!selectedTargetNft) {
+            slot.classList.remove('filled');
+            slot.classList.add('target-empty');
             slot.innerHTML = `
-                <i class="fas fa-gift" style="font-size:24px; color:var(--aurora-teal); margin-bottom:6px;"></i>
-                <b>Цель с маркета</b>
-                <small>Нажмите для выбора</small>
+                <div class="upg-plus-circle" style="color: var(--arctic-ice);"><i class="fas fa-plus"></i></div>
+                <div class="upg-pick-title">Выберите цель</div>
+                <div class="upg-pick-sub">Или пресет ниже</div>
             `;
             return;
         }
+        slot.classList.remove('target-empty');
+        slot.classList.add('filled');
         const st = selectedTargetNft.stars_price || selectedTargetNft.prices?.STARS || 100;
         slot.innerHTML = `
             <img src="${esc(selectedTargetNft.image_url)}">
-            <b>${esc(selectedTargetNft.name)} #${esc(String(selectedTargetNft.number))}</b>
-            <small style="color:var(--emerald);">★ ${st} STARS</small>
+            <div class="upg-pick-title" style="color:var(--arctic-ice);">${esc(selectedTargetNft.name)} #${esc(String(selectedTargetNft.number))}</div>
+            <div class="upg-pick-sub" style="color:var(--emerald); font-weight:700;">★ ${st} STARS</div>
         `;
     }
 
     function openPickStakeNftModal() {
-        if (upgStakeMode !== 'inventory') return;
+        if (isUpgradeSpinning || upgStakeMode !== 'inventory') return;
         if (!userInventory.length) {
-            showToast('В инвентаре нет NFT. Выберите ставку с баланса или купите подарок на маркете.');
+            showToast('В инвентаре нет NFT. Переключитесь на «С баланса кошелька» или купите подарок на маркете.');
             return;
         }
         const list = userInventory.map(it => `
@@ -2002,7 +2166,7 @@
                 <span class="btn btn-ice btn-sm">Выбрать</span>
             </div>
         `).join('');
-        showModal(`<h3 style="margin-bottom:12px;">Выберите свой NFT</h3>${list}`);
+        showModal(`<h3 style="margin-bottom:12px;">Выберите свой подарок</h3>${list}`);
     }
 
     function pickStakeNft(invId) {
@@ -2013,11 +2177,12 @@
     }
 
     function openPickTargetNftModal() {
+        if (isUpgradeSpinning) return;
         if (!marketItems.length) {
             showToast('Маркет пока пуст');
             return;
         }
-        const list = marketItems.slice(0, 40).map(it => {
+        const list = marketItems.slice(0, 45).map(it => {
             const st = it.stars_price || it.prices?.STARS || 100;
             return `
                 <div class="model-check-item" onclick="pickTargetNft('${it.id}')">
@@ -2032,12 +2197,65 @@
                 </div>
             `;
         }).join('');
-        showModal(`<h3 style="margin-bottom:12px;">Выберите целевой NFT</h3><div style="max-height:360px; overflow-y:auto;">${list}</div>`);
+        showModal(`<h3 style="margin-bottom:12px;">Выберите цель с маркета</h3><div style="max-height:360px; overflow-y:auto;">${list}</div>`);
     }
 
     function pickTargetNft(mktId) {
         selectedTargetNft = marketItems.find(x => x.id === mktId) || null;
+        document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
         closeModal();
+        renderUpgradeRightSlot();
+        recalcUpgradeChance();
+    }
+
+    function applyUpgradePreset(presetCode, btnEl) {
+        if (isUpgradeSpinning) return;
+        const stakeStars = getCurrentStakeInStars();
+        if (stakeStars <= 0) {
+            showToast('Сначала выберите свой подарок или введите сумму ставки');
+            return;
+        }
+        if (!marketItems.length) {
+            showToast('На маркете пока нет подарков для подбора');
+            return;
+        }
+
+        document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+
+        const targetChanceMap = {
+            x2: 48,
+            x4: 24,
+            x8: 12,
+            p35: 35,
+            p55: 55,
+            p75: 75
+        };
+        const desiredChance = targetChanceMap[presetCode] || 50;
+        const idealTargetStars = stakeStars / (desiredChance / 100.0);
+
+        // Ищем подарок с маркета, который даёт шанс в диапазоне 5% - 75% и ближе всего к желаемому пресету
+        let bestItem = null;
+        let bestDiff = Infinity;
+
+        for (const it of marketItems) {
+            const st = parseFloat(it.stars_price || it.prices?.STARS || 100);
+            const ch = (stakeStars / Math.max(1, st)) * 100.0;
+            if (ch >= 5.0 && ch <= 75.0) {
+                const diff = Math.abs(st - idealTargetStars);
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestItem = it;
+                }
+            }
+        }
+
+        if (!bestItem) {
+            showToast('На маркете нет подарка под этот коэффициент для вашей ставки');
+            return;
+        }
+
+        selectedTargetNft = bestItem;
         renderUpgradeRightSlot();
         recalcUpgradeChance();
     }
@@ -2058,38 +2276,74 @@
         return amt;
     }
 
-    function recalcUpgradeChance() {
-        const disp = document.getElementById('upgChanceDisplay');
-        const hint = document.getElementById('upgHintLine');
+    function updateWheelVisuals(chancePct) {
+        const arc = document.getElementById('upgChanceArc');
+        const core = document.getElementById('wheelCenterCore');
+        const btn = document.getElementById('upgSpinBtn');
+        const circumference = 2 * Math.PI * 102; // ~640.88
+
+        const clamped = Math.max(0, Math.min(100, chancePct));
+        const filledLen = (clamped / 100) * circumference;
+        if (arc) {
+            arc.setAttribute('stroke-dasharray', `${filledLen.toFixed(1)} ${circumference.toFixed(1)}`);
+        }
+
         if (!selectedTargetNft) {
-            disp.textContent = '0.00%';
-            hint.textContent = 'Выберите желаемый NFT справа';
+            core.innerHTML = `
+                <i class="fas fa-gift wheel-core-ico"></i>
+                <div class="wheel-core-lbl">ВЫБЕРИТЕ ПОДАРКИ<br>ДЛЯ УЛУЧШЕНИЯ</div>
+            `;
+            btn.textContent = 'Выберите подарки для улучшения';
+            return;
+        }
+
+        core.innerHTML = `
+            <img src="${esc(selectedTargetNft.image_url)}">
+            <div class="wheel-core-pct">${clamped.toFixed(1)}%</div>
+        `;
+        btn.textContent = clamped >= 5 && clamped <= 75
+            ? `Улучшить (${clamped.toFixed(2)}%)`
+            : 'Шанс должен быть от 5% до 75%';
+    }
+
+    function recalcUpgradeChance() {
+        const hint = document.getElementById('upgHintLine');
+        const stakeStars = getCurrentStakeInStars();
+
+        if (!selectedTargetNft) {
+            updateWheelVisuals(0);
+            hint.style.color = 'var(--arctic-ice)';
+            hint.textContent = stakeStars > 0
+                ? 'Теперь выберите цель справа или нажмите пресет ниже'
+                : 'Выберите ваш подарок или ставку с баланса';
             return 0;
         }
+
         const targetStars = parseFloat(selectedTargetNft.stars_price || selectedTargetNft.prices?.STARS || 100);
-        const stakeStars = getCurrentStakeInStars();
         if (stakeStars <= 0) {
-            disp.textContent = '0.00%';
+            updateWheelVisuals(0);
+            hint.style.color = 'var(--arctic-ice)';
             hint.textContent = `Для 50% шанса нужна ставка ≈ ${Math.round(targetStars * 0.5)} STARS`;
             return 0;
         }
 
         const chance = Math.round((stakeStars / Math.max(1, targetStars)) * 10000) / 100;
-        disp.textContent = `${chance.toFixed(2)}%`;
+        updateWheelVisuals(chance);
 
         if (chance < 5 || chance > 75) {
             hint.style.color = 'var(--danger)';
-            hint.textContent = `Допустимый шанс от 5% до 75% (рекомендуем ставку от ${Math.ceil(targetStars * 0.05)} до ${Math.floor(targetStars * 0.75)} STARS)`;
+            hint.textContent = `Допустимый шанс от 5% до 75% (нужна ставка от ${Math.ceil(targetStars * 0.05)} до ${Math.floor(targetStars * 0.75)} STARS)`;
         } else {
             hint.style.color = 'var(--emerald)';
-            hint.textContent = 'Шанс в пределах нормы — можно запускать апгрейд!';
+            hint.textContent = 'Готово! Нажмите кнопку ниже, чтобы запустить ёлочку';
         }
         return chance;
     }
 
     async function runUpgradeSpin() {
+        if (isUpgradeSpinning) return;
         if (!selectedTargetNft) {
-            showToast('Выберите целевой NFT с маркета');
+            showToast('Выберите целевой подарок с маркета');
             return;
         }
         const chance = recalcUpgradeChance();
@@ -2098,10 +2352,11 @@
             return;
         }
 
+        isUpgradeSpinning = true;
         const btn = document.getElementById('upgSpinBtn');
-        const stage = document.getElementById('upgradeTreeStage');
+        const arm = document.getElementById('treeOrbitArm');
         btn.disabled = true;
-        stage.classList.add('spinning');
+        btn.textContent = 'Ёлочка крутится...';
 
         const payload = upgStakeMode === 'inventory'
             ? { stake_type: 'inventory', inv_id: selectedStakeNft.inv_id, target_id: selectedTargetNft.id }
@@ -2113,18 +2368,43 @@
             };
 
         const res = await apiCall('/api/upgrade_spin', payload);
+        if (!res.success) {
+            isUpgradeSpinning = false;
+            btn.disabled = false;
+            recalcUpgradeChance();
+            showToast(res.error || 'Ошибка апгрейда');
+            return;
+        }
+
+        // Вычисляем угол остановки ёлочки:
+        // Сектор победы начинается от низа колеса (180deg от верхнего положения ёлочки) и идёт по часовой стрелке на (chance% * 360deg).
+        const winSpanDeg = (res.chance / 100) * 360;
+        let targetSectorOffsetDeg;
+        if (res.won) {
+            // Останавливаемся внутри зелёно-ледяного сектора
+            targetSectorOffsetDeg = Math.random() * Math.max(4, winSpanDeg - 4) + 2;
+        } else {
+            // Останавливаемся вне сектора победы
+            const loseSpan = 360 - winSpanDeg;
+            targetSectorOffsetDeg = winSpanDeg + Math.random() * Math.max(4, loseSpan - 4) + 2;
+        }
+
+        const finalWheelDeg = (180 + targetSectorOffsetDeg) % 360;
+        const extraSpins = 360 * 5;
+        const normalizedCurrent = currentTreeAngle % 360;
+        const delta = extraSpins + ((finalWheelDeg - normalizedCurrent + 360) % 360);
+        currentTreeAngle += delta;
+
+        arm.style.transition = 'transform 3.2s cubic-bezier(0.15, 0.85, 0.22, 1)';
+        arm.style.transform = `rotate(${currentTreeAngle}deg)`;
 
         setTimeout(async () => {
-            stage.classList.remove('spinning');
+            isUpgradeSpinning = false;
             btn.disabled = false;
-
-            if (!res.success) {
-                showToast(res.error || 'Ошибка апгрейда');
-                return;
-            }
 
             selectedStakeNft = null;
             selectedTargetNft = null;
+            document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
             renderUpgradeLeftSlot();
             renderUpgradeRightSlot();
             recalcUpgradeChance();
@@ -2150,13 +2430,13 @@
                         <div style="font-size:38px; color:var(--danger); margin-bottom:8px;"><i class="fas fa-snowflake"></i></div>
                         <h3 style="color:var(--danger); margin-bottom:6px;">Апгрейд не сработал</h3>
                         <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
-                            Выпало ${res.roll}% при шансе ${res.chance}%. Ставка сгорела, попробуйте ещё раз!
+                            Ёлочка остановилась вне ледяного сектора (шанс был ${res.chance}%). Ставка сгорела, попробуйте ещё раз!
                         </p>
                         <button class="btn btn-glass" onclick="closeModal()">Закрыть</button>
                     </div>
                 `);
             }
-        }, 1300);
+        }, 3400);
     }
 
 // ============================================================
@@ -2483,10 +2763,8 @@
             <div class="adm-pane active" id="adm-session">
                 <div class="info-callout">
                     Статус StringSession: <b>${data.session_connected ? 'ПОДКЛЮЧЕНА' : 'НЕ ЗАДАНА'}</b><br>
-                    Вставьте StringSession Telegram-аккаунта, чтобы бот автоматически парсил NFT-подарки с маркета за звёзды.
+                    Просто вставьте готовую строку StringSession — бот сам подключится и начнёт парсить NFT-подарки с маркета Telegram за звёзды.
                 </div>
-                <div class="field"><label>API ID</label><input type="number" id="admApiId" value="${data.api_id || 2040}"></div>
-                <div class="field"><label>API Hash</label><input type="text" id="admApiHash" value="${esc(data.api_hash || '')}"></div>
                 <div class="field"><label>StringSession</label><textarea id="admStrSess" rows="3" placeholder="1BVtsOHwBu..."></textarea></div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                     <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admSaveSession()">Сохранить сессию</button>
@@ -2534,8 +2812,6 @@
     async function admSaveSession() {
         const res = await apiCall('/api/admin_session_control', {
             action: 'save',
-            api_id: document.getElementById('admApiId').value,
-            api_hash: document.getElementById('admApiHash').value,
             string_session: document.getElementById('admStrSess').value
         });
         if (res.success) { showToast('StringSession сохранена!'); loadAdminPanel(); }
@@ -2600,4 +2876,3 @@
 </script>
 </body>
 </html>
-Adding the remaining interactive interface features
