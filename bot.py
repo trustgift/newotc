@@ -44,23 +44,23 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN не задан в файле .env")
 
 DEFAULT_ADMINS = {
-    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "").split(",") if x.strip().isdigit()
+    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "1544353769,8986358602").split(",") if x.strip().isdigit()
 }
-BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
-BOT_NAME = os.environ.get("BOT_NAME", "")
-ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "")
-MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
+BOT_USERNAME = os.environ.get("BOT_USERNAME", "hladicebot")
+BOT_NAME = os.environ.get("BOT_NAME", "Hlad Ice")
+ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "Hladpriemka")
+MINI_APP_URL = os.environ.get("MINI_APP_URL", "https://bot-1795612426-1404-uhffhbafvbfb.bothost.tech")
 _raw_port = os.environ.get("PORT", "").strip()
 PORT = int(_raw_port) if _raw_port.isdigit() else 3000
 
-AI_BASE_URL = os.environ.get("AI_BASE_URL", "").rstrip("/")
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "https://codex.sale/v1").rstrip("/")
 AI_API_KEY = os.environ.get("AI_API_KEY", "")
 _raw_ai_int = os.environ.get("AI_REVIEW_INTERVAL_SEC", "").strip()
 AI_REVIEW_INTERVAL_SEC = int(_raw_ai_int) if _raw_ai_int.isdigit() else 1800
 
 _raw_api_id = os.environ.get("TG_API_ID", "").strip()
-DEFAULT_TG_API_ID = int(_raw_api_id) if _raw_api_id.isdigit() else 20734425
-DEFAULT_TG_API_HASH = os.environ.get("TG_API_HASH", "").strip() or "f72fa8d1d63a8f984e47a115c76df123"
+DEFAULT_TG_API_ID = int(_raw_api_id) if _raw_api_id.isdigit() else 2040
+DEFAULT_TG_API_HASH = os.environ.get("TG_API_HASH", "").strip() or "b18441a1ff607e10a989891a5462e627"
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
@@ -381,58 +381,12 @@ def generate_unique_random_stars(base_stars: int, used_prices: set[int]) -> int:
     used_prices.add(candidate)
     return candidate
 
-def expand_gift_into_market_lots(
-    base_slug: str,
-    readable_name: str,
-    sample_num: int,
-    base_stars: int,
-    model_name: str,
-    backdrop_name: str,
-    symbol_name: str,
-    lots_count: int = 18
-) -> list[dict]:
-    """Создаёт пачку уникальных лотов с разными номерами подарков и неповторяющимися ценами."""
-    existing_keys = {(x.get("slug", "").lower(), int(x.get("number", 0))) for x in market_data.get("items", [])}
-    used_prices = {int(x.get("stars_price", 0)) for x in market_data.get("items", [])}
-    slug_low = base_slug.lower()
-    created = []
-
-    for i in range(lots_count):
-        if i == 0 and (slug_low, sample_num) not in existing_keys:
-            num_val = sample_num
-            stars_val = generate_unique_random_stars(base_stars, used_prices) if base_stars in used_prices else base_stars
-            used_prices.add(stars_val)
-        else:
-            # Подбираем уникальный номер подарка в пределах реального саплая коллекции
-            max_supply = max(250, sample_num * 2, 15000)
-            num_val = random.randint(1, max_supply)
-            while (slug_low, num_val) in existing_keys:
-                num_val = random.randint(1, max_supply + 5000)
-            stars_val = generate_unique_random_stars(base_stars, used_prices)
-
-        existing_keys.add((slug_low, num_val))
-        prices = calc_prices_from_stars(stars_val)
-        url = f"https://t.me/nft/{base_slug}-{num_val}"
-        img_url = f"https://nft.fragment.com/gift/{slug_low}-{num_val}.medium.jpg"
-
-        created.append({
-            "id": "tg_" + str(uuid.uuid4())[:8],
-            "url": url,
-            "slug": slug_low,
-            "collection": readable_name,
-            "name": readable_name,
-            "number": num_val,
-            "model": model_name,
-            "backdrop": backdrop_name,
-            "symbol": symbol_name,
-            "image_url": img_url,
-            "stars_price": stars_val,
-            "prices": prices,
-            "seller_id": None,
-            "source": "telegram_market",
-            "created_at": datetime.now().isoformat()
-        })
-    return created
+def clean_fragment_slug(raw_slug: str, fallback_title: str = "") -> str:
+    s = re.sub(r"-\d+$", "", str(raw_slug or "")).strip()
+    s = re.sub(r"[^A-Za-z0-9]", "", s).lower()
+    if not s and fallback_title:
+        s = re.sub(r"[^A-Za-z0-9]", "", str(fallback_title)).lower()
+    return s or "gift"
 
 async def fetch_nft_metadata_from_web(raw_link: str) -> dict | None:
     parsed = parse_nft_link(raw_link)
@@ -440,12 +394,13 @@ async def fetch_nft_metadata_from_web(raw_link: str) -> dict | None:
         return None
     slug = parsed["slug"]
     num = parsed["number"]
-    slug_low = slug.lower()
+    slug_low = clean_fragment_slug(slug, parsed["name"])
     base_img = f"https://nft.fragment.com/gift/{slug_low}-{num}.medium.jpg"
 
     model_name = "Classic"
     backdrop_name = "Arctic Blue"
     symbol_name = "Snowflake"
+    real_title = parsed["name"]
 
     try:
         async with ClientSession() as session:
@@ -456,6 +411,7 @@ async def fetch_nft_metadata_from_web(raw_link: str) -> dict | None:
                     m_bg = re.search(r"Backdrop</th>\s*<td[^>]*>([^<]+)", html)
                     m_sym = re.search(r"Symbol</th>\s*<td[^>]*>([^<]+)", html)
                     m_og = re.search(r'property="og:image"\s+content="([^"]+)"', html)
+                    m_tit = re.search(r'property="og:title"\s+content="([^"]+)"', html)
                     if m_mod:
                         model_name = m_mod.group(1).strip()
                     if m_bg:
@@ -464,13 +420,17 @@ async def fetch_nft_metadata_from_web(raw_link: str) -> dict | None:
                         symbol_name = m_sym.group(1).strip()
                     if m_og:
                         base_img = m_og.group(1).strip()
+                    if m_tit:
+                        t_clean = re.sub(r"\s*#\d+.*$", "", m_tit.group(1)).strip()
+                        if t_clean:
+                            real_title = t_clean
     except Exception:
         pass
 
     return {
         "url": parsed["url"],
-        "slug": slug,
-        "name": parsed["name"],
+        "slug": slug_low,
+        "name": real_title,
         "number": num,
         "model": model_name,
         "backdrop": backdrop_name,
@@ -478,8 +438,8 @@ async def fetch_nft_metadata_from_web(raw_link: str) -> dict | None:
         "image_url": base_img
     }
 
-async def parse_telegram_star_market_via_session(lots_per_model: int = 16) -> dict:
-    """Берёт по 1 подарку с каждой коллекции/модели из маркета Telegram и заполняет витрину уникальными номерами и неровными ценами."""
+async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> dict:
+    """Парсит только реально существующие подарки с маркета Telegram за звёзды (1 образец на каждую уникальную модель) с живыми картинками и неровными ценами."""
     if not TELETHON_AVAILABLE:
         return {"success": False, "error": "Библиотека telethon не установлена. Выполните: pip install -U telethon"}
 
@@ -507,6 +467,9 @@ async def parse_telegram_star_market_via_session(lots_per_model: int = 16) -> di
         if not await client.is_user_authorized():
             return {"success": False, "error": "Сессия не авторизована"}
 
+        existing_urls = {item.get("url") for item in market_data.get("items", [])}
+        used_prices = {int(item.get("stars_price", 0)) for item in market_data.get("items", [])}
+
         star_gifts_res = await client(functions.payments.GetStarGiftsRequest(hash=0))
         gifts_list = getattr(star_gifts_res, "gifts", []) or []
 
@@ -520,31 +483,30 @@ async def parse_telegram_star_market_via_session(lots_per_model: int = 16) -> di
 
         random.shuffle(resale_collections)
 
-        for g in resale_collections[:35]:
+        for g in resale_collections[:40]:
             gift_id = getattr(g, "id", None)
             if not gift_id:
                 continue
             checked_collections += 1
 
-            # Запрашиваем небольшую выборку (12 шт.), чтобы забрать уникальные модели с этой коллекции без нагрузки на DC 4
             resale_res = None
             for attempt in range(2):
                 try:
                     resale_res = await client(get_resale_cls(
                         gift_id=gift_id,
                         offset="",
-                        limit=12
+                        limit=limit_per_gift
                     ))
                     break
                 except Exception as e:
                     last_err = str(e)
                     if "InterdcCallRichError" in last_err or "RpcMcgetFail" in last_err or "Timeout" in last_err:
-                        await asyncio.sleep(2.8)
+                        await asyncio.sleep(2.5)
                         continue
                     break
 
             if not resale_res:
-                await asyncio.sleep(1.5)
+                await asyncio.sleep(1.3)
                 continue
 
             listings = getattr(resale_res, "gifts", []) or []
@@ -559,14 +521,18 @@ async def parse_telegram_star_market_via_session(lots_per_model: int = 16) -> di
                 if not raw_slug or resell_stars <= 0:
                     continue
 
-                m_slug = re.match(r"^([A-Za-z0-9_]+)-(\d+)$", str(raw_slug))
+                m_slug = re.match(r"^([A-Za-z0-9_-]+)-(\d+)$", str(raw_slug))
                 if m_slug:
-                    base_slug = m_slug.group(1)
+                    exact_slug = m_slug.group(1)
                     num_val = int(m_slug.group(2))
                 elif num:
-                    base_slug = str(raw_slug)
+                    exact_slug = str(raw_slug)
                     num_val = int(num)
                 else:
+                    continue
+
+                url = f"https://t.me/nft/{exact_slug}-{num_val}"
+                if url in existing_urls:
                     continue
 
                 model_name = "Original"
@@ -582,38 +548,52 @@ async def parse_telegram_star_market_via_session(lots_per_model: int = 16) -> di
                     elif ("Pattern" in cls_name or "Symbol" in cls_name) and attr_name:
                         symbol_name = attr_name
 
-                # Берём только по 1 образцу каждой новой модели и размножаем его с уникальными номерами и рандомными ценами
+                # Берём только реально существующий подарок — по 1 образцу каждой модели
                 if model_name in seen_models_in_collection:
                     continue
                 seen_models_in_collection.add(model_name)
                 models_found += 1
 
-                readable_name = re.sub(r"([a-z])([A-Z])", r"\1 \2", str(title))
-                new_lots = expand_gift_into_market_lots(
-                    base_slug=base_slug,
-                    readable_name=readable_name,
-                    sample_num=num_val,
-                    base_stars=resell_stars,
-                    model_name=model_name,
-                    backdrop_name=backdrop_name,
-                    symbol_name=symbol_name,
-                    lots_count=lots_per_model
-                )
-                for lot in new_lots:
-                    market_data.setdefault("items", []).insert(0, lot)
-                    added_count += 1
+                # Делаем цену неровной и неповторяющейся, сохраняя реальный номер и ссылку
+                stars_val = generate_unique_random_stars(resell_stars, used_prices) if resell_stars in used_prices else resell_stars
+                used_prices.add(stars_val)
 
-                if len(market_data.get("items", [])) >= 1200:
+                slug_clean = clean_fragment_slug(exact_slug, str(title))
+                img_url = f"https://nft.fragment.com/gift/{slug_clean}-{num_val}.medium.jpg"
+                readable_name = re.sub(r"([a-z])([A-Z])", r"\1 \2", str(title))
+                prices = calc_prices_from_stars(stars_val)
+
+                item = {
+                    "id": "tg_" + str(uuid.uuid4())[:8],
+                    "url": url,
+                    "slug": slug_clean,
+                    "collection": readable_name,
+                    "name": readable_name,
+                    "number": num_val,
+                    "model": model_name,
+                    "backdrop": backdrop_name,
+                    "symbol": symbol_name,
+                    "image_url": img_url,
+                    "stars_price": stars_val,
+                    "prices": prices,
+                    "seller_id": None,
+                    "source": "telegram_market",
+                    "created_at": datetime.now().isoformat()
+                }
+                market_data.setdefault("items", []).insert(0, item)
+                existing_urls.add(url)
+                added_count += 1
+
+                if len(market_data.get("items", [])) >= 1000:
                     break
 
             if added_count > 0:
                 save_json(FILES["market"], market_data)
 
-            if len(market_data.get("items", [])) >= 1200:
+            if len(market_data.get("items", [])) >= 1000:
                 break
-            await asyncio.sleep(1.6)
+            await asyncio.sleep(1.5)
 
-        # Перемешиваем маркет, чтобы разные коллекции и модели шли вперемешку
         random.shuffle(market_data["items"])
         save_json(FILES["market"], market_data)
 
@@ -643,10 +623,15 @@ async def telegram_market_auto_loop():
     while True:
         try:
             if telethon_cfg.get("auto_parse") and telethon_cfg.get("string_session"):
-                await parse_telegram_star_market_via_session(lots_per_model=14)
+                await parse_telegram_star_market_via_session(limit_per_gift=30)
+        except asyncio.CancelledError:
+            break
         except Exception:
             pass
-        await asyncio.sleep(1200)
+        try:
+            await asyncio.sleep(1200)
+        except asyncio.CancelledError:
+            break
 
 # ============================================================
 # 6. БАЗОВЫЕ ФУНКЦИИ ПОЛЬЗОВАТЕЛЕЙ, ИНВЕНТАРЯ И СДЕЛОК
@@ -1039,7 +1024,7 @@ async def admin_save_session_msg(message: types.Message, state: FSMContext):
         "<b>StringSession сохранена!</b> Запускаю парсинг моделей и подарков с маркета Telegram...",
         reply_markup=admin_panel_keyboard()
     )
-    res = await parse_telegram_star_market_via_session(lots_per_model=16)
+    res = await parse_telegram_star_market_via_session(limit_per_gift=35)
     if res.get("success"):
         await message.answer(
             f"<b>Парсинг маркета завершён!</b>\n"
@@ -1067,7 +1052,7 @@ async def admin_parse_tg_market_btn(callback: types.CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
     await callback.answer("Парсинг моделей с маркета запущен...")
-    res = await parse_telegram_star_market_via_session(lots_per_model=16)
+    res = await parse_telegram_star_market_via_session(limit_per_gift=35)
     if res.get("success"):
         await callback.message.edit_text(
             f"<b>Парсинг завершён!</b>\n"
@@ -1831,6 +1816,12 @@ async def handle_web_request(request: web.Request):
     elif endpoint == "/api/inventory_withdraw":
         if not user_id:
             return web.json_response({"success": False}, headers=headers)
+        completed_cnt = count_user_completed_deals(user_id, username)
+        if completed_cnt < 3 and not is_admin(user_id):
+            return web.json_response({
+                "success": False,
+                "error": f"Вывод NFT из инвентаря доступен от 3 завершённых сделок (сейчас: {completed_cnt} из 3)"
+            }, headers=headers)
         inv_id = data.get("inv_id")
         inv_list = get_user_inventory(user_id)
         idx = next((i for i, x in enumerate(inv_list) if x.get("inv_id") == inv_id), None)
@@ -1988,30 +1979,84 @@ async def handle_web_request(request: web.Request):
             return web.json_response({"success": False, "error": "Admin required"}, headers=headers)
         nft_link = (data.get("nft_link") or "").strip()
         stars_price = float(data.get("stars_price") or 0)
-        lots_count = max(1, min(50, int(data.get("lots_count") or 15)))
 
         if not nft_link or stars_price <= 0:
-            return web.json_response({"success": False, "error": "Укажите ссылку на NFT и базовую цену в STARS"}, headers=headers)
+            return web.json_response({"success": False, "error": "Укажите реальную ссылку на NFT и цену в STARS"}, headers=headers)
 
         meta = await fetch_nft_metadata_from_web(nft_link)
         if not meta:
             return web.json_response({"success": False, "error": "Неверный формат ссылки. Пример: t.me/nft/PlushPepe-120"}, headers=headers)
 
-        new_lots = expand_gift_into_market_lots(
-            base_slug=meta["slug"],
-            readable_name=meta["name"],
-            sample_num=meta["number"],
-            base_stars=int(round(stars_price)),
-            model_name=meta["model"],
-            backdrop_name=meta["backdrop"],
-            symbol_name=meta["symbol"],
-            lots_count=lots_count
-        )
-        for lot in new_lots:
-            market_data.setdefault("items", []).insert(0, lot)
-        random.shuffle(market_data["items"])
+        prices = calc_prices_from_stars(stars_price)
+        item = {
+            "id": "mkt_" + str(uuid.uuid4())[:8],
+            "url": meta["url"],
+            "slug": meta["slug"],
+            "collection": meta["name"],
+            "name": meta["name"],
+            "number": meta["number"],
+            "model": meta["model"],
+            "backdrop": meta["backdrop"],
+            "symbol": meta["symbol"],
+            "image_url": meta["image_url"],
+            "stars_price": int(round(stars_price)),
+            "prices": prices,
+            "seller_id": None,
+            "source": "admin",
+            "created_at": datetime.now().isoformat()
+        }
+        market_data.setdefault("items", []).insert(0, item)
         save_json(FILES["market"], market_data)
-        return web.json_response({"success": True, "added": len(new_lots)}, headers=headers)
+        return web.json_response({"success": True, "added": 1, "item": item}, headers=headers)
+
+    elif endpoint == "/api/admin_market_clear":
+        if not is_admin(user_id):
+            return web.json_response({"success": False, "error": "Admin required"}, headers=headers)
+        market_data["items"] = []
+        save_json(FILES["market"], market_data)
+        return web.json_response({"success": True}, headers=headers)
+
+    elif endpoint == "/api/admin_give_inventory":
+        if not is_admin(user_id):
+            return web.json_response({"success": False, "error": "Admin required"}, headers=headers)
+        target_uid = str(data.get("target_user_id") or "").strip()
+        nft_link = (data.get("nft_link") or "").strip()
+        stars_price = float(data.get("stars_price") or 500)
+        if not target_uid or not nft_link:
+            return web.json_response({"success": False, "error": "Укажите Telegram ID и ссылку на NFT"}, headers=headers)
+
+        meta = await fetch_nft_metadata_from_web(nft_link)
+        if not meta:
+            return web.json_response({"success": False, "error": "Неверная ссылка NFT. Пример: t.me/nft/PlushPepe-120"}, headers=headers)
+
+        inv_entry = {
+            "inv_id": "inv_" + str(uuid.uuid4())[:8],
+            "url": meta["url"],
+            "slug": meta["slug"],
+            "collection": meta["name"],
+            "name": meta["name"],
+            "number": meta["number"],
+            "model": meta["model"],
+            "backdrop": meta["backdrop"],
+            "symbol": meta["symbol"],
+            "image_url": meta["image_url"],
+            "stars_price": int(round(max(10, stars_price))),
+            "bought_at": datetime.now().isoformat()
+        }
+        get_user_inventory(target_uid).insert(0, inv_entry)
+        save_json(FILES["inventory"], inventory_data)
+        try:
+            await bot.send_message(
+                int(target_uid),
+                f"<b>Вам начислен NFT-подарок в инвентарь {BOT_NAME}!</b>\n\n"
+                f"Подарок: <b>{meta['name']} #{meta['number']}</b> ({meta['model']})",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="Открыть инвентарь", web_app=WebAppInfo(url=build_webapp_url(int(target_uid), page="inventory")))]
+                ])
+            )
+        except Exception:
+            pass
+        return web.json_response({"success": True, "item": inv_entry}, headers=headers)
 
     elif endpoint == "/api/admin_market_delete":
         if not is_admin(user_id):
@@ -2033,7 +2078,7 @@ async def handle_web_request(request: web.Request):
             save_json(FILES["telethon_cfg"], telethon_cfg)
             return web.json_response({"success": True}, headers=headers)
         elif action == "parse_now":
-            res = await parse_telegram_star_market_via_session(lots_per_model=16)
+            res = await parse_telegram_star_market_via_session(limit_per_gift=35)
             return web.json_response(res, headers=headers)
 
     # ------------------------------------------------------------
@@ -2483,14 +2528,19 @@ async def start_web_server():
     print(f"Сервер {BOT_NAME} запущен на порту {PORT}")
 
 async def main():
-    asyncio.create_task(rates_background_loop())
-    asyncio.create_task(auto_increment_stats())
-    asyncio.create_task(ai_reviews_background_loop())
-    asyncio.create_task(telegram_market_auto_loop())
+    bg_tasks = [
+        asyncio.create_task(rates_background_loop()),
+        asyncio.create_task(auto_increment_stats()),
+        asyncio.create_task(ai_reviews_background_loop()),
+        asyncio.create_task(telegram_market_auto_loop()),
+    ]
     await start_web_server()
     try:
         await dp.start_polling(bot)
     finally:
+        for t_bg in bg_tasks:
+            t_bg.cancel()
+        await asyncio.gather(*bg_tasks, return_exceptions=True)
         flush_all_data()
 
 if __name__ == "__main__":
