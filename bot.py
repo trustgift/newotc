@@ -56,8 +56,8 @@ AI_BASE_URL = os.environ.get("AI_BASE_URL", "").rstrip("/")
 AI_API_KEY = os.environ.get("AI_API_KEY", "")
 AI_REVIEW_INTERVAL_SEC = int(os.environ.get("AI_REVIEW_INTERVAL_SEC", 1800))
 
-DEFAULT_TG_API_ID = int(os.environ.get("TG_API_ID", ""))
-DEFAULT_TG_API_HASH = os.environ.get("TG_API_HASH", "")
+DEFAULT_TG_API_ID = int(os.environ.get("TG_API_ID", "2040"))
+DEFAULT_TG_API_HASH = os.environ.get("TG_API_HASH", "b18441a1ff607e10a989891a5462e627")
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
