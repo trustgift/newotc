@@ -44,7 +44,7 @@ if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN не задан в файле .env")
 
 DEFAULT_ADMINS = {
-    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "1544353769,8986358602").split(",") if x.strip().isdigit()
+    int(x.strip()) for x in os.environ.get("ADMIN_IDS", "").split(",") if x.strip().isdigit()
 }
 BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
 BOT_NAME = os.environ.get("BOT_NAME", "")
