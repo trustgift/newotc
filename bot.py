@@ -50,14 +50,17 @@ BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
 BOT_NAME = os.environ.get("BOT_NAME", "")
 ESCROW_ACCOUNT = os.environ.get("ESCROW_ACCOUNT", "")
 MINI_APP_URL = os.environ.get("MINI_APP_URL", "")
-PORT = int(os.environ.get("PORT", 3000))
+_raw_port = os.environ.get("PORT", "").strip()
+PORT = int(_raw_port) if _raw_port.isdigit() else 3000
 
 AI_BASE_URL = os.environ.get("AI_BASE_URL", "").rstrip("/")
 AI_API_KEY = os.environ.get("AI_API_KEY", "")
-AI_REVIEW_INTERVAL_SEC = int(os.environ.get("AI_REVIEW_INTERVAL_SEC", 1800))
+_raw_ai_int = os.environ.get("AI_REVIEW_INTERVAL_SEC", "").strip()
+AI_REVIEW_INTERVAL_SEC = int(_raw_ai_int) if _raw_ai_int.isdigit() else 1800
 
-DEFAULT_TG_API_ID = int(os.environ.get("TG_API_ID", "2040"))
-DEFAULT_TG_API_HASH = os.environ.get("TG_API_HASH", "b18441a1ff607e10a989891a5462e627")
+_raw_api_id = os.environ.get("TG_API_ID", "").strip()
+DEFAULT_TG_API_ID = int(_raw_api_id) if _raw_api_id.isdigit() else 20734425
+DEFAULT_TG_API_HASH = os.environ.get("TG_API_HASH", "").strip() or "f72fa8d1d63a8f984e47a115c76df123"
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
@@ -484,7 +487,8 @@ async def parse_telegram_star_market_via_session(lots_per_model: int = 16) -> di
     if not sess_str:
         return {"success": False, "error": "StringSession не добавлена"}
 
-    api_id = int(telethon_cfg.get("api_id") or DEFAULT_TG_API_ID)
+    _cfg_api = str(telethon_cfg.get("api_id") or "").strip()
+    api_id = int(_cfg_api) if _cfg_api.isdigit() else DEFAULT_TG_API_ID
     api_hash = (telethon_cfg.get("api_hash") or DEFAULT_TG_API_HASH).strip()
 
     try:
@@ -510,7 +514,7 @@ async def parse_telegram_star_market_via_session(lots_per_model: int = 16) -> di
         if not get_resale_cls:
             return {"success": False, "error": "Обновите telethon: pip install -U telethon"}
 
-        resale_collections = [g for g in gifts_list if getattr(g, "availability_resale", 0) > 0]
+        resale_collections = [g for g in gifts_list if (getattr(g, "availability_resale", None) or 0) > 0]
         if not resale_collections:
             resale_collections = gifts_list
 
