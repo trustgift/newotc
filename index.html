@@ -12,9 +12,9 @@
 
         :root {
             --bg-deep: #030812;
-            --bg-surface: rgba(10, 20, 38, 0.78);
-            --bg-surface-strong: rgba(13, 25, 48, 0.94);
-            --bg-field: rgba(6, 13, 26, 0.88);
+            --bg-surface: rgba(10, 20, 38, 0.8);
+            --bg-surface-strong: rgba(13, 25, 48, 0.95);
+            --bg-field: rgba(6, 13, 26, 0.9);
             --border-crystal: rgba(165, 224, 255, 0.22);
             --border-highlight: rgba(125, 211, 252, 0.55);
             --text-primary: #f8fafc;
@@ -193,7 +193,6 @@
             border-radius: var(--radius-lg);
             padding: 12px 8px;
             text-align: center;
-            position: relative;
         }
         .bento-stat b { font-family: 'Unbounded', sans-serif; font-size: 15px; color: #fff; display: block; }
         .bento-stat span { font-size: 10px; color: var(--text-secondary); margin-top: 3px; display: block; }
@@ -243,7 +242,6 @@
         .action-tile b { font-size: 13px; font-weight: 800; display: block; }
         .action-tile span { font-size: 11px; opacity: 0.82; display: block; margin-top: 2px; }
 
-        /* БЫСТРЫЕ КНОПКИ НА ГЛАВНОЙ (СДЕЛКИ, КОШЕЛЁК, ОТЗЫВЫ, АДМИН) */
         .hub-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .hub-card {
             padding: 12px 8px;
@@ -312,126 +310,176 @@
         .btn-sm { padding: 8px 12px; font-size: 12px; width: auto; }
 
         /* ============================================================
-           МАРКЕТ PORTALS / MRKT STYLE (СЕТКА КАРТОЧЕК + ФИЛЬТР МОДЕЛЕЙ)
+           МАРКЕТ PORTALS / MRKT (ВИЗУАЛЬНЫЕ ФИЛЬТРЫ БЕЗ РУЧНОГО ВВОДА)
            ============================================================ */
-        .market-toolbar {
-            display: flex;
+        .filter-bar-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
             margin-bottom: 10px;
         }
-        .search-box {
-            flex: 1;
-            position: relative;
-        }
-        .search-box input {
-            width: 100%;
-            padding: 10px 12px 10px 34px;
-            border-radius: 12px;
+        .visual-filter-btn {
+            padding: 10px 12px;
+            border-radius: 14px;
             border: 1px solid var(--border-crystal);
-            background: var(--bg-field);
+            background: linear-gradient(155deg, rgba(16, 30, 58, 0.92), rgba(7, 15, 30, 0.96));
             color: var(--text-primary);
-            font-size: 13px;
-            outline: none;
-        }
-        .search-box i {
-            position: absolute;
-            left: 11px; top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-        .filter-trigger-btn {
-            padding: 0 13px;
-            border-radius: 12px;
-            border: 1px solid var(--border-highlight);
-            background: rgba(56, 189, 248, 0.14);
-            color: var(--arctic-ice);
-            font-size: 12px;
-            font-weight: 700;
-            display: flex; align-items: center; gap: 6px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .sort-pills {
             display: flex;
-            gap: 6px;
-            overflow-x: auto;
-            padding-bottom: 4px;
-            margin-bottom: 12px;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: 0.18s;
         }
-        .s-pill {
-            padding: 6px 12px;
-            border-radius: 99px;
+        .visual-filter-btn.active-filter {
+            border-color: var(--arctic-cyan);
+            background: rgba(56, 189, 248, 0.16);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+        }
+        .vf-left { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+        .vf-left i { color: var(--arctic-cyan); font-size: 14px; }
+        .vf-text { text-align: left; overflow: hidden; }
+        .vf-text small { font-size: 9.5px; color: var(--text-muted); display: block; text-transform: uppercase; font-weight: 700; }
+        .vf-text b { font-size: 12px; color: #fff; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Горизонтальная лента быстрого выбора подарков/коллекций */
+        .quick-col-strip {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            scrollbar-width: none;
+        }
+        .quick-col-strip::-webkit-scrollbar { display: none; }
+        .col-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 11px;
+            border-radius: 12px;
             border: 1px solid var(--border-crystal);
             background: var(--bg-field);
             color: var(--text-secondary);
             font-size: 11.5px;
             font-weight: 700;
-            cursor: pointer;
             white-space: nowrap;
+            cursor: pointer;
+            transition: 0.18s;
         }
-        .s-pill.active {
+        .col-pill img { width: 20px; height: 20px; object-fit: contain; border-radius: 5px; }
+        .col-pill.active {
             background: var(--grad-arctic);
             color: #030812;
             border-color: transparent;
         }
 
+        /* Сортировка: Дешевле / Дороже / Недавние */
+        .sort-segmented {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            padding: 4px;
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            border-radius: 14px;
+            margin-bottom: 12px;
+        }
+        .sort-seg-btn {
+            padding: 8px 4px;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .sort-seg-btn.active {
+            background: var(--grad-arctic);
+            color: #030812;
+        }
+
+        /* Сетка карточек NFT (Portals / MRKT стиль) */
         .market-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
         }
         .nft-tile {
-            background: linear-gradient(165deg, rgba(15, 29, 56, 0.92), rgba(6, 13, 26, 0.96));
+            position: relative;
+            background: linear-gradient(170deg, rgba(16, 31, 60, 0.94), rgba(6, 13, 26, 0.98));
             border: 1px solid var(--border-crystal);
-            border-radius: 18px;
+            border-radius: 20px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            transition: transform 0.18s, border-color 0.18s;
+            transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
             cursor: pointer;
         }
         .nft-tile:active { transform: scale(0.97); }
+        .nft-tile:hover { border-color: var(--border-highlight); box-shadow: 0 10px 26px rgba(56, 189, 248, 0.18); }
+
         .nft-tile-art {
             position: relative;
-            height: 136px;
-            background: radial-gradient(circle at 50% 45%, rgba(56, 189, 248, 0.25), rgba(6, 13, 26, 0.95));
+            height: 142px;
+            background: radial-gradient(circle at 50% 42%, rgba(56, 189, 248, 0.28), rgba(6, 13, 26, 0.96) 78%);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px;
+            padding: 12px;
         }
         .nft-tile-art::before {
             content: '';
             position: absolute;
             inset: 0;
-            opacity: 0.15;
-            background-image: radial-gradient(var(--arctic-cyan) 1px, transparent 1px);
+            opacity: 0.18;
+            background-image: radial-gradient(var(--arctic-ice) 1px, transparent 1px);
             background-size: 12px 12px;
         }
         .nft-tile-art img {
-            width: 96px;
-            height: 96px;
+            width: 102px;
+            height: 102px;
             object-fit: contain;
             position: relative;
             z-index: 2;
-            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
+            filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.65));
         }
         .nft-num-badge {
             position: absolute;
             top: 8px; right: 8px;
-            padding: 3px 7px;
-            border-radius: 7px;
-            background: rgba(3, 8, 18, 0.72);
-            border: 1px solid rgba(255,255,255,0.14);
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: rgba(3, 8, 18, 0.78);
+            border: 1px solid rgba(186, 230, 253, 0.22);
             font-size: 10px;
             font-weight: 800;
             color: var(--arctic-ice);
             z-index: 3;
         }
+        .nft-model-tag {
+            position: absolute;
+            bottom: 8px; left: 8px; right: 8px;
+            padding: 3px 8px;
+            border-radius: 8px;
+            background: rgba(3, 8, 18, 0.72);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--arctic-cyan);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 3;
+        }
         .nft-tile-info {
-            padding: 10px;
+            padding: 10px 11px 11px;
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -445,34 +493,63 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .nft-tile-model {
-            font-size: 10.5px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .nft-price-box {
+        .nft-price-row {
             margin-top: 8px;
-            padding-top: 7px;
-            border-top: 1px solid rgba(165, 224, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            padding: 6px 8px;
+            border-radius: 11px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(125, 211, 252, 0.22);
         }
-        .price-main-stars {
-            font-size: 13px;
+        .price-stars-pill {
+            font-size: 12.5px;
             font-weight: 800;
             color: var(--gold-star);
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
         }
-        .price-sub-fiat {
-            font-size: 10px;
-            color: var(--text-secondary);
-            margin-top: 2px;
+        .price-rub-pill {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--arctic-ice);
         }
 
-        /* ============================================================
+        /* Карточка выбора модели/коллекции в модалке фильтра */
+        .visual-option-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            max-height: 350px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            padding-right: 2px;
+        }
+        .vo-card {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 10px;
+            border-radius: 13px;
+            background: var(--bg-field);
+            border: 1px solid var(--border-crystal);
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .vo-card.checked {
+            border-color: var(--arctic-cyan);
+            background: rgba(56, 189, 248, 0.18);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.22);
+        }
+        .vo-card img { width: 32px; height: 32px; object-fit: contain; border-radius: 7px; }
+        .vo-card-info { overflow: hidden; flex: 1; }
+        .vo-card-info b { font-size: 11.5px; color: #fff; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .vo-card-info small { font-size: 10px; color: var(--arctic-ice); display: block; }
+
+/* ============================================================
            АПГРЕЙД (ЗИМНЕЕ КОЛЕСО С ОРБИТАЛЬНОЙ ЁЛОЧКОЙ)
            ============================================================ */
         .upg-wheel-arena {
@@ -501,7 +578,6 @@
             height: 256px;
             overflow: visible;
         }
-        /* Орбитальная ёлочка вместо стрелочки */
         .tree-orbit-arm {
             position: absolute;
             inset: 0;
@@ -537,34 +613,11 @@
             padding: 8px;
             z-index: 4;
         }
-        .wheel-center-core img {
-            width: 44px;
-            height: 44px;
-            object-fit: contain;
-            margin-bottom: 3px;
-        }
-        .wheel-core-ico {
-            font-size: 24px;
-            color: var(--emerald);
-            margin-bottom: 4px;
-        }
-        .wheel-core-lbl {
-            font-size: 9px;
-            font-weight: 800;
-            line-height: 1.2;
-            letter-spacing: 0.4px;
-            color: var(--emerald);
-            text-transform: uppercase;
-        }
-        .wheel-core-pct {
-            font-family: 'Unbounded', sans-serif;
-            font-size: 16px;
-            font-weight: 800;
-            color: #fff;
-            margin-top: 2px;
-        }
+        .wheel-center-core img { width: 44px; height: 44px; object-fit: contain; margin-bottom: 3px; }
+        .wheel-core-ico { font-size: 24px; color: var(--emerald); margin-bottom: 4px; }
+        .wheel-core-lbl { font-size: 9px; font-weight: 800; line-height: 1.2; letter-spacing: 0.4px; color: var(--emerald); text-transform: uppercase; }
+        .wheel-core-pct { font-family: 'Unbounded', sans-serif; font-size: 16px; font-weight: 800; color: #fff; margin-top: 2px; }
 
-        /* Две карточки выбора (Ваш подарок -> Цель) со стрелкой по центру */
         .upg-cards-pair {
             position: relative;
             display: grid;
@@ -608,39 +661,18 @@
         .upg-pick-card:active { transform: scale(0.97); }
         .upg-pick-card.filled { border-color: var(--border-highlight); }
         .upg-plus-circle {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 40px; height: 40px; border-radius: 50%;
             background: rgba(56, 189, 248, 0.14);
             border: 1px solid rgba(125, 211, 252, 0.3);
             color: var(--emerald);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; margin-bottom: 10px;
         }
-        .upg-pick-card img {
-            width: 56px;
-            height: 56px;
-            object-fit: contain;
-            margin-bottom: 6px;
-            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
-        }
-        .upg-pick-title {
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--emerald);
-            line-height: 1.25;
-        }
+        .upg-pick-card img { width: 56px; height: 56px; object-fit: contain; margin-bottom: 6px; }
+        .upg-pick-title { font-size: 13px; font-weight: 800; color: var(--emerald); line-height: 1.25; }
         .upg-pick-card.target-empty .upg-pick-title { color: var(--text-secondary); }
-        .upg-pick-sub {
-            font-size: 10.5px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
+        .upg-pick-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 4px; }
 
-        /* Ряд пресетов X2, X4, X8, 35%, 55%, 75% */
         .upg-presets-row {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
@@ -657,14 +689,11 @@
             font-weight: 800;
             text-align: center;
             cursor: pointer;
-            transition: 0.18s;
         }
-        .preset-chip:active { transform: scale(0.94); }
         .preset-chip.active {
             border-color: var(--emerald);
             background: rgba(52, 211, 153, 0.18);
             color: #fff;
-            box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
         }
 
         /* КАСТОМНЫЙ СЕЛЕКТ */
@@ -786,7 +815,6 @@
         .footer-bar { text-align: center; padding: 14px 10px 6px; font-size: 11px; color: var(--text-muted); }
         .privacy-btn { color: var(--arctic-cyan); text-decoration: underline; cursor: pointer; font-weight: 700; }
 
-        /* НИЖНЯЯ ПАНЕЛЬ (РОВНО 5 КНОПОК: ГЛАВНАЯ, МАРКЕТ, АПГРЕЙД, ИНВЕНТАРЬ, ЧАТ) */
         .dock-nav {
             position: fixed;
             bottom: 10px; left: 10px; right: 10px;
@@ -851,10 +879,6 @@
             border: 1px solid var(--border-crystal);
             margin-bottom: 6px; cursor: pointer;
         }
-        .model-check-item.checked {
-            border-color: var(--arctic-cyan);
-            background: rgba(56, 189, 248, 0.16);
-        }
 
         .adm-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
         .adm-tab {
@@ -869,7 +893,6 @@
         .adm-pane.active { display: block; }
     </style>
 </head>
-
 <body>
     <!-- СЕВЕРНОЕ СИЯНИЕ -->
     <div class="aurora-bg">
@@ -911,7 +934,7 @@
         </div>
 
         <!-- ============================================================
-             PAGE: MAIN (ГЛАВНАЯ + ВСЕ ДОП. РАЗДЕЛЫ НА ГЛАВНОЙ)
+             PAGE: MAIN
              ============================================================ -->
         <div class="page active" id="page-main">
             <div class="ice-panel hero-arctic">
@@ -935,7 +958,6 @@
                     </button>
                 </div>
 
-                <!-- БЫСТРЫЕ ПЕРЕХОДЫ НА РАЗДЕЛЫ, УБРАННЫЕ ИЗ НИЖНЕЙ ПАНЕЛИ -->
                 <div class="hub-grid">
                     <div class="hub-card" onclick="showPage('deals')">
                         <i class="fas fa-layer-group"></i>
@@ -1009,7 +1031,6 @@
                 </div>
             </div>
 
-            <!-- АКТИВНЫЕ СДЕЛКИ И ПОСЛЕДНИЕ ОТЗЫВЫ -->
             <div class="ice-panel">
                 <div class="head-row">
                     <div class="head-title"><i class="fas fa-bolt"></i> <span data-i18n="active_deals">Активные сделки</span></div>
@@ -1027,416 +1048,421 @@
             </div>
         </div>
 
-        <!-- ============================================================
-             PAGE: MARKET (МАРКЕТ PORTALS / MRKT STYLE)
-             ============================================================ -->
-        <div class="page" id="page-market">
-            <div class="ice-panel">
-                <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
-                    <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.35)"/>
-                </svg>
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-store"></i> <span data-i18n="market_title">Маркет NFT</span> <span id="marketTotalBadge" style="font-size:11px; color:var(--arctic-ice); font-weight:700;"></span></div>
-                    <button class="btn btn-glass btn-sm" onclick="loadMarket()"><i class="fas fa-rotate"></i></button>
-                </div>
-
-                <div class="seg-tabs">
-                    <button type="button" class="seg-btn active" id="mktTabNft" onclick="switchMarketTab('nft')">NFT Подарки</button>
-                    <button type="button" class="seg-btn" id="mktTabAcc" onclick="switchMarketTab('acc')">Игровые аккаунты</button>
-                </div>
-
-                <div id="marketNftSection">
-                    <!-- Поиск и мульти-фильтр моделей -->
-                    <div class="market-toolbar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="marketSearchInput" placeholder="Поиск по названию, #номеру..." oninput="debouncedMarketLoad()">
-                        </div>
-                        <button class="filter-trigger-btn" onclick="openModelFilterModal()">
-                            <i class="fas fa-sliders"></i>
-                            <span id="modelFilterBtnText">Модели</span>
-                        </button>
-                    </div>
-
-                    <!-- Сортировка -->
-                    <div class="sort-pills">
-                        <button class="s-pill active" id="sort-newest" onclick="setMarketSort('newest', this)">Недавно выставленные</button>
-                        <button class="s-pill" id="sort-price_asc" onclick="setMarketSort('price_asc', this)">Дешевле</button>
-                        <button class="s-pill" id="sort-price_desc" onclick="setMarketSort('price_desc', this)">Дороже</button>
-                    </div>
-
-                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;" id="marketRateInfo">
-                        Курс: 1 ★ = 1.4 ₽ • Автоконвертация TON и UAH
-                    </div>
-
-                    <!-- Сетка карточек NFT -->
-                    <div class="market-grid" id="marketGrid"></div>
-                </div>
-
-                <div id="marketAccSection" style="display: none; text-align: center; padding: 30px 14px;">
-                    <div style="font-size: 40px; color: var(--arctic-cyan); margin-bottom: 10px;"><i class="fas fa-gamepad"></i></div>
-                    <div style="font-size: 17px; font-weight: 800; margin-bottom: 6px;">Маркет игровых аккаунтов в разработке</div>
-                    <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
-                        Скоро здесь откроется витрина игровых аккаунтов с моментальной передачей. Сейчас вы можете провести сделку на любой аккаунт без комиссии.
-                    </div>
-                    <button class="btn btn-ice btn-sm" onclick="openCreateRole('buyer')">Создать сделку на аккаунт</button>
-                </div>
+<!-- ============================================================
+         PAGE: MARKET (ВИЗУАЛЬНЫЕ ФИЛЬТРЫ КОЛЛЕКЦИЙ И МОДЕЛЕЙ БЕЗ ВВОДА)
+         ============================================================ -->
+    <div class="page" id="page-market">
+        <div class="ice-panel">
+            <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
+                <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.35)"/>
+            </svg>
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-store"></i> <span data-i18n="market_title">Маркет NFT</span> <span id="marketTotalBadge" style="font-size:11px; color:var(--arctic-ice); font-weight:700;"></span></div>
+                <button class="btn btn-glass btn-sm" onclick="resetAllMarketFilters()"><i class="fas fa-rotate"></i></button>
             </div>
-        </div>
 
-        <!-- ============================================================
-             PAGE: UPGRADE (ЗИМНЕЕ КОЛЕСО С ОРБИТАЛЬНОЙ ЁЛОЧКОЙ)
-             ============================================================ -->
-        <div class="page" id="page-upgrade">
-            <div class="ice-panel">
-                <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
-                    <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.38)"/>
-                </svg>
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-tree"></i> <span>Апгрейд подарков</span></div>
-                    <span style="font-size:11px; color:var(--arctic-ice); font-weight:700;">5% — 75%</span>
-                </div>
-
-                <!-- Колесо апгрейда с орбитальной ёлочкой -->
-                <div class="upg-wheel-arena">
-                    <div class="wheel-box">
-                        <svg class="wheel-svg" viewBox="0 0 260 260">
-                            <defs>
-                                <linearGradient id="iceSectorGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#10b981"/>
-                                    <stop offset="50%" stop-color="#2dd4bf"/>
-                                    <stop offset="100%" stop-color="#38bdf8"/>
-                                </linearGradient>
-                            </defs>
-
-                            <!-- Внешнее ледяное кольцо с насечками -->
-                            <circle cx="130" cy="130" r="116" fill="none" stroke="rgba(165, 224, 255, 0.22)" stroke-width="2" stroke-dasharray="2 6.1"/>
-                            <circle cx="130" cy="130" r="102" fill="none" stroke="rgba(14, 28, 54, 0.95)" stroke-width="18"/>
-
-                            <!-- Сектор шанса победы (начинается от 0 внизу, 90deg в SVG) -->
-                            <circle id="upgChanceArc" cx="130" cy="130" r="102" fill="none"
-                                    stroke="url(#iceSectorGrad)" stroke-width="18"
-                                    stroke-dasharray="0 641"
-                                    transform="rotate(90 130 130)"
-                                    style="transition: stroke-dasharray 0.35s ease;"/>
-
-                            <!-- Внутренняя тонкая обводка -->
-                            <circle cx="130" cy="130" r="88" fill="none" stroke="rgba(125, 211, 252, 0.25)" stroke-width="1.5"/>
-
-                            <!-- Метки 100 (верх), 50 (лево), 50 (право), 0 (низ) -->
-                            <text x="130" y="32" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">100</text>
-                            <text x="28" y="134" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">50</text>
-                            <text x="232" y="134" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">50</text>
-                            <text x="130" y="236" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">0</text>
-                        </svg>
-
-                        <!-- Орбитальная ёлочка вместо стрелочки -->
-                        <div class="tree-orbit-arm" id="treeOrbitArm">
-                            <div class="tree-orbit-badge">
-                                <svg viewBox="0 0 36 40" width="34" height="38">
-                                    <rect x="15" y="32" width="6" height="6" rx="1.5" fill="#92400e"/>
-                                    <polygon points="18,14 5,32 31,32" fill="#059669"/>
-                                    <polygon points="18,8 8,23 28,23" fill="#10b981"/>
-                                    <polygon points="18,3 11,15 25,15" fill="#34d399"/>
-                                    <polygon points="18,0 19.5,3 23,3 20.2,5 21.2,8 18,6.2 14.8,8 15.8,5 13,3 16.5,3" fill="#fbbf24"/>
-                                    <circle cx="14" cy="20" r="1.6" fill="#38bdf8"/>
-                                    <circle cx="22" cy="21" r="1.6" fill="#fbbf24"/>
-                                    <circle cx="12" cy="28" r="1.8" fill="#f472b6"/>
-                                    <circle cx="23" cy="28" r="1.8" fill="#bae6fd"/>
-                                </svg>
-                            </div>
-                        </div>
-
-                        <!-- Центральный круг -->
-                        <div class="wheel-center-core" id="wheelCenterCore">
-                            <i class="fas fa-gift wheel-core-ico"></i>
-                            <div class="wheel-core-lbl">ВЫБЕРИТЕ ПОДАРКИ<br>ДЛЯ УЛУЧШЕНИЯ</div>
-                        </div>
-                    </div>
-                    <div style="font-size: 11px; color: var(--arctic-ice);" id="upgHintLine">Выберите ваш подарок или ставку с баланса</div>
-                </div>
-
-                <!-- Переключатель источника ставки -->
-                <div class="seg-tabs">
-                    <button type="button" class="seg-btn active" id="upgModeInv" onclick="setUpgradeStakeMode('inventory')">Из инвентаря</button>
-                    <button type="button" class="seg-btn" id="upgModeBal" onclick="setUpgradeStakeMode('balance')">С баланса кошелька</button>
-                </div>
-
-                <div id="upgBalanceInputs" style="display:none; margin-bottom: 12px;">
-                    <div style="display:grid; grid-template-columns: 1fr 1.4fr; gap: 8px;">
-                        <div class="custom-select" id="csUpgCurr">
-                            <div class="cs-trigger" onclick="toggleCustomSelect('csUpgCurr')">
-                                <span id="csUpgCurrText">STARS</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
-                            <div class="cs-menu">
-                                <div class="cs-option selected" onclick="selectUpgCurr('STARS')">STARS</div>
-                                <div class="cs-option" onclick="selectUpgCurr('TON')">TON</div>
-                                <div class="cs-option" onclick="selectUpgCurr('RUB')">RUB</div>
-                                <div class="cs-option" onclick="selectUpgCurr('UAH')">UAH</div>
-                            </div>
-                        </div>
-                        <input type="hidden" id="upgCurrVal" value="STARS">
-                        <input type="number" id="upgBalAmt" placeholder="Сумма ставки" min="1" step="0.1" oninput="recalcUpgradeChance()" style="width:100%; padding:12px; border-radius:13px; border:1px solid var(--border-crystal); background:var(--bg-field); color:#fff; outline:none;">
-                    </div>
-                </div>
-
-                <!-- Две карточки выбора со стрелкой по центру -->
-                <div class="upg-cards-pair">
-                    <div class="upg-pick-card" id="upgLeftSlot" onclick="openPickStakeNftModal()">
-                        <div class="upg-plus-circle"><i class="fas fa-plus"></i></div>
-                        <div class="upg-pick-title">Выберите<br>подарки</div>
-                        <div class="upg-pick-sub">Из вашего инвентаря</div>
-                    </div>
-
-                    <div class="upg-arrow-bridge"><i class="fas fa-arrow-right"></i></div>
-
-                    <div class="upg-pick-card target-empty" id="upgRightSlot" onclick="openPickTargetNftModal()">
-                        <div class="upg-plus-circle" style="color: var(--arctic-ice);"><i class="fas fa-plus"></i></div>
-                        <div class="upg-pick-title">Выберите цель</div>
-                        <div class="upg-pick-sub">Или пресет ниже</div>
-                    </div>
-                </div>
-
-                <!-- Пресеты X2, X4, X8, 35%, 55%, 75% -->
-                <div class="upg-presets-row">
-                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('x2', this)">X2</button>
-                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('x4', this)">X4</button>
-                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('x8', this)">X8</button>
-                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('p35', this)">35%</button>
-                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('p55', this)">55%</button>
-                    <button type="button" class="preset-chip" onclick="applyUpgradePreset('p75', this)">75%</button>
-                </div>
-
-                <!-- Главная кнопка улучшения -->
-                <button class="btn btn-ice" id="upgSpinBtn" onclick="runUpgradeSpin()">
-                    Выберите подарки для улучшения
-                </button>
+            <div class="seg-tabs">
+                <button type="button" class="seg-btn active" id="mktTabNft" onclick="switchMarketTab('nft')">NFT Подарки</button>
+                <button type="button" class="seg-btn" id="mktTabAcc" onclick="switchMarketTab('acc')">Игровые аккаунты</button>
             </div>
-        </div>
 
-        <!-- ============================================================
-             PAGE: INVENTORY (ИНВЕНТАРЬ КУПЛЕННЫХ И ВЫИГРАННЫХ NFT)
-             ============================================================ -->
-        <div class="page" id="page-inventory">
-            <div class="ice-panel">
-                <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
-                    <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.35)"/>
-                </svg>
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-box-open"></i> <span>Мой инвентарь</span></div>
-                    <button class="btn btn-glass btn-sm" onclick="loadInventory()"><i class="fas fa-rotate"></i></button>
-                </div>
+            <div id="marketNftSection">
+                <!-- Горизонтальная лента быстрого выбора коллекции с иконками -->
+                <div class="quick-col-strip" id="quickCollectionStrip"></div>
 
-                <div class="info-callout">
-                    Здесь хранятся NFT, купленные на маркете или выигранные в апгрейде. Вы можете вывести подарок на свой Telegram-аккаунт или выставить его на продажу в маркет (комиссия при продаже на маркете — 5%).
-                </div>
-
-                <div id="inventoryContainer"></div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-             PAGE: CHAT (ЧАТ ПОДДЕРЖКИ)
-             ============================================================ -->
-        <div class="page" id="page-support">
-            <div class="ice-panel">
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-comments"></i> <span data-i18n="chat_title">Чат с поддержкой</span></div>
-                    <button class="btn btn-glass btn-sm" onclick="openTg('Hladpriemka')">@Hladpriemka</button>
-                </div>
-
-                <div class="chat-stream" id="userChatBox"></div>
-
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="userMsgInput" placeholder="Напишите сообщение..." style="flex:1; padding:12px 14px; border-radius:14px; border:1px solid var(--border-crystal); background:var(--bg-field); color:var(--text-primary); outline:none;" onkeydown="if(event.key==='Enter') sendUserMessage()">
-                    <button class="btn btn-ice btn-sm" onclick="sendUserMessage()"><i class="fas fa-paper-plane"></i></button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-             ДОПОЛНИТЕЛЬНЫЕ СТРАНИЦЫ (ОТКРЫВАЮТСЯ С ГЛАВНОЙ)
-             ============================================================ -->
-        <div class="page" id="page-create">
-            <div class="ice-panel">
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-plus-circle"></i> <span data-i18n="create_title">Создать сделку (комиссия 0%)</span></div>
-                    <button class="btn btn-glass btn-sm" onclick="showPage('main')">Назад</button>
-                </div>
-
-                <div class="seg-tabs">
-                    <button type="button" class="seg-btn active" id="tabSeller" onclick="setCreatorRole('seller')" data-i18n="sell_btn">Я продавец</button>
-                    <button type="button" class="seg-btn" id="tabBuyer" onclick="setCreatorRole('buyer')" data-i18n="buy_btn">Я покупатель</button>
-                </div>
-
-                <div class="info-callout" id="roleHint"></div>
-
-                <form id="dealForm">
-                    <div class="field">
-                        <label>Категория</label>
-                        <div class="custom-select" id="csCategory">
-                            <div class="cs-trigger" onclick="toggleCustomSelect('csCategory')">
-                                <span id="csCategoryText">NFT / Telegram Gift</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
-                            <div class="cs-menu">
-                                <div class="cs-option selected" onclick="selectCustomOption('csCategory', 'nft_gift', 'NFT / Telegram Gift')">NFT / Telegram Gift</div>
-                                <div class="cs-option" onclick="selectCustomOption('csCategory', 'game_account', 'Игровой аккаунт')">Игровой аккаунт</div>
-                                <div class="cs-option" onclick="selectCustomOption('csCategory', 'other', 'Цифровой товар')">Цифровой товар</div>
+                <!-- Две кнопки визуального фильтра: Коллекция и Модель -->
+                <div class="filter-bar-grid">
+                    <button type="button" class="visual-filter-btn" id="btnFilterCollection" onclick="openCollectionFilterModal()">
+                        <div class="vf-left">
+                            <i class="fas fa-gift"></i>
+                            <div class="vf-text">
+                                <small>Подарок</small>
+                                <b id="lblFilterCollection">Все подарки</b>
                             </div>
                         </div>
-                        <input type="hidden" id="catValue" value="nft_gift">
-                    </div>
-
-                    <div class="field">
-                        <label>Название товара</label>
-                        <input type="text" id="prodInput" placeholder="Plush Pepe #120" required>
-                    </div>
-
-                    <div class="field" id="nftField">
-                        <label>Ссылка на NFT (t.me/nft/...)</label>
-                        <input type="text" id="nftInput" placeholder="t.me/nft/PlushPepe-120">
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px;">
-                        <div class="field">
-                            <label>Валюта</label>
-                            <div class="custom-select" id="csDealCurr">
-                                <div class="cs-trigger" onclick="toggleCustomSelect('csDealCurr')">
-                                    <span id="csDealCurrText">TON</span>
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                                <div class="cs-menu">
-                                    <div class="cs-option selected" onclick="selectCustomOption('csDealCurr', 'TON', 'TON')">TON</div>
-                                    <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'STARS', 'STARS')">STARS</div>
-                                    <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'RUB', 'RUB')">RUB</div>
-                                    <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'UAH', 'UAH')">UAH</div>
-                                </div>
-                            </div>
-                            <input type="hidden" id="currValue" value="TON">
-                        </div>
-
-                        <div class="field">
-                            <label>Сумма</label>
-                            <input type="number" id="amtInput" placeholder="25" min="0.01" step="0.01" required>
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label id="partnerLbl">@username покупателя</label>
-                        <input type="text" id="partnerInput" placeholder="username" required>
-                    </div>
-
-                    <button type="submit" class="btn btn-ice" id="submitDealBtn">
-                        <i class="fas fa-check-circle"></i> Создать и получить ссылку
+                        <i class="fas fa-chevron-down" style="font-size:11px; color:var(--text-muted);"></i>
                     </button>
-                </form>
 
-                <div id="createdResult" style="display: none; margin-top: 14px;"></div>
-            </div>
-        </div>
-
-        <div class="page" id="page-deals">
-            <div class="ice-panel">
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-layer-group"></i> <span>Мои сделки</span></div>
-                    <button class="btn btn-glass btn-sm" onclick="loadDeals()"><i class="fas fa-rotate"></i></button>
-                </div>
-                <div id="dealsContainer"></div>
-            </div>
-        </div>
-
-        <div class="page" id="page-reviews">
-            <div class="ice-panel">
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-star"></i> <span>Отзывы о сервисе</span></div>
-                    <button class="btn btn-glass btn-sm" onclick="loadReviews()"><i class="fas fa-rotate"></i></button>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(56,189,248,0.12); border:1px solid var(--border-highlight); border-radius:16px; margin-bottom:12px;">
-                    <div>
-                        <div style="font-family:'Unbounded',sans-serif; font-size:19px; font-weight:800; color:var(--gold-star);" id="avgRatingText">4.9 ★</div>
-                        <div style="font-size:11px; color:var(--text-secondary);" id="reviewsCountText">Загрузка...</div>
-                    </div>
-                    <div style="font-size:11px; color:var(--arctic-ice); font-weight:700;">@hladicebot</div>
-                </div>
-                <div id="reviewFormBlock" style="margin-bottom: 12px;"></div>
-                <div id="reviewsListContainer"></div>
-            </div>
-        </div>
-
-        <div class="page" id="page-balance">
-            <div class="ice-panel">
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-wallet"></i> <span>Кошелёк Hlad Ice</span></div>
-                </div>
-
-                <div class="card-3d-stage" id="card3dStage">
-                    <div class="wallet-3d-card theme-stars" id="wallet3dCard">
-                        <div class="cc-top-row">
-                            <div class="cc-emv"></div>
-                            <div class="cc-net-pill" id="cardNetworkBadge">TELEGRAM STARS</div>
+                    <button type="button" class="visual-filter-btn" id="btnFilterModel" onclick="openModelFilterModal()">
+                        <div class="vf-left">
+                            <i class="fas fa-palette"></i>
+                            <div class="vf-text">
+                                <small>Модель</small>
+                                <b id="lblFilterModel">Все модели</b>
+                            </div>
                         </div>
-                        <div class="cc-label-title" id="cardWalletTitle">STARS КОШЕЛЁК</div>
-                        <div class="cc-amount-display" id="cardMainBalance">0 STARS</div>
-                        <div class="cc-currency-tabs">
-                            <div class="cc-curr-btn active" id="pill-stars" onclick="selectCardCurrency('stars')"><small>STARS</small><b id="val-stars">0</b></div>
-                            <div class="cc-curr-btn" id="pill-ton" onclick="selectCardCurrency('ton')"><small>TON</small><b id="val-ton">0</b></div>
-                            <div class="cc-curr-btn" id="pill-rub" onclick="selectCardCurrency('rub')"><small>RUB</small><b id="val-rub">0</b></div>
-                            <div class="cc-curr-btn" id="pill-uah" onclick="selectCardCurrency('uah')"><small>UAH</small><b id="val-uah">0</b></div>
-                        </div>
-                    </div>
+                        <i class="fas fa-chevron-down" style="font-size:11px; color:var(--text-muted);"></i>
+                    </button>
                 </div>
 
-                <div class="info-callout" id="walletMethodHint">
-                    Для вывода звёзд укажите сумму и @username аккаунта Telegram, куда пойдут звёзды.
+                <!-- Сортировка: Недавние / Дешевле / Дороже -->
+                <div class="sort-segmented">
+                    <button type="button" class="sort-seg-btn active" id="sort-newest" onclick="setMarketSort('newest', this)">
+                        <i class="fas fa-clock"></i> Недавние
+                    </button>
+                    <button type="button" class="sort-seg-btn" id="sort-price_asc" onclick="setMarketSort('price_asc', this)">
+                        <i class="fas fa-arrow-down-short-wide"></i> Дешевле
+                    </button>
+                    <button type="button" class="sort-seg-btn" id="sort-price_desc" onclick="setMarketSort('price_desc', this)">
+                        <i class="fas fa-arrow-up-wide-short"></i> Дороже
+                    </button>
+                </div>
+
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; display:flex; justify-content:space-between;" id="marketRateInfo">
+                    <span>Курс: 1 ★ = 1.4 ₽ • Автоконвертация TON и UAH</span>
+                </div>
+
+                <!-- Сетка карточек NFT -->
+                <div class="market-grid" id="marketGrid"></div>
+            </div>
+
+            <div id="marketAccSection" style="display: none; text-align: center; padding: 30px 14px;">
+                <div style="font-size: 40px; color: var(--arctic-cyan); margin-bottom: 10px;"><i class="fas fa-gamepad"></i></div>
+                <div style="font-size: 17px; font-weight: 800; margin-bottom: 6px;">Маркет игровых аккаунтов в разработке</div>
+                <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px;">
+                    Скоро здесь откроется витрина игровых аккаунтов с моментальной передачей. Сейчас вы можете провести сделку на любой аккаунт без комиссии.
+                </div>
+                <button class="btn btn-ice btn-sm" onclick="openCreateRole('buyer')">Создать сделку на аккаунт</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PAGE: UPGRADE (ЗИМНЕЕ КОЛЕСО С ОРБИТАЛЬНОЙ ЁЛОЧКОЙ)
+         ============================================================ -->
+    <div class="page" id="page-upgrade">
+        <div class="ice-panel">
+            <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
+                <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.38)"/>
+            </svg>
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-tree"></i> <span>Апгрейд подарков</span></div>
+                <span style="font-size:11px; color:var(--arctic-ice); font-weight:700;">5% — 75%</span>
+            </div>
+
+            <div class="upg-wheel-arena">
+                <div class="wheel-box">
+                    <svg class="wheel-svg" viewBox="0 0 260 260">
+                        <defs>
+                            <linearGradient id="iceSectorGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#10b981"/>
+                                <stop offset="50%" stop-color="#2dd4bf"/>
+                                <stop offset="100%" stop-color="#38bdf8"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="130" cy="130" r="116" fill="none" stroke="rgba(165, 224, 255, 0.22)" stroke-width="2" stroke-dasharray="2 6.1"/>
+                        <circle cx="130" cy="130" r="102" fill="none" stroke="rgba(14, 28, 54, 0.95)" stroke-width="18"/>
+                        <circle id="upgChanceArc" cx="130" cy="130" r="102" fill="none"
+                                stroke="url(#iceSectorGrad)" stroke-width="18"
+                                stroke-dasharray="0 641"
+                                transform="rotate(90 130 130)"
+                                style="transition: stroke-dasharray 0.35s ease;"/>
+                        <circle cx="130" cy="130" r="88" fill="none" stroke="rgba(125, 211, 252, 0.25)" stroke-width="1.5"/>
+                        <text x="130" y="32" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">100</text>
+                        <text x="28" y="134" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">50</text>
+                        <text x="232" y="134" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">50</text>
+                        <text x="130" y="236" text-anchor="middle" fill="#e0f2fe" font-size="10" font-weight="800">0</text>
+                    </svg>
+
+                    <div class="tree-orbit-arm" id="treeOrbitArm">
+                        <div class="tree-orbit-badge">
+                            <svg viewBox="0 0 36 40" width="34" height="38">
+                                <rect x="15" y="32" width="6" height="6" rx="1.5" fill="#92400e"/>
+                                <polygon points="18,14 5,32 31,32" fill="#059669"/>
+                                <polygon points="18,8 8,23 28,23" fill="#10b981"/>
+                                <polygon points="18,3 11,15 25,15" fill="#34d399"/>
+                                <polygon points="18,0 19.5,3 23,3 20.2,5 21.2,8 18,6.2 14.8,8 15.8,5 13,3 16.5,3" fill="#fbbf24"/>
+                                <circle cx="14" cy="20" r="1.6" fill="#38bdf8"/>
+                                <circle cx="22" cy="21" r="1.6" fill="#fbbf24"/>
+                                <circle cx="12" cy="28" r="1.8" fill="#f472b6"/>
+                                <circle cx="23" cy="28" r="1.8" fill="#bae6fd"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="wheel-center-core" id="wheelCenterCore">
+                        <i class="fas fa-gift wheel-core-ico"></i>
+                        <div class="wheel-core-lbl">ВЫБЕРИТЕ ПОДАРКИ<br>ДЛЯ УЛУЧШЕНИЯ</div>
+                    </div>
+                </div>
+                <div style="font-size: 11px; color: var(--arctic-ice);" id="upgHintLine">Выберите ваш подарок или ставку с баланса</div>
+            </div>
+
+            <div class="seg-tabs">
+                <button type="button" class="seg-btn active" id="upgModeInv" onclick="setUpgradeStakeMode('inventory')">Из инвентаря</button>
+                <button type="button" class="seg-btn" id="upgModeBal" onclick="setUpgradeStakeMode('balance')">С баланса кошелька</button>
+            </div>
+
+            <div id="upgBalanceInputs" style="display:none; margin-bottom: 12px;">
+                <div style="display:grid; grid-template-columns: 1fr 1.4fr; gap: 8px;">
+                    <div class="custom-select" id="csUpgCurr">
+                        <div class="cs-trigger" onclick="toggleCustomSelect('csUpgCurr')">
+                            <span id="csUpgCurrText">STARS</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="cs-menu">
+                            <div class="cs-option selected" onclick="selectUpgCurr('STARS')">STARS</div>
+                            <div class="cs-option" onclick="selectUpgCurr('TON')">TON</div>
+                            <div class="cs-option" onclick="selectUpgCurr('RUB')">RUB</div>
+                            <div class="cs-option" onclick="selectUpgCurr('UAH')">UAH</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="upgCurrVal" value="STARS">
+                    <input type="number" id="upgBalAmt" placeholder="Сумма ставки" min="1" step="0.1" oninput="recalcUpgradeChance()" style="width:100%; padding:12px; border-radius:13px; border:1px solid var(--border-crystal); background:var(--bg-field); color:#fff; outline:none;">
+                </div>
+            </div>
+
+            <div class="upg-cards-pair">
+                <div class="upg-pick-card" id="upgLeftSlot" onclick="openPickStakeNftModal()">
+                    <div class="upg-plus-circle"><i class="fas fa-plus"></i></div>
+                    <div class="upg-pick-title">Выберите<br>подарки</div>
+                    <div class="upg-pick-sub">Из вашего инвентаря</div>
+                </div>
+
+                <div class="upg-arrow-bridge"><i class="fas fa-arrow-right"></i></div>
+
+                <div class="upg-pick-card target-empty" id="upgRightSlot" onclick="openPickTargetNftModal()">
+                    <div class="upg-plus-circle" style="color: var(--arctic-ice);"><i class="fas fa-plus"></i></div>
+                    <div class="upg-pick-title">Выберите цель</div>
+                    <div class="upg-pick-sub">Или пресет ниже</div>
+                </div>
+            </div>
+
+            <div class="upg-presets-row">
+                <button type="button" class="preset-chip" onclick="applyUpgradePreset('x2', this)">X2</button>
+                <button type="button" class="preset-chip" onclick="applyUpgradePreset('x4', this)">X4</button>
+                <button type="button" class="preset-chip" onclick="applyUpgradePreset('x8', this)">X8</button>
+                <button type="button" class="preset-chip" onclick="applyUpgradePreset('p35', this)">35%</button>
+                <button type="button" class="preset-chip" onclick="applyUpgradePreset('p55', this)">55%</button>
+                <button type="button" class="preset-chip" onclick="applyUpgradePreset('p75', this)">75%</button>
+            </div>
+
+            <button class="btn btn-ice" id="upgSpinBtn" onclick="runUpgradeSpin()">
+                Выберите подарки для улучшения
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PAGE: INVENTORY
+         ============================================================ -->
+    <div class="page" id="page-inventory">
+        <div class="ice-panel">
+            <svg class="icicle-crown" viewBox="0 0 400 15" preserveAspectRatio="none">
+                <path d="M0,0 L400,0 L400,2 Q380,14 365,2 Q345,10 330,2 Q310,15 290,2 Q270,10 250,2 Q230,15 210,2 Q190,10 170,2 Q150,15 130,2 Q110,10 90,2 Q70,15 50,2 Q30,10 15,2 L0,2 Z" fill="rgba(186,230,253,0.35)"/>
+            </svg>
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-box-open"></i> <span>Мой инвентарь</span></div>
+                <button class="btn btn-glass btn-sm" onclick="loadInventory()"><i class="fas fa-rotate"></i></button>
+            </div>
+
+            <div class="info-callout">
+                Здесь хранятся NFT, купленные на маркете или выигранные в апгрейде. Вы можете вывести подарок на свой Telegram-аккаунт или выставить его на продажу в маркет (комиссия при продаже на маркете — 5%).
+            </div>
+
+            <div id="inventoryContainer"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PAGE: CHAT
+         ============================================================ -->
+    <div class="page" id="page-support">
+        <div class="ice-panel">
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-comments"></i> <span data-i18n="chat_title">Чат с поддержкой</span></div>
+                <button class="btn btn-glass btn-sm" onclick="openTg('Hladpriemka')">@Hladpriemka</button>
+            </div>
+
+            <div class="chat-stream" id="userChatBox"></div>
+
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="userMsgInput" placeholder="Напишите сообщение..." style="flex:1; padding:12px 14px; border-radius:14px; border:1px solid var(--border-crystal); background:var(--bg-field); color:var(--text-primary); outline:none;" onkeydown="if(event.key==='Enter') sendUserMessage()">
+                <button class="btn btn-ice btn-sm" onclick="sendUserMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         ДОП. СТРАНИЦЫ (СОЗДАНИЕ СДЕЛКИ, МОИ СДЕЛКИ, ОТЗЫВЫ, КОШЕЛЁК, АДМИН)
+         ============================================================ -->
+    <div class="page" id="page-create">
+        <div class="ice-panel">
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-plus-circle"></i> <span data-i18n="create_title">Создать сделку (комиссия 0%)</span></div>
+                <button class="btn btn-glass btn-sm" onclick="showPage('main')">Назад</button>
+            </div>
+
+            <div class="seg-tabs">
+                <button type="button" class="seg-btn active" id="tabSeller" onclick="setCreatorRole('seller')" data-i18n="sell_btn">Я продавец</button>
+                <button type="button" class="seg-btn" id="tabBuyer" onclick="setCreatorRole('buyer')" data-i18n="buy_btn">Я покупатель</button>
+            </div>
+
+            <div class="info-callout" id="roleHint"></div>
+
+            <form id="dealForm">
+                <div class="field">
+                    <label>Категория</label>
+                    <div class="custom-select" id="csCategory">
+                        <div class="cs-trigger" onclick="toggleCustomSelect('csCategory')">
+                            <span id="csCategoryText">NFT / Telegram Gift</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="cs-menu">
+                            <div class="cs-option selected" onclick="selectCustomOption('csCategory', 'nft_gift', 'NFT / Telegram Gift')">NFT / Telegram Gift</div>
+                            <div class="cs-option" onclick="selectCustomOption('csCategory', 'game_account', 'Игровой аккаунт')">Игровой аккаунт</div>
+                            <div class="cs-option" onclick="selectCustomOption('csCategory', 'other', 'Цифровой товар')">Цифровой товар</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="catValue" value="nft_gift">
                 </div>
 
                 <div class="field">
-                    <label id="withdrawAmtLabel">Количество звёзд (STARS)</label>
-                    <input type="number" id="withdrawAmt" placeholder="500" min="0.01" step="0.01">
+                    <label>Название товара</label>
+                    <input type="text" id="prodInput" placeholder="Plush Pepe #120" required>
+                </div>
+
+                <div class="field" id="nftField">
+                    <label>Ссылка на NFT (t.me/nft/...)</label>
+                    <input type="text" id="nftInput" placeholder="t.me/nft/PlushPepe-120">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px;">
+                    <div class="field">
+                        <label>Валюта</label>
+                        <div class="custom-select" id="csDealCurr">
+                            <div class="cs-trigger" onclick="toggleCustomSelect('csDealCurr')">
+                                <span id="csDealCurrText">TON</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="cs-menu">
+                                <div class="cs-option selected" onclick="selectCustomOption('csDealCurr', 'TON', 'TON')">TON</div>
+                                <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'STARS', 'STARS')">STARS</div>
+                                <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'RUB', 'RUB')">RUB</div>
+                                <div class="cs-option" onclick="selectCustomOption('csDealCurr', 'UAH', 'UAH')">UAH</div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="currValue" value="TON">
+                    </div>
+
+                    <div class="field">
+                        <label>Сумма</label>
+                        <input type="number" id="amtInput" placeholder="25" min="0.01" step="0.01" required>
+                    </div>
                 </div>
 
                 <div class="field">
-                    <label id="withdrawReqLabel">Юзернейм аккаунта (@username)</label>
-                    <input type="text" id="withdrawReq" placeholder="@username">
+                    <label id="partnerLbl">@username покупателя</label>
+                    <input type="text" id="partnerInput" placeholder="username" required>
                 </div>
 
-                <button class="btn btn-ice" onclick="handleWithdrawClick()">
-                    <i class="fas fa-arrow-up-right-from-square"></i> Вывести средства
+                <button type="submit" class="btn btn-ice" id="submitDealBtn">
+                    <i class="fas fa-check-circle"></i> Создать и получить ссылку
                 </button>
-            </div>
-        </div>
+            </form>
 
-        <div class="page" id="page-admin">
-            <div class="ice-panel">
-                <div class="head-row">
-                    <div class="head-title"><i class="fas fa-crown"></i> <span>Админ-панель</span></div>
-                    <button class="btn btn-glass btn-sm" onclick="loadAdminPanel()"><i class="fas fa-rotate"></i></button>
+            <div id="createdResult" style="display: none; margin-top: 14px;"></div>
+        </div>
+    </div>
+
+    <div class="page" id="page-deals">
+        <div class="ice-panel">
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-layer-group"></i> <span>Мои сделки</span></div>
+                <button class="btn btn-glass btn-sm" onclick="loadDeals()"><i class="fas fa-rotate"></i></button>
+            </div>
+            <div id="dealsContainer"></div>
+        </div>
+    </div>
+
+    <div class="page" id="page-reviews">
+        <div class="ice-panel">
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-star"></i> <span>Отзывы о сервисе</span></div>
+                <button class="btn btn-glass btn-sm" onclick="loadReviews()"><i class="fas fa-rotate"></i></button>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(56,189,248,0.12); border:1px solid var(--border-highlight); border-radius:16px; margin-bottom:12px;">
+                <div>
+                    <div style="font-family:'Unbounded',sans-serif; font-size:19px; font-weight:800; color:var(--gold-star);" id="avgRatingText">4.9 ★</div>
+                    <div style="font-size:11px; color:var(--text-secondary);" id="reviewsCountText">Загрузка...</div>
                 </div>
-                <div id="adminBody"></div>
+                <div style="font-size:11px; color:var(--arctic-ice); font-weight:700;">@hladicebot</div>
             </div>
+            <div id="reviewFormBlock" style="margin-bottom: 12px;"></div>
+            <div id="reviewsListContainer"></div>
         </div>
-
-        <!-- FOOTER -->
-        <footer class="footer-bar">
-            <div>© 2026 Hlad Ice (@hladicebot) • <span class="privacy-btn" onclick="openPrivacyPolicy()" data-i18n="privacy_link">Политика конфиденциальности</span></div>
-        </footer>
     </div>
 
-    <!-- НИЖНЯЯ ПАНЕЛЬ (РОВНО 5 КНОПОК: ГЛАВНАЯ, МАРКЕТ, АПГРЕЙД, ИНВЕНТАРЬ, ЧАТ) -->
-    <nav class="dock-nav">
-        <button class="dock-item active" data-page="main" onclick="showPage('main')"><i class="fas fa-house"></i><span data-i18n="nav_home">Главная</span></button>
-        <button class="dock-item" data-page="market" onclick="showPage('market')"><i class="fas fa-store"></i><span data-i18n="nav_market">Маркет</span></button>
-        <button class="dock-item" data-page="upgrade" onclick="showPage('upgrade')"><i class="fas fa-tree"></i><span data-i18n="nav_upgrade">Апгрейд</span></button>
-        <button class="dock-item" data-page="inventory" onclick="showPage('inventory')"><i class="fas fa-box-open"></i><span data-i18n="nav_inv">Инвентарь</span></button>
-        <button class="dock-item" data-page="support" onclick="showPage('support')"><i class="fas fa-comment-dots"></i><span data-i18n="nav_chat">Чат</span></button>
-    </nav>
+    <div class="page" id="page-balance">
+        <div class="ice-panel">
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-wallet"></i> <span>Кошелёк Hlad Ice</span></div>
+            </div>
 
-    <!-- MODAL -->
-    <div class="modal-overlay" id="modal" onclick="if(event.target===this) closeModal()">
-        <div class="modal-window" id="modalBody"></div>
+            <div class="card-3d-stage" id="card3dStage">
+                <div class="wallet-3d-card theme-stars" id="wallet3dCard">
+                    <div class="cc-top-row">
+                        <div class="cc-emv"></div>
+                        <div class="cc-net-pill" id="cardNetworkBadge">TELEGRAM STARS</div>
+                    </div>
+                    <div class="cc-label-title" id="cardWalletTitle">STARS КОШЕЛЁК</div>
+                    <div class="cc-amount-display" id="cardMainBalance">0 STARS</div>
+                    <div class="cc-currency-tabs">
+                        <div class="cc-curr-btn active" id="pill-stars" onclick="selectCardCurrency('stars')"><small>STARS</small><b id="val-stars">0</b></div>
+                        <div class="cc-curr-btn" id="pill-ton" onclick="selectCardCurrency('ton')"><small>TON</small><b id="val-ton">0</b></div>
+                        <div class="cc-curr-btn" id="pill-rub" onclick="selectCardCurrency('rub')"><small>RUB</small><b id="val-rub">0</b></div>
+                        <div class="cc-curr-btn" id="pill-uah" onclick="selectCardCurrency('uah')"><small>UAH</small><b id="val-uah">0</b></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-callout" id="walletMethodHint">
+                Для вывода звёзд укажите сумму и @username аккаунта Telegram, куда пойдут звёзды.
+            </div>
+
+            <div class="field">
+                <label id="withdrawAmtLabel">Количество звёзд (STARS)</label>
+                <input type="number" id="withdrawAmt" placeholder="500" min="0.01" step="0.01">
+            </div>
+
+            <div class="field">
+                <label id="withdrawReqLabel">Юзернейм аккаунта (@username)</label>
+                <input type="text" id="withdrawReq" placeholder="@username">
+            </div>
+
+            <button class="btn btn-ice" onclick="handleWithdrawClick()">
+                <i class="fas fa-arrow-up-right-from-square"></i> Вывести средства
+            </button>
+        </div>
     </div>
+
+    <div class="page" id="page-admin">
+        <div class="ice-panel">
+            <div class="head-row">
+                <div class="head-title"><i class="fas fa-crown"></i> <span>Админ-панель</span></div>
+                <button class="btn btn-glass btn-sm" onclick="loadAdminPanel()"><i class="fas fa-rotate"></i></button>
+            </div>
+            <div id="adminBody"></div>
+        </div>
+    </div>
+
+    <footer class="footer-bar">
+        <div>© 2026 Hlad Ice (@hladicebot) • <span class="privacy-btn" onclick="openPrivacyPolicy()" data-i18n="privacy_link">Политика конфиденциальности</span></div>
+    </footer>
+</div>
+
+<!-- НИЖНЯЯ ПАНЕЛЬ (5 КНОПОК) -->
+<nav class="dock-nav">
+    <button class="dock-item active" data-page="main" onclick="showPage('main')"><i class="fas fa-house"></i><span data-i18n="nav_home">Главная</span></button>
+    <button class="dock-item" data-page="market" onclick="showPage('market')"><i class="fas fa-store"></i><span data-i18n="nav_market">Маркет</span></button>
+    <button class="dock-item" data-page="upgrade" onclick="showPage('upgrade')"><i class="fas fa-tree"></i><span data-i18n="nav_upgrade">Апгрейд</span></button>
+    <button class="dock-item" data-page="inventory" onclick="showPage('inventory')"><i class="fas fa-box-open"></i><span data-i18n="nav_inv">Инвентарь</span></button>
+    <button class="dock-item" data-page="support" onclick="showPage('support')"><i class="fas fa-comment-dots"></i><span data-i18n="nav_chat">Чат</span></button>
+</nav>
+
+<div class="modal-overlay" id="modal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-window" id="modalBody"></div>
+</div>
 
 <script>
     // ============================================================
@@ -1623,7 +1649,7 @@
     }
 
     // ============================================================
-    // 3. ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ (СДЕЛКИ, МАРКЕТ, АПГРЕЙД, ВЫВОД)
+    // 3. ПОЛИТИКА КОНФИДЕНЦИАЛЬНОСТИ
     // ============================================================
     function openPrivacyPolicy() {
         showModal(`
@@ -1732,7 +1758,7 @@
     }
 
     // ============================================================
-    // 5. НАВИГАЦИЯ (5 ОСНОВНЫХ ВКЛАДОК + ПЕРЕХОДЫ С ГЛАВНОЙ)
+    // 5. НАВИГАЦИЯ
     // ============================================================
     let chatPollTimer = null;
 
@@ -1771,13 +1797,14 @@
     }
 
     // ============================================================
-    // 6. МАРКЕТ NFT (МУЛЬТИ-ФИЛЬТР МОДЕЛЕЙ, СОРТИРОВКА, ПОКУПКА ОТ 2 СДЕЛОК)
+    // 6. МАРКЕТ NFT (ВИЗУАЛЬНЫЕ ФИЛЬТРЫ КОЛЛЕКЦИЙ И МОДЕЛЕЙ БЕЗ ВВОДА)
     // ============================================================
     let marketItems = [];
+    let marketCollectionsList = [];
     let marketModelsList = [];
+    let selectedFilterCollections = [];
     let selectedFilterModels = [];
     let activeMarketSort = 'newest';
-    let marketSearchTimer = null;
 
     function switchMarketTab(tab) {
         document.getElementById('mktTabNft').classList.toggle('active', tab === 'nft');
@@ -1786,39 +1813,144 @@
         document.getElementById('marketAccSection').style.display = tab === 'acc' ? 'block' : 'none';
     }
 
-    function debouncedMarketLoad() {
-        clearTimeout(marketSearchTimer);
-        marketSearchTimer = setTimeout(() => loadMarket(), 300);
+    function resetAllMarketFilters() {
+        selectedFilterCollections = [];
+        selectedFilterModels = [];
+        activeMarketSort = 'newest';
+        document.querySelectorAll('.sort-segmented .sort-seg-btn').forEach(p => p.classList.remove('active'));
+        document.getElementById('sort-newest')?.classList.add('active');
+        loadMarket();
     }
 
     function setMarketSort(sortVal, btnEl) {
         activeMarketSort = sortVal;
-        document.querySelectorAll('.sort-pills .s-pill').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.sort-segmented .sort-seg-btn').forEach(p => p.classList.remove('active'));
         if (btnEl) btnEl.classList.add('active');
         loadMarket();
     }
 
+    function toggleQuickCollection(colName) {
+        if (!colName) {
+            selectedFilterCollections = [];
+            selectedFilterModels = [];
+        } else {
+            const idx = selectedFilterCollections.indexOf(colName);
+            if (idx >= 0) {
+                selectedFilterCollections.splice(idx, 1);
+            } else {
+                selectedFilterCollections = [colName];
+            }
+            selectedFilterModels = [];
+        }
+        loadMarket();
+    }
+
     async function loadMarket() {
-        const search = document.getElementById('marketSearchInput')?.value.trim() || '';
         const res = await apiCall('/api/market', {
+            collections: selectedFilterCollections,
             models: selectedFilterModels,
-            sort: activeMarketSort,
-            search
+            sort: activeMarketSort
         });
         if (res.success) {
             marketItems = res.items || [];
+            marketCollectionsList = res.collections || [];
             marketModelsList = res.models || [];
+
             document.getElementById('marketTotalBadge').textContent = `(${res.filtered_count || marketItems.length})`;
-            document.getElementById('modelFilterBtnText').textContent = selectedFilterModels.length
-                ? `Модели (${selectedFilterModels.length})`
-                : 'Модели';
+
+            // Обновляем кнопки визуальных фильтров
+            const colBtn = document.getElementById('btnFilterCollection');
+            const colLbl = document.getElementById('lblFilterCollection');
+            if (selectedFilterCollections.length) {
+                colBtn.classList.add('active-filter');
+                colLbl.textContent = selectedFilterCollections.length === 1
+                    ? selectedFilterCollections[0]
+                    : `Выбрано: ${selectedFilterCollections.length}`;
+            } else {
+                colBtn.classList.remove('active-filter');
+                colLbl.textContent = 'Все подарки';
+            }
+
+            const modBtn = document.getElementById('btnFilterModel');
+            const modLbl = document.getElementById('lblFilterModel');
+            if (selectedFilterModels.length) {
+                modBtn.classList.add('active-filter');
+                modLbl.textContent = selectedFilterModels.length === 1
+                    ? selectedFilterModels[0]
+                    : `Выбрано: ${selectedFilterModels.length}`;
+            } else {
+                modBtn.classList.remove('active-filter');
+                modLbl.textContent = 'Все модели';
+            }
 
             if (res.rates) {
-                document.getElementById('marketRateInfo').textContent =
-                    `Курс: 1 ★ = 1.4 ₽ • 1 TON ≈ ${res.rates.ton_to_rub} ₽ • 1 UAH ≈ ${res.rates.uah_to_rub} ₽`;
+                document.getElementById('marketRateInfo').innerHTML =
+                    `<span>Курс: 1 ★ = 1.4 ₽ • 1 TON ≈ ${res.rates.ton_to_rub} ₽</span><span>${res.filtered_count || marketItems.length} лотов</span>`;
             }
+
+            renderQuickCollectionStrip();
             renderMarketGrid();
         }
+    }
+
+    function renderQuickCollectionStrip() {
+        const strip = document.getElementById('quickCollectionStrip');
+        if (!strip) return;
+        const allActive = selectedFilterCollections.length === 0 ? 'active' : '';
+        let html = `<button type="button" class="col-pill ${allActive}" onclick="toggleQuickCollection('')">Все (${marketCollectionsList.reduce((a, b) => a + b.count, 0)})</button>`;
+
+        html += marketCollectionsList.map(c => {
+            const isAct = selectedFilterCollections.includes(c.name) ? 'active' : '';
+            return `
+                <button type="button" class="col-pill ${isAct}" onclick="toggleQuickCollection('${esc(c.name)}')">
+                    <img src="${esc(c.image)}" onerror="this.style.display='none'">
+                    <span>${esc(c.name)}</span>
+                </button>
+            `;
+        }).join('');
+        strip.innerHTML = html;
+    }
+
+    function openCollectionFilterModal() {
+        if (!marketCollectionsList.length) {
+            showToast('Маркет пока пуст');
+            return;
+        }
+        const cardsHtml = marketCollectionsList.map(c => {
+            const isChecked = selectedFilterCollections.includes(c.name);
+            return `
+                <div class="vo-card ${isChecked ? 'checked' : ''}" onclick="toggleCollectionCard(this, '${esc(c.name)}')">
+                    <img src="${esc(c.image)}" onerror="this.style.display='none'">
+                    <div class="vo-card-info">
+                        <b>${esc(c.name)}</b>
+                        <small>${c.count} шт.</small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        showModal(`
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3>Выбор подарков</h3>
+                <button class="btn btn-glass btn-sm" onclick="selectedFilterCollections=[]; selectedFilterModels=[]; closeModal(); loadMarket();">Сбросить</button>
+            </div>
+            <div class="visual-option-grid">
+                ${cardsHtml}
+            </div>
+            <button class="btn btn-ice" onclick="closeModal(); loadMarket();">Показать выбранные</button>
+        `);
+    }
+
+    function toggleCollectionCard(el, colName) {
+        const idx = selectedFilterCollections.indexOf(colName);
+        if (idx >= 0) {
+            selectedFilterCollections.splice(idx, 1);
+            el.classList.remove('checked');
+        } else {
+            selectedFilterCollections.push(colName);
+            el.classList.add('checked');
+        }
+        selectedFilterModels = [];
     }
 
     function openModelFilterModal() {
@@ -1826,29 +1958,32 @@
             showToast('Список моделей пока пуст');
             return;
         }
-        const listHtml = marketModelsList.map(m => {
+        const cardsHtml = marketModelsList.map(m => {
             const isChecked = selectedFilterModels.includes(m.name);
             return `
-                <div class="model-check-item ${isChecked ? 'checked' : ''}" onclick="toggleModelFilterItem(this, '${esc(m.name)}')">
-                    <span style="font-size:13px; font-weight:700;">${esc(m.name)}</span>
-                    <span style="font-size:11px; color:var(--arctic-ice);">${m.count} шт.</span>
+                <div class="vo-card ${isChecked ? 'checked' : ''}" onclick="toggleModelFilterCard(this, '${esc(m.name)}')">
+                    <img src="${esc(m.image)}" onerror="this.style.display='none'">
+                    <div class="vo-card-info">
+                        <b>${esc(m.name)}</b>
+                        <small>${esc(m.collection)} • ${m.count} шт.</small>
+                    </div>
                 </div>
             `;
         }).join('');
 
         showModal(`
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <h3>Фильтр по моделям</h3>
+                <h3>Выбор моделей</h3>
                 <button class="btn btn-glass btn-sm" onclick="selectedFilterModels=[]; closeModal(); loadMarket();">Сбросить</button>
             </div>
-            <div style="max-height: 320px; overflow-y: auto; margin-bottom: 12px;">
-                ${listHtml}
+            <div class="visual-option-grid">
+                ${cardsHtml}
             </div>
-            <button class="btn btn-ice" onclick="closeModal(); loadMarket();">Применить фильтр</button>
+            <button class="btn btn-ice" onclick="closeModal(); loadMarket();">Применить модели</button>
         `);
     }
 
-    function toggleModelFilterItem(el, modelName) {
+    function toggleModelFilterCard(el, modelName) {
         const idx = selectedFilterModels.indexOf(modelName);
         if (idx >= 0) {
             selectedFilterModels.splice(idx, 1);
@@ -1864,7 +1999,7 @@
         if (!grid) return;
 
         if (!marketItems.length) {
-            grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:28px; color:var(--text-muted); font-size:13px;">Подарки не найдены. Добавьте сессию парсера в админке или сбросьте фильтры.</div>`;
+            grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:28px; color:var(--text-muted); font-size:13px;">По выбранным фильтрам подарков нет. Нажмите кнопку обновления сверху, чтобы сбросить фильтры.</div>`;
             return;
         }
 
@@ -1872,7 +2007,6 @@
             const p = item.prices || {};
             const stars = p.STARS || item.stars_price || 100;
             const rub = p.RUB || Math.round(stars * 1.4);
-            const ton = p.TON || 0;
             const fallbackImg = `https://nft.fragment.com/gift/${esc(item.slug || '')}-${esc(String(item.number))}.medium.jpg`;
 
             return `
@@ -1880,15 +2014,13 @@
                     <div class="nft-tile-art">
                         <span class="nft-num-badge">#${esc(String(item.number))}</span>
                         <img src="${esc(item.image_url)}" alt="${esc(item.name)}" onerror="this.src='${fallbackImg}'">
+                        <div class="nft-model-tag">${esc(item.model || 'Original')}</div>
                     </div>
                     <div class="nft-tile-info">
-                        <div>
-                            <div class="nft-tile-name">${esc(item.name)}</div>
-                            <div class="nft-tile-model">${esc(item.model || 'Original')}</div>
-                        </div>
-                        <div class="nft-price-box">
-                            <div class="price-main-stars">★ ${stars} STARS</div>
-                            <div class="price-sub-fiat">≈ ${rub} ₽ • ${ton} TON</div>
+                        <div class="nft-tile-name">${esc(item.name)}</div>
+                        <div class="nft-price-row">
+                            <span class="price-stars-pill">★ ${stars}</span>
+                            <span class="price-rub-pill">${rub} ₽</span>
                         </div>
                     </div>
                 </div>
@@ -1904,7 +2036,7 @@
 
         showModal(`
             <div style="text-align:center; margin-bottom:12px;">
-                <img src="${esc(item.image_url)}" onerror="this.src='${fallbackImg}'" style="width:110px; height:110px; object-fit:contain; border-radius:16px; margin-bottom:8px;">
+                <img src="${esc(item.image_url)}" onerror="this.src='${fallbackImg}'" style="width:116px; height:116px; object-fit:contain; border-radius:18px; margin-bottom:8px; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.6));">
                 <h3 style="font-size:18px;">${esc(item.name)} <span style="color:var(--arctic-cyan);">#${esc(String(item.number))}</span></h3>
                 <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
                     Модель: <b>${esc(item.model)}</b> • Фон: <b>${esc(item.backdrop)}</b>
@@ -1926,7 +2058,6 @@
         const item = marketItems.find(x => x.id === itemId);
         if (!item) return;
 
-        // Проверка на 2 завершённые сделки
         if (userCompletedDealsCount < 2 && !isUserAdmin) {
             showModal(`
                 <h3 style="margin-bottom:10px;">Покупка на маркете недоступна</h3>
@@ -1964,8 +2095,8 @@
         }
     }
 
-    // ============================================================
-    // 7. ИНВЕНТАРЬ (ВЫВЕСТИ НА АККАУНТ ИЛИ ПРОДАТЬ НА МАРКЕТЕ -5%)
+// ============================================================
+    // 7. ИНВЕНТАРЬ
     // ============================================================
     let userInventory = [];
 
@@ -2223,18 +2354,10 @@
         document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
         if (btnEl) btnEl.classList.add('active');
 
-        const targetChanceMap = {
-            x2: 48,
-            x4: 24,
-            x8: 12,
-            p35: 35,
-            p55: 55,
-            p75: 75
-        };
+        const targetChanceMap = { x2: 48, x4: 24, x8: 12, p35: 35, p55: 55, p75: 75 };
         const desiredChance = targetChanceMap[presetCode] || 50;
         const idealTargetStars = stakeStars / (desiredChance / 100.0);
 
-        // Ищем подарок с маркета, который даёт шанс в диапазоне 5% - 75% и ближе всего к желаемому пресету
         let bestItem = null;
         let bestDiff = Infinity;
 
@@ -2280,7 +2403,7 @@
         const arc = document.getElementById('upgChanceArc');
         const core = document.getElementById('wheelCenterCore');
         const btn = document.getElementById('upgSpinBtn');
-        const circumference = 2 * Math.PI * 102; // ~640.88
+        const circumference = 2 * Math.PI * 102;
 
         const clamped = Math.max(0, Math.min(100, chancePct));
         const filledLen = (clamped / 100) * circumference;
@@ -2376,15 +2499,11 @@
             return;
         }
 
-        // Вычисляем угол остановки ёлочки:
-        // Сектор победы начинается от низа колеса (180deg от верхнего положения ёлочки) и идёт по часовой стрелке на (chance% * 360deg).
         const winSpanDeg = (res.chance / 100) * 360;
         let targetSectorOffsetDeg;
         if (res.won) {
-            // Останавливаемся внутри зелёно-ледяного сектора
             targetSectorOffsetDeg = Math.random() * Math.max(4, winSpanDeg - 4) + 2;
         } else {
-            // Останавливаемся вне сектора победы
             const loseSpan = 360 - winSpanDeg;
             targetSectorOffsetDeg = winSpanDeg + Math.random() * Math.max(4, loseSpan - 4) + 2;
         }
@@ -2439,13 +2558,12 @@
         }, 3400);
     }
 
-// ============================================================
+    // ============================================================
     // 9. СДЕЛКИ, ОТЗЫВЫ, 3D КОШЕЛЁК, ЧАТ И АДМИН-ПАНЕЛЬ
     // ============================================================
     let cachedDeals = [];
     let cachedReviews = [];
     let canUserReview = false;
-    let selectedReviewRating = 5;
     let activeReviewCurrencyFilter = 'ALL';
     let totalReviewsGlobal = 0;
     let avgRatingGlobal = 4.9;
@@ -2763,22 +2881,25 @@
             <div class="adm-pane active" id="adm-session">
                 <div class="info-callout">
                     Статус StringSession: <b>${data.session_connected ? 'ПОДКЛЮЧЕНА' : 'НЕ ЗАДАНА'}</b><br>
-                    Просто вставьте готовую строку StringSession — бот сам подключится и начнёт парсить NFT-подарки с маркета Telegram за звёзды.
+                    Вставьте готовую строку StringSession — бот возьмёт по 1 подарку каждой модели из маркета Telegram и заполнит витрину уникальными номерами и неровными ценами.
                 </div>
                 <div class="field"><label>StringSession</label><textarea id="admStrSess" rows="3" placeholder="1BVtsOHwBu..."></textarea></div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                     <button class="btn btn-ice btn-sm" style="width:100%;" onclick="admSaveSession()">Сохранить сессию</button>
-                    <button class="btn btn-emerald btn-sm" style="width:100%;" onclick="admParseMarketNow()">Спарсить маркет</button>
+                    <button class="btn btn-emerald btn-sm" style="width:100%;" onclick="admParseMarketNow()">Спарсить модели</button>
                 </div>
             </div>
 
             <div class="adm-pane" id="adm-market">
-                <div class="field"><label>Добавить NFT вручную (t.me/nft/...)</label><input type="text" id="admMktLink" placeholder="t.me/nft/PlushPepe-120"></div>
-                <div class="field"><label>Цена в STARS (RUB, TON и UAH посчитаются сами)</label><input type="number" id="admMktStars" placeholder="1500"></div>
-                <button class="btn btn-ice btn-sm" style="width:100%; margin-bottom:12px;" onclick="admAddMarketItem()">Добавить в маркет</button>
+                <div class="field"><label>Ссылка на подарок (t.me/nft/...)</label><input type="text" id="admMktLink" placeholder="t.me/nft/PlushPepe-120"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div class="field"><label>Базовая цена (STARS)</label><input type="number" id="admMktStars" placeholder="1500"></div>
+                    <div class="field"><label>Кол-во лотов этой модели</label><input type="number" id="admMktCount" value="15" min="1" max="50"></div>
+                </div>
+                <button class="btn btn-ice btn-sm" style="width:100%; margin-bottom:12px;" onclick="admAddMarketItem()">Добавить модель в маркет</button>
                 ${(data.market || []).slice(0, 20).map(m => `
                     <div class="deal-box" style="display:flex; justify-content:space-between; align-items:center;">
-                        <div><b>${esc(m.name)} #${m.number}</b><div style="font-size:11px; color:var(--gold-star);">★ ${m.stars_price} STARS</div></div>
+                        <div><b>${esc(m.name)} #${m.number}</b><div style="font-size:11px; color:var(--gold-star);">${esc(m.model)} • ★ ${m.stars_price} STARS</div></div>
                         <button class="btn btn-danger btn-sm" onclick="admDelMarketItem('${m.id}')">Удалить</button>
                     </div>
                 `).join('')}
@@ -2818,18 +2939,19 @@
     }
 
     async function admParseMarketNow() {
-        showToast('Парсинг подарков из Telegram...');
+        showToast('Парсинг моделей с маркета Telegram...');
         const res = await apiCall('/api/admin_session_control', { action: 'parse_now' });
-        if (res.success) { showToast(`Добавлено ${res.added} NFT (всего ${res.total})`); loadMarket(); loadAdminPanel(); }
+        if (res.success) { showToast(`Найдено моделей: ${res.models}, добавлено лотов: ${res.added}`); loadMarket(); loadAdminPanel(); }
         else showToast(res.error || 'Ошибка парсинга');
     }
 
     async function admAddMarketItem() {
         const res = await apiCall('/api/admin_market_add', {
             nft_link: document.getElementById('admMktLink').value,
-            stars_price: document.getElementById('admMktStars').value
+            stars_price: document.getElementById('admMktStars').value,
+            lots_count: document.getElementById('admMktCount').value
         });
-        if (res.success) { showToast('Лот добавлен!'); loadMarket(); loadAdminPanel(); }
+        if (res.success) { showToast(`Добавлено ${res.added} уникальных лотов!`); loadMarket(); loadAdminPanel(); }
         else showToast(res.error || 'Ошибка');
     }
 
