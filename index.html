@@ -1741,11 +1741,11 @@
     }
 
     function openSendGiftToEscrow() {
-        const giftUrl = `tg://send_gift?to=${CONFIG.ESCROW_ACCOUNT}`;
+        const targetUrl = `https://t.me/${CONFIG.ESCROW_ACCOUNT.replace('@', '')}`;
         if (tg && tg.openTelegramLink) {
-            try { tg.openTelegramLink(giftUrl); } catch (e) { window.location.href = giftUrl; }
+            tg.openTelegramLink(targetUrl);
         } else {
-            window.location.href = giftUrl;
+            window.open(targetUrl, '_blank');
         }
     }
 
