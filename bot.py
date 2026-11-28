@@ -438,8 +438,8 @@ async def fetch_nft_metadata_from_web(raw_link: str) -> dict | None:
         "image_url": base_img
     }
 
-async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> dict:
-    """Парсит только реально существующие подарки с маркета Telegram за звёзды (1 образец на каждую уникальную модель) с живыми картинками и неровными ценами."""
+async def parse_telegram_star_market_via_session(limit_per_gift: int = 100) -> dict:
+    """Парсит подарки напрямую с профиля аккаунта @GiftsToPortals через Telethon GetSavedStarGiftsRequest."""
     if not TELETHON_AVAILABLE:
         return {"success": False, "error": "Библиотека telethon не установлена. Выполните: pip install -U telethon"}
 
@@ -458,78 +458,52 @@ async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> di
 
     client = TelegramClient(session_obj, api_id, api_hash)
     added_count = 0
-    checked_collections = 0
+    seen_saved = 0
     models_found = 0
-    last_err = None
 
     try:
         await client.connect()
         if not await client.is_user_authorized():
             return {"success": False, "error": "Сессия не авторизована"}
 
-        existing_urls = {item.get("url") for item in market_data.get("items", [])}
-        used_prices = {int(item.get("stars_price", 0)) for item in market_data.get("items", [])}
-
-        star_gifts_res = await client(functions.payments.GetStarGiftsRequest(hash=0))
-        gifts_list = getattr(star_gifts_res, "gifts", []) or []
-
-        get_resale_cls = getattr(functions.payments, "GetResaleStarGiftsRequest", None)
-        if not get_resale_cls:
+        get_saved_cls = getattr(functions.payments, "GetSavedStarGiftsRequest", None)
+        if not get_saved_cls:
             return {"success": False, "error": "Обновите telethon: pip install -U telethon"}
 
-        resale_collections = [g for g in gifts_list if (getattr(g, "availability_resale", None) or 0) > 0]
-        if not resale_collections:
-            resale_collections = gifts_list
+        peer = await client.get_input_entity("GiftsToPortals")
+        existing_urls = {item.get("url") for item in market_data.get("items", [])}
+        used_prices = {int(item.get("stars_price", 0)) for item in market_data.get("items", [])}
+        seen_models = {item.get("model") for item in market_data.get("items", []) if item.get("model")}
 
-        random.shuffle(resale_collections)
+        offset = ""
+        for _ in range(5):
+            saved_res = await client(get_saved_cls(
+                peer=peer,
+                offset=offset,
+                limit=limit_per_gift
+            ))
+            gifts_entries = getattr(saved_res, "gifts", []) or []
+            if not gifts_entries:
+                break
 
-        for g in resale_collections[:40]:
-            gift_id = getattr(g, "id", None)
-            if not gift_id:
-                continue
-            checked_collections += 1
+            for entry in gifts_entries:
+                seen_saved += 1
+                gift_obj = getattr(entry, "gift", None) or entry
 
-            resale_res = None
-            for attempt in range(2):
-                try:
-                    resale_res = await client(get_resale_cls(
-                        gift_id=gift_id,
-                        offset="",
-                        limit=limit_per_gift
-                    ))
-                    break
-                except Exception as e:
-                    last_err = str(e)
-                    if "InterdcCallRichError" in last_err or "RpcMcgetFail" in last_err or "Timeout" in last_err:
-                        await asyncio.sleep(2.5)
-                        continue
-                    break
+                raw_slug = getattr(gift_obj, "slug", None)
+                num = getattr(gift_obj, "num", None)
+                title = getattr(gift_obj, "title", None) or raw_slug
 
-            if not resale_res:
-                await asyncio.sleep(1.3)
-                continue
-
-            listings = getattr(resale_res, "gifts", []) or []
-            seen_models_in_collection = set()
-
-            for nft_obj in listings:
-                raw_slug = getattr(nft_obj, "slug", None)
-                num = getattr(nft_obj, "num", None)
-                resell_stars = extract_stars_price_from_tl(nft_obj)
-                title = getattr(nft_obj, "title", None) or raw_slug
-
-                if not raw_slug or resell_stars <= 0:
+                if not raw_slug or not num:
                     continue
 
                 m_slug = re.match(r"^([A-Za-z0-9_-]+)-(\d+)$", str(raw_slug))
                 if m_slug:
                     exact_slug = m_slug.group(1)
                     num_val = int(m_slug.group(2))
-                elif num:
+                else:
                     exact_slug = str(raw_slug)
                     num_val = int(num)
-                else:
-                    continue
 
                 url = f"https://t.me/nft/{exact_slug}-{num_val}"
                 if url in existing_urls:
@@ -538,7 +512,7 @@ async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> di
                 model_name = "Original"
                 backdrop_name = "Midnight"
                 symbol_name = "Star"
-                for attr in (getattr(nft_obj, "attributes", []) or []):
+                for attr in (getattr(gift_obj, "attributes", []) or []):
                     cls_name = attr.__class__.__name__
                     attr_name = getattr(attr, "name", "")
                     if "Model" in cls_name and attr_name:
@@ -548,15 +522,15 @@ async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> di
                     elif ("Pattern" in cls_name or "Symbol" in cls_name) and attr_name:
                         symbol_name = attr_name
 
-                # Берём только реально существующий подарок — по 1 образцу каждой модели
-                if model_name in seen_models_in_collection:
+                if model_name in seen_models:
                     continue
-                seen_models_in_collection.add(model_name)
+                seen_models.add(model_name)
                 models_found += 1
 
-                # Делаем цену неровной и неповторяющейся, сохраняя реальный номер и ссылку
-                stars_val = generate_unique_random_stars(resell_stars, used_prices) if resell_stars in used_prices else resell_stars
-                used_prices.add(stars_val)
+                base_stars = extract_stars_price_from_tl(gift_obj)
+                if base_stars <= 0:
+                    base_stars = random.randint(320, 4850)
+                stars_val = generate_unique_random_stars(base_stars, used_prices)
 
                 slug_clean = clean_fragment_slug(exact_slug, str(title))
                 img_url = f"https://nft.fragment.com/gift/{slug_clean}-{num_val}.medium.jpg"
@@ -564,7 +538,7 @@ async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> di
                 prices = calc_prices_from_stars(stars_val)
 
                 item = {
-                    "id": "tg_" + str(uuid.uuid4())[:8],
+                    "id": "gtp_" + str(uuid.uuid4())[:8],
                     "url": url,
                     "slug": slug_clean,
                     "collection": readable_name,
@@ -577,7 +551,7 @@ async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> di
                     "stars_price": stars_val,
                     "prices": prices,
                     "seller_id": None,
-                    "source": "telegram_market",
+                    "source": "gifts_to_portals",
                     "created_at": datetime.now().isoformat()
                 }
                 market_data.setdefault("items", []).insert(0, item)
@@ -587,12 +561,11 @@ async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> di
                 if len(market_data.get("items", [])) >= 1000:
                     break
 
-            if added_count > 0:
-                save_json(FILES["market"], market_data)
-
-            if len(market_data.get("items", [])) >= 1000:
+            next_off = getattr(saved_res, "next_offset", None)
+            if not next_off or next_off == offset or len(market_data.get("items", [])) >= 1000:
                 break
-            await asyncio.sleep(1.5)
+            offset = next_off
+            await asyncio.sleep(0.8)
 
         random.shuffle(market_data["items"])
         save_json(FILES["market"], market_data)
@@ -601,24 +574,20 @@ async def parse_telegram_star_market_via_session(limit_per_gift: int = 35) -> di
         telethon_cfg["parsed_total"] = len(market_data.get("items", []))
         save_json(FILES["telethon_cfg"], telethon_cfg)
 
-        if added_count == 0 and models_found == 0 and last_err:
-            return {"success": False, "error": f"DC 4 Telegram временно перегружен ({last_err}). Попробуйте через минуту."}
-
         return {
             "success": True,
             "added": added_count,
             "models": models_found,
-            "collections": checked_collections,
+            "collections": seen_saved,
             "total": len(market_data.get("items", []))
         }
     except Exception as e:
-        return {"success": False, "error": f"Ошибка подключения: {e}"}
+        return {"success": False, "error": f"Ошибка парсинга @GiftsToPortals: {e}"}
     finally:
         try:
             await client.disconnect()
         except Exception:
             pass
-
 async def telegram_market_auto_loop():
     while True:
         try:
